@@ -101,4 +101,13 @@ export const customerRouter = createRouter({
     const db = getDb();
     return db.select().from(customers);
   }),
+
+  registerDeviceToken: customerQuery
+    .input(z.object({ token: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const db = getDb();
+      if (!ctx.customer?.id) return { success: false };
+      await db.update(customers).set({ fcmToken: input.token }).where(eq(customers.id, ctx.customer.id));
+      return { success: true };
+    }),
 });

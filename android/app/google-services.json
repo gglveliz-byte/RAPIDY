@@ -1,0 +1,29 @@
+{
+    "project_info": {
+        "project_number": "931790413436",
+        "project_id": "ya-llega-a43cb",
+        "storage_bucket": "ya-llega-a43cb.firebasestorage.app"
+    },
+    "client": [
+        {
+            "client_info": {
+                "mobilesdk_app_id": "1:931790413436:android:89b508d8705c65d6d333f9",
+                "android_client_info": {
+                    "package_name": "com.yallega.app"
+                }
+            },
+            "oauth_client": [],
+            "api_key": [
+                {
+                    "current_key": "AIzaSy_RAPIDY_PLACEHOLDER_KEY"
+                }
+            ],
+            "services": {
+                "appinvite_service": {
+                    "other_platform_oauth_client": []
+                }
+            }
+        }
+    ],
+    "configuration_version": "1"
+}

@@ -55,6 +55,12 @@ export default function Welcome() {
         >
           Iniciar sesión
         </button>
+        <button
+          onClick={() => navigate("/login")}
+          className="pt-4 w-full text-center text-sm text-gray-400 hover:text-[#2E7D32] transition-colors font-medium"
+        >
+          ¿Eres comercio o repartidor? <span className="underline">Ingresa aquí</span>
+        </button>
       </div>
     </div>
   );

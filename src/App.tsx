@@ -2,7 +2,6 @@ import { Routes, Route } from 'react-router'
 import { lazy, Suspense, useEffect } from 'react'
 import { Loader2 } from 'lucide-react'
 import SessionGuard from '@/components/SessionGuard'
-import { PWAInstallBanner } from '@/components/PWAInstallBanner'
 import { QueryProvider } from '@/providers/QueryProvider'
 import { trpcMutate } from '@/hooks/useDeliveryData'
 import { getSession } from '@/hooks/useSessionSync'
@@ -18,7 +17,6 @@ const Cart = lazy(() => import('./pages/customer/Cart'))
 const OrderTracking = lazy(() => import('./pages/customer/OrderTracking'))
 const Chat = lazy(() => import('./pages/customer/Chat'))
 const CustomerProfile = lazy(() => import('./pages/customer/Profile'))
-const DownloadApp = lazy(() => import('./pages/customer/DownloadApp'))
 
 // Driver app
 const DriverHome = lazy(() => import('./pages/driver/DriverHome'))
@@ -27,7 +25,6 @@ const DriverEarnings = lazy(() => import('./pages/driver/DriverEarnings'))
 const DriverProfile = lazy(() => import('./pages/driver/DriverProfile'))
 const DriverChat = lazy(() => import('./pages/driver/DriverChat'))
 const DriverHistory = lazy(() => import('./pages/driver/DriverHistory'))
-const DownloadPartners = lazy(() => import('./pages/driver/DownloadPartners'))
 
 // Commerce dashboard
 const CommerceDashboard = lazy(() => import('./pages/commerce/Dashboard'))
@@ -72,24 +69,27 @@ function SessionRefresh() {
   return null
 }
 
-export default function App() {
+import { useLocation } from 'react-router'
+import { AnimatePresence } from 'framer-motion'
+import { PageTransition } from '@/components/PageTransition'
+
+function AnimatedRoutes() {
+  const location = useLocation()
+  
   return (
-    <QueryProvider>
-      <Suspense fallback={<LoadingFallback />}>
-        <SessionRefresh />
-        <Routes>
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
         {/* Customer App Routes */}
-        <Route path="/" element={<Welcome />} />
-        <Route path="/descargar" element={<DownloadApp />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/customer-login" element={<CustomerLogin />} />
-        <Route path="/home" element={<SessionGuard role="customer"><CustomerHome /></SessionGuard>} />
-        <Route path="/search" element={<SessionGuard role="customer"><CustomerSearch /></SessionGuard>} />
-        <Route path="/commerce/:id" element={<SessionGuard role="customer"><CommerceDetail /></SessionGuard>} />
-        <Route path="/cart" element={<SessionGuard role="customer"><Cart /></SessionGuard>} />
-        <Route path="/order/:id" element={<SessionGuard role="customer"><OrderTracking /></SessionGuard>} />
-        <Route path="/chat/:orderId" element={<SessionGuard role="customer"><Chat /></SessionGuard>} />
-        <Route path="/profile" element={<SessionGuard role="customer"><CustomerProfile /></SessionGuard>} />
+        <Route path="/" element={<PageTransition><Welcome /></PageTransition>} />
+        <Route path="/register" element={<PageTransition><Register /></PageTransition>} />
+        <Route path="/customer-login" element={<PageTransition><CustomerLogin /></PageTransition>} />
+        <Route path="/home" element={<SessionGuard role="customer"><PageTransition><CustomerHome /></PageTransition></SessionGuard>} />
+        <Route path="/search" element={<SessionGuard role="customer"><PageTransition><CustomerSearch /></PageTransition></SessionGuard>} />
+        <Route path="/commerce/:id" element={<SessionGuard role="customer"><PageTransition><CommerceDetail /></PageTransition></SessionGuard>} />
+        <Route path="/cart" element={<SessionGuard role="customer"><PageTransition><Cart /></PageTransition></SessionGuard>} />
+        <Route path="/order/:id" element={<SessionGuard role="customer"><PageTransition><OrderTracking /></PageTransition></SessionGuard>} />
+        <Route path="/chat/:orderId" element={<SessionGuard role="customer"><PageTransition><Chat /></PageTransition></SessionGuard>} />
+        <Route path="/profile" element={<SessionGuard role="customer"><PageTransition><CustomerProfile /></PageTransition></SessionGuard>} />
 
         {/* Driver App Routes */}
         <Route path="/driver" element={<SessionGuard role="driver"><DriverHome /></SessionGuard>} />
@@ -115,12 +115,20 @@ export default function App() {
         <Route path="/admin/settings" element={<SessionGuard role="admin"><AdminSettings /></SessionGuard>} />
 
         {/* Auth & Downloads */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/descargar-socios" element={<DownloadPartners />} />
-        <Route path="*" element={<NotFound />} />
+        <Route path="/login" element={<PageTransition><Login /></PageTransition>} />
+        <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />
       </Routes>
-      <PWAInstallBanner />
-    </Suspense>
-  </QueryProvider>
-)
+    </AnimatePresence>
+  )
+}
+
+export default function App() {
+  return (
+    <QueryProvider>
+      <Suspense fallback={<LoadingFallback />}>
+        <SessionRefresh />
+        <AnimatedRoutes />
+      </Suspense>
+    </QueryProvider>
+  )
 }

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Ya Llega</string>
+    <string name="title_activity_main">Ya Llega</string>
+    <string name="package_name">com.yallega.app</string>
+    <string name="custom_url_scheme">com.yallega.app</string>
+</resources>

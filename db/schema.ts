@@ -56,6 +56,7 @@ export const users = pgTable("users", {
     .notNull()
     .$onUpdate(() => new Date()),
   lastSignInAt: timestamp("lastSignInAt").defaultNow().notNull(),
+  fcmToken: text("fcm_token"),
 });
 
 export type User = typeof users.$inferSelect;
@@ -69,6 +70,7 @@ export const customers = pgTable("customers", {
   phone: varchar("phone", { length: 20 }).notNull().unique(),
   address: text("address").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  fcmToken: text("fcm_token"),
 });
 
 export type Customer = typeof customers.$inferSelect;
@@ -89,6 +91,7 @@ export const drivers = pgTable("drivers", {
   totalEarnings: numeric("total_earnings", { precision: 10, scale: 2 }).default("0.00"),
   commissionRate: numeric("commission_rate", { precision: 5, scale: 2 }).default("75.00"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  fcmToken: text("fcm_token"),
 });
 
 export type Driver = typeof drivers.$inferSelect;

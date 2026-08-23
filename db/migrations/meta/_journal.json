@@ -43,6 +43,13 @@
       "when": 1782500000000,
       "tag": "0005_drivers_commission_rate",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1787244492071,
+      "tag": "0006_known_tempest",
+      "breakpoints": true
     }
   ]
 }

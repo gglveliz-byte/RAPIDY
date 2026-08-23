@@ -1,0 +1,6 @@
+{
+  "appId": "com.yallega.app",
+  "appName": "Ya Llega",
+  "webDir": "dist/public",
+  "bundledWebRuntime": false
+}

@@ -11,6 +11,9 @@
     <link rel="apple-touch-icon" href="/logotipo.jpeg" />
     <meta name="theme-color" content="#2E7D32" />
     <meta name="description" content="Plataforma de delivery multi-comercio" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script>
       (function() {
         var path = window.location.pathname;
@@ -22,8 +25,7 @@
           path.startsWith("/commerce/products") || 
           path.startsWith("/commerce/stats") || 
           path.startsWith("/commerce/profile") || 
-          path === "/login" || 
-          path === "/descargar-socios";
+          path === "/login";
         
         var link = document.createElement('link');
         link.rel = 'manifest';

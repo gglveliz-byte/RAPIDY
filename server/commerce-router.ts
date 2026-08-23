@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { createRouter, publicQuery, merchantQuery } from "./middleware";
 import { getDb } from "./queries/connection";
-import { commerces, products, orderItems, orders, orderCommerceStatus, drivers, orderStatusHistory } from "@db/schema";
+import { commerces, products, orderItems, orders, orderCommerceStatus, drivers, orderStatusHistory, users } from "@db/schema";
 import { eq, and, like } from "drizzle-orm";
 import { emit } from "./events";
 
@@ -226,5 +226,14 @@ export const commerceRouter = createRouter({
       });
 
       return result;
+    }),
+
+  registerDeviceToken: merchantQuery
+    .input(z.object({ token: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const db = getDb();
+      if (!ctx.merchant?.id) return { success: false };
+      await db.update(users).set({ fcmToken: input.token }).where(eq(users.id, ctx.merchant.id));
+      return { success: true };
     }),
 });

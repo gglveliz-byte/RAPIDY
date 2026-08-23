@@ -314,4 +314,13 @@ export const driverRouter = createRouter({
 
       return result;
     }),
+
+  registerDeviceToken: driverQuery
+    .input(z.object({ token: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const db = getDb();
+      if (!ctx.driver?.id) return { success: false };
+      await db.update(drivers).set({ fcmToken: input.token }).where(eq(drivers.id, ctx.driver.id));
+      return { success: true };
+    }),
 });

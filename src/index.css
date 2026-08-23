@@ -36,7 +36,7 @@ input, textarea {
     --border: 0 0% 88%;
     --input: 0 0% 88%;
     --ring: 122 39% 33%;
-    --radius: 0.625rem;
+    --radius: 1.25rem;
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 0 0% 13%;
     --sidebar-primary: 122 39% 33%;
@@ -84,7 +84,7 @@ input, textarea {
   }
   body {
     @apply bg-background text-foreground;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   }
 }
 

@@ -32,6 +32,11 @@ dist-ssr
 *.sqlite3
 # TypeScript cache
 *.tsbuildinfo
+next-env.d.ts
+
+# Firebase
+firebase-adminsdk.json
+
 # Build outputs
 dist/
 
