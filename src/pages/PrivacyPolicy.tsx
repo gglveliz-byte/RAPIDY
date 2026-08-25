@@ -1,5 +1,3 @@
-import { Link } from "wouter";
-
 export default function PrivacyPolicy() {
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -45,11 +43,9 @@ export default function PrivacyPolicy() {
         </div>
 
         <div className="mt-8 pt-6 border-t border-gray-200">
-          <Link href="/">
-            <a className="text-blue-600 hover:text-blue-800 font-medium">
-              &larr; Volver a la página principal
-            </a>
-          </Link>
+          <a href="/" className="text-blue-600 hover:text-blue-800 font-medium">
+            &larr; Volver a la página principal
+          </a>
         </div>
       </div>
     </div>
