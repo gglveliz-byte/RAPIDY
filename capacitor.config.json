@@ -2,5 +2,9 @@
   "appId": "com.yallega.app",
   "appName": "Ya Llega",
   "webDir": "dist/public",
-  "bundledWebRuntime": false
+  "bundledWebRuntime": false,
+  "server": {
+    "url": "https://app-delivery-lautaro-ezequi.onrender.com",
+    "cleartext": true
+  }
 }

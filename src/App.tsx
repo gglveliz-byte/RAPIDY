@@ -43,6 +43,7 @@ const AdminSettings = lazy(() => import('./pages/admin/Settings'))
 
 // Auth
 const Login = lazy(() => import('./pages/Login'))
+const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'))
 const NotFound = lazy(() => import('./pages/NotFound'))
 
 
@@ -116,6 +117,7 @@ function AnimatedRoutes() {
 
         {/* Auth & Downloads */}
         <Route path="/login" element={<PageTransition><Login /></PageTransition>} />
+        <Route path="/politica-de-privacidad" element={<PageTransition><PrivacyPolicy /></PageTransition>} />
         <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />
       </Routes>
     </AnimatePresence>
