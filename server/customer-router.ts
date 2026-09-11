@@ -2,23 +2,22 @@ import { z } from "zod";
 import { createRouter, publicQuery, customerQuery } from "./middleware";
 import { getDb } from "./queries/connection";
 import { customers } from "@db/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { setCustomerCookies, clearCustomerCookies, verifyRefreshToken } from "./customer-auth";
 
 export const customerRouter = createRouter({
   register: publicQuery
     .input(
       z.object({
-        firstName: z.string().min(1, "Nombre requerido"),
-        lastName: z.string().min(1, "Apellido requerido"),
-        phone: z.string().min(5, "Teléfono válido requerido"),
-        address: z.string().min(1, "Dirección requerida"),
+        firstName: z.string().min(1),
+        lastName: z.string().min(1),
+        phone: z.string().min(6),
+        address: z.string().min(1),
       })
     )
     .mutation(async ({ input, ctx }) => {
       const db = getDb();
       const existing = await db.select().from(customers).where(eq(customers.phone, input.phone));
-      
       let customer;
       if (existing.length > 0) {
         customer = existing[0];
@@ -35,7 +34,19 @@ export const customerRouter = createRouter({
     .input(z.object({ phone: z.string() }))
     .mutation(async ({ input, ctx }) => {
       const db = getDb();
-      const result = await db.select().from(customers).where(eq(customers.phone, input.phone));
+      let result = await db.select().from(customers).where(eq(customers.phone, input.phone));
+      
+      // Fallback: buscar por dígitos si no coincide exacto
+      if (result.length === 0) {
+        const digits = input.phone.replace(/\D/g, "");
+        if (digits.length >= 7) {
+          result = await db
+            .select()
+            .from(customers)
+            .where(sql`REGEXP_REPLACE(${customers.phone}, '[^0-9]', '', 'g') LIKE ${'%' + digits.slice(-8)}`);
+        }
+      }
+
       if (result.length === 0) {
         return { success: false, customer: null };
       }
