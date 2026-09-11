@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { getDb } from "../api/queries/connection";
+import { getDb } from "../server/queries/connection";
 import { categories, commerces, products, appSettings, users } from "../db/schema";
 import { eq, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
@@ -207,6 +207,10 @@ async function seed() {
   console.log("Skipping merchant users seeding for test bot...");
 
   console.log("Seed completed!");
+  process.exit(0);
 }
 
-seed().catch(console.error);
+seed().catch(err => {
+  console.error(err);
+  process.exit(1);
+});

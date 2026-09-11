@@ -1,4 +1,4 @@
-import { getDb } from "./api/queries/connection";
+import { getDb } from "./server/queries/connection";
 import { orders } from "./db/schema";
 import "dotenv/config";
 import { sql } from "drizzle-orm";

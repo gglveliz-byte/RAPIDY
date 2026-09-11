@@ -1,4 +1,5 @@
-import * as admin from 'firebase-admin';
+import { initializeApp, cert, getApps, applicationDefault } from "firebase-admin/app";
+import { getMessaging } from "firebase-admin/messaging";
 
 // Initialize Firebase Admin lazily to avoid crashing if credentials aren't set yet.
 let initialized = false;
@@ -8,17 +9,17 @@ function initFirebase() {
   try {
     // If GOOGLE_APPLICATION_CREDENTIALS is set in .env, firebase-admin automatically uses it.
     // If not, and we are in dev, it might fail, so we wrap in try-catch.
-    if (!admin.apps.length) {
+    if (!getApps().length) {
       if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
         // En producción (Render), leer el JSON directamente desde una variable de entorno
         const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
-        admin.initializeApp({
-          credential: admin.credential.cert(serviceAccount),
+        initializeApp({
+          credential: cert(serviceAccount),
         });
       } else {
         // En local, usa el archivo que pusimos en .env (GOOGLE_APPLICATION_CREDENTIALS)
-        admin.initializeApp({
-          credential: admin.credential.applicationDefault(),
+        initializeApp({
+          credential: applicationDefault(),
         });
       }
     }
@@ -56,7 +57,7 @@ export async function sendPushNotification(token: string | null | undefined, tit
       }
     };
 
-    const response = await admin.messaging().send(message);
+    const response = await getMessaging().send(message);
     console.log('[Firebase] Successfully sent message:', response);
     return response;
   } catch (error) {

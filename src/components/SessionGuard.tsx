@@ -3,6 +3,7 @@ import { useNavigate } from "react-router"
 import { getSession, useSessionSync, clearSession } from "@/hooks/useSessionSync"
 import { useCustomerSession } from "@/hooks/useCustomerSession"
 import { trpcCall } from "@/hooks/useDeliveryData"
+import { usePushNotifications } from "@/hooks/usePushNotifications"
 import { Loader2 } from "lucide-react"
 
 type GuardRole = "customer" | "admin" | "merchant" | "driver"
@@ -12,6 +13,9 @@ export default function SessionGuard({ role, children }: { role: GuardRole; chil
   const { isAuthenticated } = useCustomerSession()
   const [checking, setChecking] = useState(true)
   const redirected = useRef(false)
+
+  // Registrar notificaciones push nativas si el usuario está autenticado
+  usePushNotifications(role, !checking)
 
   const redirectOut = useCallback(() => {
     if (redirected.current) return
