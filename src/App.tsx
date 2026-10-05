@@ -41,9 +41,15 @@ const AdminOrders = lazy(() => import('./pages/admin/Orders'))
 const AdminProducts = lazy(() => import('./pages/admin/Products'))
 const AdminSettings = lazy(() => import('./pages/admin/Settings'))
 
-// Auth
+// Auth & Legal
 const Login = lazy(() => import('./pages/Login'))
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'))
+const TermsAndConditions = lazy(() => import('./pages/legal/TermsAndConditions'))
+const RefundPolicy = lazy(() => import('./pages/legal/RefundPolicy'))
+const RegretButton = lazy(() => import('./pages/legal/RegretButton'))
+const ConsumerProtection = lazy(() => import('./pages/legal/ConsumerProtection'))
+const DeleteAccount = lazy(() => import('./pages/legal/DeleteAccount'))
+const LegalHub = lazy(() => import('./pages/legal/LegalHub'))
 const NotFound = lazy(() => import('./pages/NotFound'))
 
 
@@ -115,9 +121,19 @@ function AnimatedRoutes() {
         <Route path="/admin/products" element={<SessionGuard role="admin"><AdminProducts /></SessionGuard>} />
         <Route path="/admin/settings" element={<SessionGuard role="admin"><AdminSettings /></SessionGuard>} />
 
-        {/* Auth & Downloads */}
+        {/* Auth & Legal */}
         <Route path="/login" element={<PageTransition><Login /></PageTransition>} />
+        <Route path="/legal" element={<PageTransition><LegalHub /></PageTransition>} />
+        <Route path="/terminos-y-condiciones" element={<PageTransition><TermsAndConditions /></PageTransition>} />
+        <Route path="/terminos" element={<PageTransition><TermsAndConditions /></PageTransition>} />
         <Route path="/politica-de-privacidad" element={<PageTransition><PrivacyPolicy /></PageTransition>} />
+        <Route path="/privacidad" element={<PageTransition><PrivacyPolicy /></PageTransition>} />
+        <Route path="/politica-de-reembolso" element={<PageTransition><RefundPolicy /></PageTransition>} />
+        <Route path="/reembolsos" element={<PageTransition><RefundPolicy /></PageTransition>} />
+        <Route path="/boton-de-arrepentimiento" element={<PageTransition><RegretButton /></PageTransition>} />
+        <Route path="/arrepentimiento" element={<PageTransition><RegretButton /></PageTransition>} />
+        <Route path="/defensa-del-consumidor" element={<PageTransition><ConsumerProtection /></PageTransition>} />
+        <Route path="/eliminar-cuenta" element={<PageTransition><DeleteAccount /></PageTransition>} />
         <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />
       </Routes>
     </AnimatePresence>

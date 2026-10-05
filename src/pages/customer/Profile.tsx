@@ -14,6 +14,9 @@ import {
   Pencil,
   Check,
   X,
+  Shield,
+  Undo2,
+  Trash2,
 } from "lucide-react";
 import { useCustomerSession } from "@/hooks/useCustomerSession";
 import { useCustomerOrders, useUpdateCustomerProfile } from "@/hooks/useDeliveryData";
@@ -207,6 +210,45 @@ export default function CustomerProfile() {
             ))}
           </div>
         )}
+      </div>
+
+      {/* Legal & Help */}
+      <div className="px-4 mt-6">
+        <h2 className="text-sm font-semibold text-gray-700 mb-2">Información y Marco Legal</h2>
+        <div className="bg-white rounded-xl card-shadow divide-y divide-gray-100 overflow-hidden">
+          <button
+            onClick={() => navigate("/legal")}
+            className="w-full p-3.5 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <Shield className="w-4 h-4 text-[#2E7D32]" />
+              <span className="text-sm text-gray-800">Centro Legal y Privacidad</span>
+            </div>
+            <ChevronRight className="w-4 h-4 text-gray-400" />
+          </button>
+
+          <button
+            onClick={() => navigate("/boton-de-arrepentimiento")}
+            className="w-full p-3.5 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <Undo2 className="w-4 h-4 text-blue-600" />
+              <span className="text-sm text-gray-800">Botón de Arrepentimiento (🇦🇷)</span>
+            </div>
+            <ChevronRight className="w-4 h-4 text-gray-400" />
+          </button>
+
+          <button
+            onClick={() => navigate("/eliminar-cuenta")}
+            className="w-full p-3.5 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <Trash2 className="w-4 h-4 text-gray-400" />
+              <span className="text-sm text-gray-500">Eliminar cuenta y datos</span>
+            </div>
+            <ChevronRight className="w-4 h-4 text-gray-400" />
+          </button>
+        </div>
       </div>
 
       {/* Actions */}

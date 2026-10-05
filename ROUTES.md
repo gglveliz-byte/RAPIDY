@@ -35,6 +35,15 @@
 - http://localhost:3000/admin/products     → Todos los productos
 - http://localhost:3000/admin/settings     → Configuración
 
+## Legal & Regulatorio (Público - Ecuador y Argentina)
+- http://localhost:3000/legal                     → Centro Legal y de Transparencia (Índice unificado)
+- http://localhost:3000/terminos-y-condiciones    → Términos y Condiciones de Uso del Servicio
+- http://localhost:3000/politica-de-privacidad    → Política de Privacidad y Protección de Datos (LOPDP & Ley 25.326)
+- http://localhost:3000/politica-de-reembolso     → Cancelaciones, Reclamaciones y Reembolsos
+- http://localhost:3000/boton-de-arrepentimiento  → Botón de Arrepentimiento (🇦🇷 Res. 424/2020 Secretaría de Comercio)
+- http://localhost:3000/defensa-del-consumidor    → Defensa del Consumidor y Libro de Reclamos Digital
+- http://localhost:3000/eliminar-cuenta           → Solicitud de Eliminación de Cuenta y Datos (Google Play Policy)
+
 ## Notas
 - **Clientes**: Se registran en `/register` → auto-login → `/home`
 - **Admin**: Login en `/login` con email (admin@quickgo.com / admin123)

@@ -154,6 +154,25 @@ export default function Register() {
             >
               {loading ? "Registrando..." : "Crear cuenta"}
             </button>
+
+            <p className="text-center text-[11px] text-gray-500 mt-3 leading-snug">
+              Al registrarte, aceptas nuestros{" "}
+              <button
+                type="button"
+                onClick={() => navigate("/terminos-y-condiciones")}
+                className="text-[#2E7D32] underline font-medium hover:text-[#1B5E20]"
+              >
+                Términos y Condiciones
+              </button>{" "}
+              y la{" "}
+              <button
+                type="button"
+                onClick={() => navigate("/politica-de-privacidad")}
+                className="text-[#2E7D32] underline font-medium hover:text-[#1B5E20]"
+              >
+                Política de Privacidad
+              </button>.
+            </p>
           </form>
           <p className="text-center text-sm text-gray-500 mt-6">
             ¿Ya tenés cuenta?{" "}

@@ -61,6 +61,20 @@ export default function Welcome() {
         >
           ¿Eres comercio o repartidor? <span className="underline">Ingresa aquí</span>
         </button>
+
+        <div className="pt-2 text-center text-xs text-gray-400 space-x-2">
+          <button onClick={() => navigate("/terminos-y-condiciones")} className="hover:underline hover:text-gray-600">
+            Términos
+          </button>
+          <span>•</span>
+          <button onClick={() => navigate("/politica-de-privacidad")} className="hover:underline hover:text-gray-600">
+            Privacidad
+          </button>
+          <span>•</span>
+          <button onClick={() => navigate("/legal")} className="hover:underline hover:text-gray-600">
+            Centro Legal
+          </button>
+        </div>
       </div>
     </div>
   );
