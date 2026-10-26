@@ -5,44 +5,44 @@ export default function Welcome() {
   const navigate = useNavigate();
 
   return (
-    <div className="mobile-container bg-white min-h-screen flex flex-col">
-      <div className="flex-1 flex flex-col items-center justify-center px-8 text-center">
+    <div className="mobile-container bg-white min-h-screen flex flex-col pt-safe pb-safe">
+      <div className="flex-1 flex flex-col items-center justify-center px-6 text-center py-4">
         <img
           src="/logotipo.jpeg"
           alt="YA LLEGA"
-          className="w-28 h-28 object-contain mb-5 rounded-2xl"
+          className="w-24 h-24 sm:w-28 sm:h-28 object-contain mb-4 rounded-2xl shadow-sm"
         />
-        <h1 className="text-4xl font-bold text-[#2E7D32] mb-2 tracking-tight">
+        <h1 className="text-3xl sm:text-4xl font-bold text-[#2E7D32] mb-1.5 tracking-tight">
           YA LLEGA
         </h1>
-        <p className="text-gray-500 text-base mb-8">
+        <p className="text-gray-500 text-sm sm:text-base mb-6 max-w-xs">
           Todo lo que necesitás, a un toque de distancia
         </p>
 
         {/* Features */}
-        <div className="grid grid-cols-3 gap-6 w-full max-w-xs mb-12">
-          <div className="flex flex-col items-center gap-2">
-            <div className="w-14 h-14 bg-[#2E7D32] rounded-2xl flex items-center justify-center">
-              <Truck className="w-7 h-7 text-white" />
+        <div className="grid grid-cols-3 gap-3 sm:gap-6 w-full max-w-xs mb-8">
+          <div className="flex flex-col items-center gap-1.5">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-[#2E7D32] rounded-2xl flex items-center justify-center shadow-sm">
+              <Truck className="w-6 h-6 text-white" />
             </div>
-            <span className="text-gray-700 text-sm font-medium">Envío rápido</span>
+            <span className="text-gray-700 text-xs sm:text-sm font-medium">Envío rápido</span>
           </div>
-          <div className="flex flex-col items-center gap-2">
-            <div className="w-14 h-14 bg-[#2E7D32] rounded-2xl flex items-center justify-center">
-              <Clock className="w-7 h-7 text-white" />
+          <div className="flex flex-col items-center gap-1.5">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-[#2E7D32] rounded-2xl flex items-center justify-center shadow-sm">
+              <Clock className="w-6 h-6 text-white" />
             </div>
-            <span className="text-gray-700 text-sm font-medium">En minutos</span>
+            <span className="text-gray-700 text-xs sm:text-sm font-medium">En minutos</span>
           </div>
-          <div className="flex flex-col items-center gap-2">
-            <div className="w-14 h-14 bg-[#2E7D32] rounded-2xl flex items-center justify-center">
-              <Star className="w-7 h-7 text-white" />
+          <div className="flex flex-col items-center gap-1.5">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-[#2E7D32] rounded-2xl flex items-center justify-center shadow-sm">
+              <Star className="w-6 h-6 text-white" />
             </div>
-            <span className="text-gray-700 text-sm font-medium">Calidad</span>
+            <span className="text-gray-700 text-xs sm:text-sm font-medium">Calidad</span>
           </div>
         </div>
       </div>
 
-      <div className="px-8 pb-10 space-y-3">
+      <div className="px-6 pb-6 space-y-3">
         <button
           onClick={() => navigate("/register")}
           className="w-full h-14 bg-[#2E7D32] text-white font-semibold text-base rounded-2xl shadow-md hover:bg-[#1B5E20] active:scale-[0.98] transition-all touch-target"

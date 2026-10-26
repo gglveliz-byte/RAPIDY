@@ -339,15 +339,18 @@ export default function OrderTracking() {
   })();
 
   return (
-    <div className="mobile-container bg-gray-50 min-h-screen">
+    <div className="mobile-container bg-gray-50 min-h-screen pb-safe">
       {/* Header */}
-      <div className="bg-white px-4 py-3 flex items-center gap-3 border-b border-gray-100">
-        <button onClick={() => navigate("/home")} className="touch-target">
+      <div className="bg-white/95 backdrop-blur-md px-4 pt-safe-top pb-3 flex items-center gap-3 border-b border-gray-100 shadow-xs">
+        <button 
+          onClick={() => navigate("/home")} 
+          className="w-9 h-9 rounded-xl flex items-center justify-center text-gray-600 hover:bg-gray-100 active:scale-90 transition-transform"
+        >
           <ArrowLeft className="w-5 h-5 text-gray-600" />
         </button>
         <div>
-          <h1 className="text-lg font-semibold text-gray-800">Pedido #{order.id}</h1>
-          <p className="text-xs text-gray-500">
+          <h1 className="text-base font-bold text-gray-800">Pedido #{order.id}</h1>
+          <p className="text-[11px] text-gray-500 font-medium">
             {new Date(order.createdAt).toLocaleDateString("es-ES", {
               day: "numeric",
               month: "short",
@@ -359,7 +362,7 @@ export default function OrderTracking() {
       </div>
 
       {/* Elegant Map */}
-      <div className="h-64 bg-gray-100 relative" style={{ zIndex: 1 }}>
+      <div className="h-60 sm:h-64 bg-gray-100 relative" style={{ zIndex: 1 }}>
         <div ref={mapContainerRef} className="absolute inset-0" />
         {geoLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/10 z-10">
@@ -370,7 +373,7 @@ export default function OrderTracking() {
         {driverPos && !isDelivered && !isCancelled && (
           <button
             onClick={() => setFollowDriver(!followDriver)}
-            className={`absolute bottom-3 right-3 z-10 w-9 h-9 rounded-full flex items-center justify-center shadow-lg transition-all ${
+            className={`absolute bottom-3 right-3 z-10 w-10 h-10 rounded-full flex items-center justify-center shadow-lg transition-all ${
               followDriver ? "bg-[#2E7D32] text-white" : "bg-white text-gray-600"
             }`}
           >
@@ -381,7 +384,7 @@ export default function OrderTracking() {
 
       {/* Driver info strip */}
       {order.driver && !isCancelled && (
-        <div className="bg-[#2E7D32]/10 px-4 py-2.5 flex items-center justify-between text-sm">
+        <div className="bg-[#2E7D32]/10 px-4 py-2.5 flex items-center justify-between text-xs sm:text-sm">
           <div className="flex items-center gap-2">
             <Navigation className="w-4 h-4 text-[#2E7D32]" />
             <span className="text-gray-700">
@@ -389,7 +392,7 @@ export default function OrderTracking() {
             </span>
           </div>
           {estimatedMinutes && !isDelivered && (
-            <div className="flex items-center gap-1 text-[#2E7D32] font-medium">
+            <div className="flex items-center gap-1 text-[#2E7D32] font-bold">
               <Clock className="w-3.5 h-3.5" />
               <span>~{estimatedMinutes} min</span>
             </div>
@@ -400,7 +403,7 @@ export default function OrderTracking() {
       {/* Progress or Rejected Payment */}
       <div className="px-4 mt-4">
         {isPaymentRejected ? (
-          <div className="bg-red-50 rounded-xl card-shadow p-5 border border-red-200 text-center">
+          <div className="bg-red-50 rounded-2xl card-shadow p-5 border border-red-200 text-center">
             <AlertTriangle className="w-10 h-10 text-red-500 mx-auto mb-2" />
             <h3 className="text-lg font-bold text-red-700 mb-1">Pago Rechazado</h3>
             <p className="text-sm text-red-600 mb-4">El comprobante subido no es válido o es ilegible. Por favor, sube el comprobante verdadero para continuar con el pedido.</p>
@@ -421,48 +424,53 @@ export default function OrderTracking() {
             </button>
           </div>
         ) : (
-          <div className="bg-white rounded-xl card-shadow p-4">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-medium text-gray-800">Estado del pedido</span>
+          <div className="bg-white rounded-2xl card-shadow p-4 border border-gray-100">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Estado actual</span>
               {!isCancelled && (
-                <span className="text-xs font-medium text-[#2E7D32]">
+                <span className="text-xs font-bold text-[#2E7D32] bg-green-50 px-2.5 py-0.5 rounded-full">
                   {hasDriver && order.commerces?.some((c: any) => c.status !== "preparing")
-                    ? `En proceso: ${order.commerces.filter((c: any) => c.status === "picked_up").length}/${order.commerces.length} recogidos`
+                    ? `${order.commerces.filter((c: any) => c.status === "picked_up").length}/${order.commerces.length} recogidos`
                     : currentStepIndex >= 0
                       ? statusSteps[currentStepIndex]?.label
                       : order.status === "pending_payment" ? "Revisando pago" : order.status.replace(/_/g, " ")}
                 </span>
               )}
               {isCancelled && (
-                <span className="text-xs font-medium text-red-600">Cancelado</span>
+                <span className="text-xs font-bold text-red-600 bg-red-50 px-2.5 py-0.5 rounded-full">Cancelado</span>
               )}
             </div>
 
             {!isCancelled && (
               <>
-                <div className="progress-track">
+                <div className="my-3">
+                  <p className="text-base font-bold text-gray-800">
+                    {currentStepIndex >= 0 ? statusSteps[currentStepIndex]?.description : "Procesando pedido"}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Paso {Math.max(1, currentStepIndex + 1)} de {statusSteps.length}
+                  </p>
+                </div>
+
+                <div className="progress-track mb-3">
                   <div className="progress-fill" style={{ width: `${Math.min(progress, 100)}%` }} />
                 </div>
 
-                <div className="flex justify-between mt-3">
+                {/* Compact Step Dots */}
+                <div className="flex justify-between items-center px-1">
                   {statusSteps.map((step, i) => (
-                    <div key={step.key} className="flex flex-col items-center gap-1" style={{ width: `${100 / statusSteps.length}%` }}>
+                    <div key={step.key} className="flex flex-col items-center">
                       <div
-                        className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold transition-all ${
-                          i <= currentStepIndex
-                            ? "bg-[#2E7D32] text-white shadow-sm"
-                            : "bg-gray-200 text-gray-400"
-                        } ${i === currentStepIndex ? "ring-2 ring-[#2E7D32]/30" : ""}`}
+                        className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold transition-all ${
+                          i < currentStepIndex
+                            ? "bg-[#2E7D32] text-white"
+                            : i === currentStepIndex
+                              ? "bg-[#2E7D32] text-white ring-4 ring-[#2E7D32]/20 scale-110"
+                              : "bg-gray-200 text-gray-400"
+                        }`}
                       >
-                        {i < currentStepIndex ? (
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-                        ) : (
-                          i + 1
-                        )}
+                        {i < currentStepIndex ? "✓" : i + 1}
                       </div>
-                      <span className={`text-[9px] text-center leading-tight ${i <= currentStepIndex ? "text-gray-800 font-medium" : "text-gray-400"}`}>
-                        {step.label}
-                      </span>
                     </div>
                   ))}
                 </div>

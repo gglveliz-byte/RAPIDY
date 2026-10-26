@@ -90,26 +90,29 @@ export default function CustomerHome() {
   };
 
   return (
-    <div className="mobile-container bg-gray-50 min-h-screen pb-20">
+    <div className="mobile-container bg-gray-50 min-h-screen pb-safe-nav">
       {/* Header */}
-      <div className="bg-[#2E7D32] px-4 pt-4 pb-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <img src="/logotipo.jpeg" alt="YA LLEGA" className="w-8 h-8 rounded-full object-cover" />
+      <div className="bg-[#2E7D32] px-4 pt-safe pb-5 shadow-sm">
+        <div className="flex items-center justify-between mb-3.5">
+          <div className="flex items-center gap-2.5">
+            <img src="/logotipo.jpeg" alt="YA LLEGA" className="w-9 h-9 rounded-full object-cover border-2 border-white/20 shadow-sm" />
             <div>
-              <p className="text-white/70 text-xs">Hola,</p>
-              <p className="text-white font-medium text-sm">{customer?.firstName || "Invitado"}</p>
+              <p className="text-white/75 text-xs font-medium">Hola,</p>
+              <p className="text-white font-bold text-sm tracking-tight">{customer?.firstName || "Invitado"}</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <button onClick={() => navigate("/profile")} className="text-white/80 hover:text-white touch-target">
-              <MapPin className="w-5 h-5" />
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => navigate("/profile")} 
+              className="w-9 h-9 rounded-full bg-white/15 text-white flex items-center justify-center hover:bg-white/25 active:scale-90 transition-all"
+            >
+              <MapPin className="w-4 h-4" />
             </button>
           </div>
         </div>
 
         {/* Search */}
-        <div className="bg-white rounded-full h-11 flex items-center px-4 gap-2 shadow-sm">
+        <div className="bg-white rounded-2xl h-11 flex items-center px-4 gap-2.5 shadow-sm">
           <Search className="w-4 h-4 text-gray-400 flex-shrink-0" />
           <input
             type="text"
@@ -140,12 +143,12 @@ export default function CustomerHome() {
             </button>
           )}
         </div>
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-4 gap-1.5 sm:gap-3">
           {activeCategories.map((cat) => (
             <button
               key={cat.id}
               onClick={() => handleCategoryClick(cat.id)}
-              className={`flex flex-col items-center gap-1.5 py-2 rounded-xl transition-all ${
+              className={`flex flex-col items-center gap-1.5 py-1.5 sm:py-2 rounded-xl transition-all ${
                 selectedCategory === cat.id
                   ? "bg-[#2E7D32]/10 scale-95"
                   : "active:scale-95"
@@ -159,7 +162,7 @@ export default function CustomerHome() {
               >
                 {iconMap[cat.icon] || <MoreHorizontal className="w-5 h-5" />}
               </div>
-              <span className="text-[11px] text-gray-600 text-center leading-tight truncate w-full px-1">
+              <span className="text-[10px] sm:text-[11px] text-gray-600 text-center leading-tight truncate w-full px-0.5">
                 {cat.name}
               </span>
             </button>
@@ -271,9 +274,9 @@ function ProductCard({ product }: { product: any }) {
                 commerceName: product.commerceName,
               })
             }
-            className="w-7 h-7 bg-[#2E7D32] text-white rounded-lg flex items-center justify-center hover:bg-[#1B5E20] active:scale-90 transition-all"
+            className="w-8 h-8 bg-[#2E7D32] text-white rounded-xl flex items-center justify-center hover:bg-[#1B5E20] active:scale-90 transition-all shadow-sm"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-4 h-4 stroke-[2.5]" />
           </button>
         </div>
       </div>
@@ -286,15 +289,15 @@ function ProductCardGrid({ product }: { product: any }) {
   const { addItem } = useCart();
 
   return (
-    <div className="bg-white rounded-xl card-shadow overflow-hidden cursor-pointer" onClick={() => navigate(`/commerce/${product.commerceId}`)}>
+    <div className="bg-white rounded-2xl card-shadow overflow-hidden cursor-pointer active:scale-[0.98] transition-transform" onClick={() => navigate(`/commerce/${product.commerceId}`)}>
       <div
         className="h-28 bg-gray-100 bg-cover bg-center"
         style={{ backgroundImage: `url(${safeImage(product.image, "product")})` }}
       />
       <div className="p-2.5">
         <p className="text-xs text-gray-500 truncate">{product.commerceName}</p>
-        <p className="text-sm font-medium text-gray-800 truncate mt-0.5">{product.name}</p>
-        <div className="flex items-center justify-between mt-1.5">
+        <p className="text-sm font-semibold text-gray-800 truncate mt-0.5">{product.name}</p>
+        <div className="flex items-center justify-between mt-2">
           <span className="text-sm font-bold text-[#2E7D32]">${product.price}</span>
           <button
             onClick={(e) => {
@@ -308,9 +311,9 @@ function ProductCardGrid({ product }: { product: any }) {
                 commerceName: product.commerceName,
               });
             }}
-            className="w-7 h-7 bg-[#2E7D32] text-white rounded-lg flex items-center justify-center hover:bg-[#1B5E20] active:scale-90 transition-all"
+            className="w-8 h-8 bg-[#2E7D32] text-white rounded-xl flex items-center justify-center hover:bg-[#1B5E20] active:scale-90 transition-all shadow-sm"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-4 h-4 stroke-[2.5]" />
           </button>
         </div>
       </div>
@@ -325,34 +328,34 @@ function CommerceCard({ commerce }: { commerce: any }) {
   const featuredProducts = (products || []).filter((p: any) => p.isFeatured === "yes").slice(0, 3);
 
   return (
-    <div className="bg-white rounded-xl card-shadow overflow-hidden">
+    <div className="bg-white rounded-2xl card-shadow overflow-hidden">
       <div
-        className="h-28 bg-gray-100 bg-cover bg-center cursor-pointer active:scale-[0.98] transition-transform"
+        className="h-32 bg-gray-100 bg-cover bg-center cursor-pointer active:scale-[0.99] transition-transform relative"
         style={{ backgroundImage: `url(${safeImage(commerce.coverImage, "cover")})` }}
         onClick={() => navigate(`/commerce/${commerce.id}`)}
       >
-        <div className="flex justify-between items-start p-2">
+        <div className="flex justify-between items-start p-2.5">
           <span
-            className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-              commerce.isOpen === "open" ? "badge-open" : "badge-closed"
+            className={`text-xs font-semibold px-2.5 py-1 rounded-full shadow-sm backdrop-blur-md ${
+              commerce.isOpen === "open" ? "bg-green-600/90 text-white" : "bg-red-600/90 text-white"
             }`}
           >
             {commerce.isOpen === "open" ? "Abierto" : "Cerrado"}
           </span>
         </div>
       </div>
-      <div className="p-3 cursor-pointer" onClick={() => navigate(`/commerce/${commerce.id}`)}>
+      <div className="p-3.5 cursor-pointer" onClick={() => navigate(`/commerce/${commerce.id}`)}>
         <div className="flex items-start gap-3">
-          <img src={safeImage(commerce.logo, "logo")} alt="" className="w-10 h-10 rounded-full object-cover -mt-7 border-2 border-white shadow-sm" onError={(e) => { (e.target as HTMLImageElement).src = safeImage(null, "logo") }} />
+          <img src={safeImage(commerce.logo, "logo")} alt="" className="w-11 h-11 rounded-xl object-cover -mt-8 border-2 border-white shadow-md bg-white" onError={(e) => { (e.target as HTMLImageElement).src = safeImage(null, "logo") }} />
           <div className="flex-1 min-w-0">
-            <h3 className="font-medium text-gray-800 text-sm truncate">{commerce.name}</h3>
-            <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
-              <span className="flex items-center gap-0.5">
-                <Clock className="w-3 h-3" />
+            <h3 className="font-bold text-gray-800 text-sm truncate">{commerce.name}</h3>
+            <div className="flex items-center gap-3 mt-1 text-xs text-gray-500 font-medium">
+              <span className="flex items-center gap-1">
+                <Clock className="w-3.5 h-3.5 text-gray-400" />
                 {commerce.deliveryTime}
               </span>
-              <span className="flex items-center gap-0.5">
-                <Star className="w-3 h-3 text-[#FFC107]" />
+              <span className="flex items-center gap-1">
+                <Star className="w-3.5 h-3.5 text-[#FFC107] fill-[#FFC107]" />
                 {commerce.rating}
               </span>
               {commerce.minOrder && parseFloat(commerce.minOrder) > 0 && (
@@ -363,17 +366,17 @@ function CommerceCard({ commerce }: { commerce: any }) {
         </div>
       </div>
       {featuredProducts.length > 0 && (
-        <div className="border-t border-gray-100 p-3">
-          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+        <div className="border-t border-gray-100 p-3 bg-gray-50/50">
+          <div className="flex gap-2.5 overflow-x-auto no-scrollbar pb-1">
             {featuredProducts.map((product: any) => (
-              <div key={product.id} className="flex-shrink-0 w-32 bg-gray-50 rounded-lg p-2">
+              <div key={product.id} className="flex-shrink-0 w-36 bg-white rounded-xl p-2.5 border border-gray-100 shadow-sm">
                 <div
-                  className="w-full h-16 bg-gray-200 bg-cover bg-center rounded mb-1.5 cursor-pointer"
+                  className="w-full h-18 bg-gray-100 bg-cover bg-center rounded-lg mb-1.5 cursor-pointer"
                   style={{ backgroundImage: `url(${safeImage(product.image, "product")})` }}
                   onClick={() => navigate(`/commerce/${commerce.id}`)}
                 />
-                <p className="text-xs font-medium text-gray-800 truncate">{product.name}</p>
-                <div className="flex items-center justify-between mt-1">
+                <p className="text-xs font-semibold text-gray-800 truncate">{product.name}</p>
+                <div className="flex items-center justify-between mt-1.5">
                   <span className="text-xs font-bold text-[#2E7D32]">${product.price}</span>
                   <button
                     onClick={(e) => {
@@ -387,9 +390,9 @@ function CommerceCard({ commerce }: { commerce: any }) {
                         commerceName: commerce.name,
                       });
                     }}
-                    className="w-5 h-5 bg-[#2E7D32] text-white rounded flex items-center justify-center hover:bg-[#1B5E20] active:scale-90"
+                    className="w-7 h-7 bg-[#2E7D32] text-white rounded-lg flex items-center justify-center hover:bg-[#1B5E20] active:scale-90 transition-transform shadow-sm"
                   >
-                    <Plus className="w-3 h-3" />
+                    <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
                   </button>
                 </div>
               </div>

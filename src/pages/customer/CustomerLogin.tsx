@@ -34,20 +34,23 @@ export default function CustomerLogin() {
   };
 
   return (
-    <div className="mobile-container bg-white min-h-screen flex flex-col">
-      <div className="bg-[#2E7D32] px-4 pt-4 pb-12">
-        <div className="flex items-center justify-between mb-6">
-          <button onClick={() => navigate("/")} className="text-white/80 hover:text-white touch-target">
-            <ArrowLeft className="w-6 h-6" />
+    <div className="mobile-container bg-gray-50 min-h-screen flex flex-col pb-safe">
+      <div className="bg-[#2E7D32] px-4 pt-safe pb-10 shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+          <button 
+            onClick={() => navigate("/")} 
+            className="w-10 h-10 rounded-xl bg-white/15 text-white flex items-center justify-center active:scale-90 transition-transform"
+          >
+            <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-2">
             <ShoppingBag className="w-5 h-5 text-white" />
-            <span className="text-white font-semibold">YA LLEGA</span>
+            <span className="text-white font-bold tracking-tight">YA LLEGA</span>
           </div>
           <div className="w-10" />
         </div>
         <h1 className="text-2xl font-bold text-white text-center">Iniciar sesión</h1>
-        <p className="text-white/70 text-sm text-center mt-1">Ingresá tu número de celular</p>
+        <p className="text-white/80 text-sm text-center mt-1">Ingresá tu número de celular</p>
       </div>
 
       <div className="px-4 -mt-6">

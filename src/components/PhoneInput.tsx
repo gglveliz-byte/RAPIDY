@@ -82,29 +82,29 @@ export default function PhoneInput({ value, onChange, error }: PhoneInputProps) 
   return (
     <div>
       <label className="text-sm font-medium text-gray-700 mb-1 block">Número de celular</label>
-      <div className={`relative flex border rounded-xl overflow-hidden focus-within:border-[#2E7D32] focus-within:ring-1 focus-within:ring-[#2E7D32] ${error ? "border-red-400" : "border-gray-200"}`}>
+      <div className={`relative flex border rounded-xl focus-within:border-[#2E7D32] focus-within:ring-1 focus-within:ring-[#2E7D32] ${error ? "border-red-400" : "border-gray-200"}`}>
         <div ref={dropdownRef} className="relative shrink-0">
           <button
             type="button"
             onClick={() => setOpen(!open)}
-            className="h-12 px-3 flex items-center gap-1.5 bg-gray-50 hover:bg-gray-100 transition-colors text-sm"
+            className="h-12 px-3 flex items-center gap-1.5 bg-gray-50 hover:bg-gray-100 transition-colors text-sm rounded-l-xl"
           >
             <span className="text-base">{getFlagEmoji(selected.code)}</span>
             <span className="font-medium text-gray-700">{selected.dial}</span>
             <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`} />
           </button>
           {open && (
-            <div className="absolute top-full left-0 mt-1 w-72 max-h-60 overflow-y-auto bg-white border border-gray-200 rounded-xl shadow-lg z-50">
+            <div className="absolute top-full left-0 mt-1 w-64 max-w-[calc(100vw-3rem)] max-h-60 overflow-y-auto bg-white border border-gray-200 rounded-xl shadow-2xl z-50">
               {countries.map(c => (
                 <button
                   key={c.code}
                   type="button"
                   onClick={() => selectCountry(c)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm hover:bg-gray-50 transition-colors text-left ${selected.code === c.code ? "bg-green-50 text-[#2E7D32] font-medium" : "text-gray-700"}`}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm hover:bg-gray-50 active:bg-gray-100 transition-colors text-left ${selected.code === c.code ? "bg-green-50 text-[#2E7D32] font-semibold" : "text-gray-700"}`}
                 >
                   <span className="text-base">{getFlagEmoji(c.code)}</span>
                   <span className="flex-1 truncate">{c.name}</span>
-                  <span className="text-gray-400">{c.dial}</span>
+                  <span className="text-xs text-gray-400 font-mono">{c.dial}</span>
                 </button>
               ))}
             </div>
@@ -117,7 +117,7 @@ export default function PhoneInput({ value, onChange, error }: PhoneInputProps) 
             value={localNumber}
             onChange={(e) => handleNumberChange(e.target.value)}
             placeholder="Ej: 555-123-4567"
-            className="w-full h-12 pl-9 pr-4 text-sm outline-none"
+            className="w-full h-12 pl-9 pr-4 text-base outline-none rounded-r-xl"
           />
         </div>
       </div>

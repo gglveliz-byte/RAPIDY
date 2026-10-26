@@ -174,60 +174,63 @@ export default function Cart() {
   }
 
   return (
-    <div className="mobile-container bg-gray-50 h-dvh flex flex-col">
+    <div className="mobile-container bg-gray-50 h-screen h-[100dvh] flex flex-col">
       {/* Header */}
-      <div className="bg-white px-4 py-3 flex items-center gap-3 border-b border-gray-100 shrink-0">
-        <button onClick={() => navigate("/home")} className="touch-target">
+      <div className="bg-white/95 backdrop-blur-md px-4 pt-safe-top pb-3 flex items-center gap-3 border-b border-gray-100 shrink-0 shadow-xs">
+        <button 
+          onClick={() => navigate("/home")} 
+          className="w-9 h-9 rounded-xl flex items-center justify-center text-gray-600 hover:bg-gray-100 active:scale-90 transition-transform"
+        >
           <ArrowLeft className="w-5 h-5 text-gray-600" />
         </button>
-        <h1 className="text-lg font-semibold text-gray-800">Carrito ({totalItems})</h1>
+        <h1 className="text-base font-bold text-gray-800">Carrito ({totalItems})</h1>
       </div>
 
       {/* Products list — scrollable */}
-      <div className="flex-1 overflow-y-auto px-4 mt-4 space-y-4 min-h-0">
+      <div className="flex-1 overflow-y-auto px-4 mt-3 space-y-3.5 min-h-0 pb-4">
         {Object.entries(grouped).map(([commerceId, group]) => (
-          <div key={commerceId} className="bg-white rounded-xl card-shadow overflow-hidden">
-            <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-100">
-              <h3 className="text-sm font-medium text-gray-700">{group.commerceName}</h3>
+          <div key={commerceId} className="bg-white rounded-2xl card-shadow overflow-hidden border border-gray-100/80">
+            <div className="px-4 py-2.5 bg-gray-50/80 border-b border-gray-100">
+              <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider">{group.commerceName}</h3>
             </div>
             <div className="divide-y divide-gray-50">
               {group.items.map((item) => (
-                <div key={item.productId} className="p-3 flex gap-3">
+                <div key={item.productId} className="p-3.5 flex gap-3">
                   <div
-                    className="w-14 h-14 rounded-lg bg-gray-100 bg-cover bg-center flex-shrink-0"
+                    className="w-16 h-16 rounded-xl bg-gray-100 bg-cover bg-center flex-shrink-0"
                     style={{ backgroundImage: `url(${item.image})` }}
                   />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between">
-                      <h4 className="text-sm font-medium text-gray-800 truncate pr-2">
+                      <h4 className="text-sm font-bold text-gray-800 truncate pr-2">
                         {item.name} {item.unitType === "kg" && <span className="text-xs text-gray-500 font-normal ml-1">({item.quantity} kg)</span>}
                       </h4>
                       <button
                         onClick={() => removeItem(item.productId)}
-                        className="text-gray-400 hover:text-red-500 transition-colors touch-target"
+                        className="text-gray-400 hover:text-red-500 active:scale-90 transition-all p-1 -mr-1"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
-                    <div className="flex items-center justify-between mt-2">
+                    <div className="flex items-center justify-between mt-2.5">
                       <span className="text-sm font-bold text-[#2E7D32]">
                         ${(parseFloat(item.price) * item.quantity).toFixed(2)}
                       </span>
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => updateQuantity(item.productId, item.quantity - (item.unitType === "kg" ? 0.1 : 1))}
-                          className="w-7 h-7 border border-gray-200 rounded-lg flex items-center justify-center text-gray-600 hover:bg-gray-50"
+                          className="w-8 h-8 rounded-xl bg-gray-100 flex items-center justify-center text-gray-700 hover:bg-gray-200 active:scale-90 transition-transform"
                         >
                           <Minus className="w-3.5 h-3.5" />
                         </button>
-                        <span className="text-sm font-medium w-6 text-center text-ellipsis overflow-hidden">
+                        <span className="text-xs font-bold min-w-[24px] text-center">
                           {item.unitType === "kg" ? Number(item.quantity).toFixed(2) : item.quantity}
                         </span>
                         <button
                           onClick={() => updateQuantity(item.productId, item.quantity + (item.unitType === "kg" ? 0.1 : 1))}
-                          className="w-7 h-7 bg-[#2E7D32] rounded-lg flex items-center justify-center text-white hover:bg-[#1B5E20]"
+                          className="w-8 h-8 rounded-xl bg-[#2E7D32] flex items-center justify-center text-white hover:bg-[#1B5E20] active:scale-90 transition-transform shadow-xs"
                         >
-                          <Plus className="w-3.5 h-3.5" />
+                          <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
                         </button>
                       </div>
                     </div>
@@ -240,7 +243,7 @@ export default function Cart() {
       </div>
 
       {/* Fixed bottom bar: payment + totals + confirm */}
-      <div className="bg-white border-t border-gray-100 px-4 pt-3 pb-4 z-50 space-y-3 shrink-0">
+      <div className="bg-white border-t border-gray-100 px-4 pt-3.5 pb-safe z-40 space-y-3 shrink-0 shadow-lg">
         {invalidItems.length > 0 && (
           <div className="p-3 bg-red-50 rounded-xl border border-red-100 flex items-start gap-2">
             <span className="text-red-500 font-bold mt-0.5">!</span>
@@ -251,39 +254,39 @@ export default function Cart() {
         <div className="flex gap-2">
           <button
             onClick={() => setPaymentMethod("cash")}
-            className={`flex-1 h-10 flex items-center justify-center gap-1.5 rounded-lg border-2 text-xs font-medium transition-all ${
+            className={`flex-1 h-11 flex items-center justify-center gap-2 rounded-xl border-2 text-xs font-bold transition-all ${
               paymentMethod === "cash"
                 ? "border-[#2E7D32] bg-green-50 text-[#2E7D32]"
-                : "border-gray-200 text-gray-500"
+                : "border-gray-200 text-gray-500 hover:border-gray-300"
             }`}
           >
-            <Banknote className="w-3.5 h-3.5" />
+            <Banknote className="w-4 h-4 stroke-[2.2]" />
             Efectivo
           </button>
           <button
             onClick={() => setPaymentMethod("transfer")}
-            className={`flex-1 h-10 flex items-center justify-center gap-1.5 rounded-lg border-2 text-xs font-medium transition-all ${
+            className={`flex-1 h-11 flex items-center justify-center gap-2 rounded-xl border-2 text-xs font-bold transition-all ${
               paymentMethod === "transfer"
                 ? "border-[#2E7D32] bg-green-50 text-[#2E7D32]"
-                : "border-gray-200 text-gray-500"
+                : "border-gray-200 text-gray-500 hover:border-gray-300"
             }`}
           >
-            <CreditCard className="w-3.5 h-3.5" />
+            <CreditCard className="w-4 h-4 stroke-[2.2]" />
             Transferencia
           </button>
         </div>
 
         {/* Totals */}
-        <div className="space-y-1">
-          <div className="flex justify-between text-sm text-gray-600">
+        <div className="space-y-1 bg-gray-50/70 p-3 rounded-xl border border-gray-100">
+          <div className="flex justify-between text-xs text-gray-600 font-medium">
             <span>Subtotal</span>
-            <span>${subtotal.toFixed(2)}</span>
+            <span className="font-semibold text-gray-800">${subtotal.toFixed(2)}</span>
           </div>
-          <div className="flex justify-between text-sm text-gray-600">
-            <span>Envio</span>
-            <span>${deliveryFee.toFixed(2)}</span>
+          <div className="flex justify-between text-xs text-gray-600 font-medium">
+            <span>Envío</span>
+            <span className="font-semibold text-gray-800">${deliveryFee.toFixed(2)}</span>
           </div>
-          <div className="flex justify-between text-base font-bold text-gray-800 pt-1 border-t border-gray-100">
+          <div className="flex justify-between text-base font-bold text-gray-800 pt-1.5 border-t border-gray-200/80">
             <span>Total</span>
             <span className="text-[#2E7D32]">${total}</span>
           </div>
@@ -292,21 +295,21 @@ export default function Cart() {
         <button
           onClick={handleCheckout}
           disabled={loading || invalidItems.length > 0}
-          className="w-full h-12 bg-[#2E7D32] text-white font-medium rounded-xl hover:bg-[#1B5E20] active:scale-[0.98] transition-all disabled:opacity-50 touch-target"
+          className="w-full h-12 bg-[#2E7D32] text-white font-bold text-sm rounded-xl hover:bg-[#1B5E20] active:scale-[0.98] transition-all disabled:opacity-50 shadow-md"
         >
-          {loading ? "Procesando..." : "Confirmar pedido"}
+          {loading ? "Procesando..." : "Continuar con la entrega"}
         </button>
       </div>
 
       {/* Address modal */}
       {showAddressModal && customer && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-xs">
           <div
-            className="absolute inset-0 bg-black/40"
+            className="absolute inset-0"
             onClick={() => setShowAddressModal(false)}
           />
-          <div className="relative bg-white w-full max-w-[480px] rounded-t-2xl sm:rounded-2xl p-5 animate-slide-up max-h-[80vh] overflow-y-auto">
-            <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-4 sm:hidden" />
+          <div className="relative bg-white w-full max-w-[480px] rounded-t-3xl sm:rounded-2xl p-5 pb-safe animate-slide-up max-h-[85dvh] overflow-y-auto shadow-2xl">
+            <div className="w-12 h-1 bg-gray-300 rounded-full mx-auto mb-4 sm:hidden" />
 
             <h2 className="text-base font-semibold text-gray-800 mb-4">Dirección de entrega</h2>
 

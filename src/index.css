@@ -106,11 +106,41 @@ input, textarea {
 
 /* Mobile app styles */
 .mobile-container {
+  width: 100%;
+  min-width: 320px;
   max-width: 480px;
   margin: 0 auto;
   min-height: 100vh;
+  min-height: 100dvh;
   position: relative;
   overflow-x: hidden;
+}
+
+/* Prevent iOS Safari auto-zoom on focus by enforcing 16px minimum font size */
+@media screen and (max-width: 768px) {
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+}
+
+/* Safe Area Utilities for Notches, Dynamic Island, and System Gesture Bars */
+.pt-safe {
+  padding-top: max(1rem, env(safe-area-inset-top, 16px));
+}
+.pt-safe-top {
+  padding-top: max(0.75rem, env(safe-area-inset-top, 12px));
+}
+.pb-safe {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom, 16px));
+}
+.pb-safe-nav {
+  padding-bottom: calc(5.75rem + env(safe-area-inset-bottom, 16px)) !important;
+}
+.bottom-safe-nav {
+  bottom: max(0.75rem, env(safe-area-inset-bottom, 12px));
+}
+.safe-top {
+  top: max(0.75rem, env(safe-area-inset-top, 12px));
 }
 
 /* Animation classes */

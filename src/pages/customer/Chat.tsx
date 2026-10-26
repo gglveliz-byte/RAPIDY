@@ -71,21 +71,24 @@ export default function Chat() {
   const isMine = (msg: any) => msg.senderType === "customer";
 
   return (
-    <div className="mobile-container min-h-screen flex flex-col notranslate">
+    <div className="mobile-container h-screen h-[100dvh] flex flex-col notranslate">
       {/* Header */}
-      <div className="bg-[#075E54] px-4 py-3 flex items-center gap-3 shadow-md z-10">
-        <button onClick={() => navigate(-1)} className="touch-target">
+      <div className="bg-[#075E54] px-4 pt-safe-top pb-3 flex items-center gap-3 shadow-md z-10 shrink-0">
+        <button 
+          onClick={() => navigate(-1)} 
+          className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center text-white active:scale-90 transition-transform"
+        >
           <ArrowLeft className="w-5 h-5 text-white" />
         </button>
-        <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-          <span className="text-white text-sm font-medium">
+        <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center font-bold">
+          <span className="text-white text-sm">
             {customer?.firstName?.charAt(0) || "?"}
           </span>
         </div>
         <div className="flex-1">
-          <h1 className="text-sm font-semibold text-white">Pedido #{orderId}</h1>
-          <p className="text-xs text-white/70 flex items-center gap-1">
-            <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
+          <h1 className="text-sm font-bold text-white">Pedido #{orderId}</h1>
+          <p className="text-xs text-white/80 flex items-center gap-1.5 font-medium">
+            <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
             En línea
           </p>
         </div>
@@ -159,7 +162,7 @@ export default function Chat() {
       </div>
 
       {/* Input */}
-      <div className="bg-[#F0F0F0] px-3 py-2 flex items-center gap-2">
+      <div className="bg-[#F0F0F0] px-3 pt-2 pb-safe flex items-center gap-2 border-t border-gray-200 shrink-0">
         <input
           type="text"
           value={text}
@@ -171,7 +174,7 @@ export default function Chat() {
         <button
           onClick={() => handleSend(text)}
           disabled={sendChat.isPending || !text.trim()}
-          className="w-11 h-11 bg-[#075E54] rounded-full flex items-center justify-center text-white hover:bg-[#064E47] disabled:opacity-40 transition-all flex-shrink-0 shadow-sm"
+          className="w-11 h-11 bg-[#075E54] rounded-full flex items-center justify-center text-white hover:bg-[#064E47] active:scale-90 disabled:opacity-40 transition-all flex-shrink-0 shadow-sm"
         >
           <Send className="w-4 h-4" />
         </button>

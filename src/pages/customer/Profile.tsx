@@ -92,18 +92,18 @@ export default function CustomerProfile() {
   };
 
   return (
-    <div className="mobile-container bg-gray-50 min-h-screen pb-20">
+    <div className="mobile-container bg-gray-50 min-h-screen pb-safe-nav">
       {/* Header */}
-      <div className="bg-[#2E7D32] px-4 pt-4 pb-8">
+      <div className="bg-[#2E7D32] px-4 pt-safe pb-8 shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
-            <User className="w-8 h-8 text-white" />
+          <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center border border-white/20 shadow-sm">
+            <User className="w-7 h-7 text-white stroke-[2.2]" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white">
+            <h1 className="text-xl font-bold text-white tracking-tight">
               {customer.firstName} {customer.lastName}
             </h1>
-            <div className="flex items-center gap-2 text-white/70 text-sm mt-0.5">
+            <div className="flex items-center gap-1.5 text-white/80 text-xs mt-0.5 font-medium">
               <Phone className="w-3.5 h-3.5" />
               <span>{customer.phone}</span>
             </div>
@@ -252,16 +252,16 @@ export default function CustomerProfile() {
       </div>
 
       {/* Actions */}
-      <div className="px-4 mt-6">
+      <div className="px-4 mt-6 mb-6">
         <button
           onClick={() => {
             logout();
             navigate("/customer-login");
           }}
-          className="w-full bg-white rounded-xl card-shadow p-4 flex items-center gap-3 text-red-500 hover:bg-red-50 transition-colors"
+          className="w-full bg-white rounded-2xl card-shadow p-4 flex items-center justify-center gap-2 text-red-600 hover:bg-red-50 border border-red-100 active:scale-[0.98] transition-all font-semibold text-sm shadow-xs"
         >
-          <LogOut className="w-5 h-5" />
-          <span className="text-sm font-medium">Cerrar sesion</span>
+          <LogOut className="w-4 h-4 stroke-[2.2]" />
+          <span>Cerrar sesión</span>
         </button>
       </div>
 

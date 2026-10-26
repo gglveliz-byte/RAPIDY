@@ -74,14 +74,17 @@ export default function Register() {
   };
 
   return (
-    <div className="mobile-container bg-white min-h-screen">
+    <div className="mobile-container bg-gray-50 min-h-screen pb-safe">
       {/* Header */}
-      <div className="bg-[#2E7D32] px-4 pt-4 pb-8">
-        <button onClick={() => navigate("/")} className="text-white/80 hover:text-white mb-4 touch-target">
-          <ArrowLeft className="w-6 h-6" />
+      <div className="bg-[#2E7D32] px-4 pt-safe pb-8 shadow-sm">
+        <button 
+          onClick={() => navigate("/")} 
+          className="w-10 h-10 rounded-xl bg-white/15 text-white flex items-center justify-center active:scale-90 transition-transform mb-3"
+        >
+          <ArrowLeft className="w-5 h-5" />
         </button>
         <h1 className="text-2xl font-bold text-white">Crear cuenta</h1>
-        <p className="text-white/70 text-sm mt-1">Regístrate con tu número de celular</p>
+        <p className="text-white/80 text-sm mt-0.5">Regístrate con tu número de celular</p>
       </div>
 
       {/* Form */}

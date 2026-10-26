@@ -46,12 +46,15 @@ export default function CustomerSearch() {
   const isLoading = categoriesLoading || commercesLoading || productsLoading;
 
   return (
-    <div className="mobile-container bg-gray-50 min-h-screen pb-20">
+    <div className="mobile-container bg-gray-50 min-h-screen pb-safe-nav">
       {/* Header */}
-      <div className="bg-white px-4 pt-4 pb-3 sticky top-0 z-10 border-b border-gray-100">
-        <div className="flex items-center gap-3">
-          <button onClick={() => navigate("/home")} className="touch-target">
-            <ArrowLeft className="w-5 h-5 text-gray-600" />
+      <div className="bg-white/95 backdrop-blur-md px-4 pt-safe-top pb-3 sticky top-0 z-20 border-b border-gray-100 shadow-sm">
+        <div className="flex items-center gap-2.5">
+          <button 
+            onClick={() => navigate("/home")} 
+            className="w-9 h-9 rounded-xl flex items-center justify-center text-gray-600 hover:bg-gray-100 active:scale-90 transition-transform shrink-0"
+          >
+            <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -112,7 +115,7 @@ export default function CustomerSearch() {
         ) : !query && !selectedCategory ? (
           <>
             <h2 className="text-base font-semibold text-gray-800 mb-3">Productos populares</h2>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2 sm:gap-3">
               {featuredProducts.slice(0, 6).map((product) => (
                 <ProductSearchCard key={product.id} product={product} />
               ))}
@@ -125,7 +128,7 @@ export default function CustomerSearch() {
                 <h2 className="text-sm font-medium text-gray-500 mb-2">
                   Productos ({filteredProducts.length})
                 </h2>
-                <div className="grid grid-cols-2 gap-3 mb-4">
+                <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-4">
                   {filteredProducts.map((product) => (
                     <ProductSearchCard key={product.id} product={product} />
                   ))}
@@ -189,9 +192,9 @@ function ProductSearchCard({ product }: { product: any }) {
                 commerceName: product.commerceName,
               });
             }}
-            className="w-7 h-7 bg-[#2E7D32] text-white rounded-lg flex items-center justify-center hover:bg-[#1B5E20] active:scale-90 transition-all"
+            className="w-8 h-8 bg-[#2E7D32] text-white rounded-xl flex items-center justify-center hover:bg-[#1B5E20] active:scale-90 transition-transform shadow-sm"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-4 h-4 stroke-[2.5]" />
           </button>
         </div>
       </div>
