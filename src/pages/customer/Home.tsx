@@ -344,9 +344,14 @@ function CommerceCard({ commerce }: { commerce: any }) {
           </span>
         </div>
       </div>
-      <div className="p-3.5 cursor-pointer" onClick={() => navigate(`/commerce/${commerce.id}`)}>
+      <div className="p-3.5 cursor-pointer relative" onClick={() => navigate(`/commerce/${commerce.id}`)}>
         <div className="flex items-start gap-3">
-          <img src={safeImage(commerce.logo, "logo")} alt="" className="w-11 h-11 rounded-xl object-cover -mt-8 border-2 border-white shadow-md bg-white" onError={(e) => { (e.target as HTMLImageElement).src = safeImage(null, "logo") }} />
+          <img
+            src={safeImage(commerce.logo, "logo")}
+            alt={commerce.name}
+            className="w-14 h-14 rounded-full object-cover -mt-9 relative z-10 border-[3px] border-white shadow-md bg-white shrink-0"
+            onError={(e) => { (e.target as HTMLImageElement).src = safeImage(null, "logo") }}
+          />
           <div className="flex-1 min-w-0">
             <h3 className="font-bold text-gray-800 text-sm truncate">{commerce.name}</h3>
             <div className="flex items-center gap-3 mt-1 text-xs text-gray-500 font-medium">
