@@ -97,17 +97,17 @@ export default function AdminDrivers() {
             <>
               {/* Status Cards */}
               <div className="grid grid-cols-3 gap-2 lg:gap-3 mb-3 lg:mb-4 lg:shrink-0">
-                <div className="bg-green-50 rounded-xl p-2 lg:p-4 text-center">
-                  <p className="text-lg lg:text-2xl font-bold text-green-700">{onlineCount}</p>
-                  <p className="text-[10px] lg:text-xs text-green-600">En linea</p>
+                <div className="bg-green-50 border border-green-100 rounded-xl p-2 sm:p-3 lg:p-4 text-center shadow-xs">
+                  <p className="text-base sm:text-xl lg:text-2xl font-bold text-green-700 leading-tight">{onlineCount}</p>
+                  <p className="text-[10px] sm:text-xs text-green-600 font-medium">En línea</p>
                 </div>
-                <div className="bg-orange-50 rounded-xl p-2 lg:p-4 text-center">
-                  <p className="text-lg lg:text-2xl font-bold text-orange-700">{busyCount}</p>
-                  <p className="text-[10px] lg:text-xs text-orange-600">Ocupados</p>
+                <div className="bg-orange-50 border border-orange-100 rounded-xl p-2 sm:p-3 lg:p-4 text-center shadow-xs">
+                  <p className="text-base sm:text-xl lg:text-2xl font-bold text-orange-700 leading-tight">{busyCount}</p>
+                  <p className="text-[10px] sm:text-xs text-orange-600 font-medium">Ocupados</p>
                 </div>
-                <div className="bg-gray-50 rounded-xl p-2 lg:p-4 text-center">
-                  <p className="text-lg lg:text-2xl font-bold text-gray-700">{offlineCount}</p>
-                  <p className="text-[10px] lg:text-xs text-gray-500">Desconectados</p>
+                <div className="bg-gray-50 border border-gray-100 rounded-xl p-2 sm:p-3 lg:p-4 text-center shadow-xs">
+                  <p className="text-base sm:text-xl lg:text-2xl font-bold text-gray-700 leading-tight">{offlineCount}</p>
+                  <p className="text-[10px] sm:text-xs text-gray-500 font-medium">Desconectados</p>
                 </div>
               </div>
 
@@ -119,7 +119,7 @@ export default function AdminDrivers() {
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Buscar repartidor..."
-                  className="w-full h-9 lg:h-10 pl-9 pr-4 bg-white rounded-xl border border-gray-200 text-xs lg:text-sm focus:outline-none focus:ring-2 focus:ring-[#2E7D32]/20"
+                  className="w-full h-10 lg:h-11 pl-9 pr-4 bg-white rounded-xl border border-gray-200 text-xs lg:text-sm focus:outline-none focus:ring-2 focus:ring-[#2E7D32]/20"
                 />
               </div>
 
@@ -195,48 +195,53 @@ export default function AdminDrivers() {
                       <div key={d.id} className="bg-white rounded-xl card-shadow p-4 flex flex-col gap-3">
                         <div className="flex justify-between items-start">
                           <div className="flex items-center gap-3">
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${d.status === "online" ? "bg-green-100" : d.status === "busy" ? "bg-orange-100" : "bg-gray-100"}`}>
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${d.status === "online" ? "bg-green-100" : d.status === "busy" ? "bg-orange-100" : "bg-gray-100"}`}>
                               <Bike className={`w-5 h-5 ${d.status === "online" ? "text-green-600" : d.status === "busy" ? "text-orange-600" : "text-gray-500"}`} />
                             </div>
                             <div>
-                              <p className="font-medium text-gray-800 leading-tight">{d.name}</p>
+                              <p className="font-semibold text-gray-800 leading-tight">{d.name}</p>
                               <div className="flex items-center gap-1 text-xs text-gray-500">
                                 <Star className="w-3 h-3 text-[#FFC107]" />
                                 {d.rating || "4.5"}
                               </div>
                             </div>
                           </div>
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${d.status === "online" ? "bg-green-100 text-green-700" : d.status === "busy" ? "bg-orange-100 text-orange-700" : "bg-gray-100 text-gray-500"}`}>
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${d.status === "online" ? "bg-green-100 text-green-700" : d.status === "busy" ? "bg-orange-100 text-orange-700" : "bg-gray-100 text-gray-500"}`}>
                             {d.status === "online" ? "Online" : d.status === "busy" ? "Ocupado" : "Offline"}
                           </span>
                         </div>
                         
-                        <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div className="grid grid-cols-2 gap-2 text-sm bg-gray-50 p-2.5 rounded-xl border border-gray-100">
                           <div>
                             <span className="block text-[10px] text-gray-500">Teléfono</span>
-                            <span className="text-gray-800">{d.phone}</span>
+                            <span className="text-gray-800 font-medium text-xs sm:text-sm">{d.phone}</span>
                           </div>
                           <div>
                             <span className="block text-[10px] text-gray-500">Vehículo</span>
-                            <span className="text-gray-800">{d.vehicle || "-"}</span>
+                            <span className="text-gray-800 font-medium text-xs sm:text-sm truncate block">{d.vehicle || "-"}</span>
                           </div>
                           <div>
                             <span className="block text-[10px] text-gray-500">Patente</span>
-                            <span className="text-gray-800">{d.licensePlate || "-"}</span>
+                            <span className="text-gray-800 font-medium text-xs sm:text-sm">{d.licensePlate || "-"}</span>
                           </div>
                           <div>
-                            <span className="block text-[10px] text-gray-500">Ubicación</span>
-                            <span className="text-gray-800">
-                              {d.currentLat && d.currentLng ? `${parseFloat(d.currentLat).toFixed(4)}, ${parseFloat(d.currentLng).toFixed(4)}` : "-"}
-                            </span>
+                            <span className="block text-[10px] text-gray-500">Comisión</span>
+                            <span className="text-[#2E7D32] font-semibold text-xs sm:text-sm">{d.commissionRate || "75"}%</span>
                           </div>
                         </div>
 
-                        <div className="pt-3 border-t border-gray-100 flex justify-end gap-2">
-                          <button onClick={() => openEdit(d)} className="px-3 py-2 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
+                        <div className="pt-2 border-t border-gray-100 flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => openEdit(d)}
+                            className="min-h-[40px] px-4 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-xl transition-all active:scale-95"
+                          >
                             Editar
                           </button>
-                          <button onClick={() => handleDeleteDriver(d.id, d.name)} className="p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors" title="Eliminar">
+                          <button
+                            onClick={() => handleDeleteDriver(d.id, d.name)}
+                            className="min-h-[40px] w-10 flex items-center justify-center text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-all active:scale-95"
+                            title="Eliminar"
+                          >
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
@@ -252,21 +257,32 @@ export default function AdminDrivers() {
 
       {/* Modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-gray-800">{editing ? "Editar repartidor" : "Nuevo repartidor"}</h2>
-              <button onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl w-full max-w-md p-4 sm:p-6 max-h-[90dvh] overflow-y-auto shadow-2xl">
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <h2 className="text-base sm:text-lg font-bold text-gray-800">{editing ? "Editar repartidor" : "Nuevo repartidor"}</h2>
+              <button
+                onClick={() => setShowForm(false)}
+                className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
             <p className="text-xs text-gray-500 mb-4 leading-relaxed">
               {editing 
                 ? "Edita los datos del repartidor, su vehículo o el porcentaje de comisión que gana por cada viaje que realiza." 
                 : "Registra a un nuevo repartidor en el sistema. Con el teléfono y la contraseña que ingreses aquí, el repartidor podrá iniciar sesión en su propia aplicación."}
             </p>
-            <form onSubmit={handleSave} className="space-y-4">
+            <form onSubmit={handleSave} className="space-y-3.5 sm:space-y-4">
               <div>
                 <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Nombre completo</label>
-                <input placeholder="Ej: Carlos Ramírez" value={form.name} onChange={(e) => setForm({...form, name: e.target.value})} className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32]" required />
+                <input
+                  placeholder="Ej: Carlos Ramírez"
+                  value={form.name}
+                  onChange={(e) => setForm({...form, name: e.target.value})}
+                  className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20"
+                  required
+                />
               </div>
               
               <div>
@@ -276,17 +292,34 @@ export default function AdminDrivers() {
 
               <div>
                 <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">{editing ? "Cambiar Contraseña (opcional)" : "Contraseña de acceso"}</label>
-                <input type="password" placeholder={editing ? "Dejar vacío para no cambiarla" : "Min. 6 caracteres"} value={form.password} onChange={(e) => setForm({...form, password: e.target.value})} className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32]" required={!editing} />
+                <input
+                  type="password"
+                  placeholder={editing ? "Dejar vacío para no cambiarla" : "Min. 6 caracteres"}
+                  value={form.password}
+                  onChange={(e) => setForm({...form, password: e.target.value})}
+                  className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20"
+                  required={!editing}
+                />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Vehículo</label>
-                  <input placeholder="Ej: Moto Honda 150" value={form.vehicle} onChange={(e) => setForm({...form, vehicle: e.target.value})} className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32]" />
+                  <input
+                    placeholder="Ej: Moto Honda 150"
+                    value={form.vehicle}
+                    onChange={(e) => setForm({...form, vehicle: e.target.value})}
+                    className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20"
+                  />
                 </div>
                 <div>
                   <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Patente</label>
-                  <input placeholder="Ej: ABC-123" value={form.licensePlate} onChange={(e) => setForm({...form, licensePlate: e.target.value})} className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32]" />
+                  <input
+                    placeholder="Ej: ABC-123"
+                    value={form.licensePlate}
+                    onChange={(e) => setForm({...form, licensePlate: e.target.value})}
+                    className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20"
+                  />
                 </div>
               </div>
 
@@ -299,13 +332,25 @@ export default function AdminDrivers() {
                   max="100"
                   value={form.commissionRate}
                   onChange={(e) => setForm({...form, commissionRate: e.target.value})}
-                  className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32]"
+                  className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20"
                 />
               </div>
 
-              <div className="flex gap-3 pt-4 border-t border-gray-100">
-                <button type="button" onClick={() => setShowForm(false)} className="flex-1 h-11 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50">Cancelar</button>
-                <button type="submit" disabled={saving} className="flex-1 h-11 bg-[#2E7D32] text-white rounded-xl text-sm font-medium hover:bg-[#1B5E20] transition-colors disabled:opacity-50">{saving ? "Guardando..." : "Guardar repartidor"}</button>
+              <div className="flex gap-2.5 sm:gap-3 pt-3 sm:pt-4 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setShowForm(false)}
+                  className="flex-1 h-11 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 active:scale-98 transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="flex-1 h-11 bg-[#2E7D32] text-white rounded-xl text-sm font-semibold hover:bg-[#1B5E20] transition-all active:scale-98 disabled:opacity-50 shadow-sm shadow-[#2E7D32]/20"
+                >
+                  {saving ? "Guardando..." : "Guardar repartidor"}
+                </button>
               </div>
             </form>
           </div>

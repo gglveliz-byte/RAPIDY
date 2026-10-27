@@ -1,7 +1,7 @@
 import type { FetchCreateContextFnOptions } from "@trpc/server/adapters/fetch";
 import type { Customer, User, Driver } from "@db/schema";
 import { verifyAccessToken } from "./customer-auth";
-import { verifyAdminToken } from "./admin-auth";
+import { verifyAdminToken, verifyAdminRefreshToken, setAdminCookie } from "./admin-auth";
 import { verifyDriverToken, refreshDriverAccessToken } from "./driver-auth";
 import { verifyMerchantToken, verifyMerchantRefreshToken } from "./merchant-auth";
 import { getDb } from "./queries/connection";
@@ -56,12 +56,23 @@ async function getCustomerFromCookie(headers: Headers, resHeaders: Headers): Pro
   return result[0] || null;
 }
 
-async function getAdminFromCookie(headers: Headers): Promise<User | null> {
+async function getAdminFromCookie(headers: Headers, resHeaders?: Headers): Promise<User | null> {
   const cookies = cookie.parse(headers.get("cookie") || "");
   const token = cookies["quickgo_admin_token"];
-  if (!token) return null;
+  const refreshToken = cookies["quickgo_admin_refresh"];
 
-  const adminId = await verifyAdminToken(token);
+  let adminId: number | null = null;
+  if (token) {
+    adminId = await verifyAdminToken(token);
+  }
+
+  if (!adminId && refreshToken) {
+    adminId = await verifyAdminRefreshToken(refreshToken);
+    if (adminId && resHeaders) {
+      await setAdminCookie(resHeaders, headers, adminId);
+    }
+  }
+
   if (!adminId) return null;
 
   const db = getDb();
@@ -137,7 +148,7 @@ export async function createContext(
   const ctx: TrpcContext = { req: opts.req, resHeaders: opts.resHeaders };
   try {
     ctx.customer = await getCustomerFromCookie(opts.req.headers, opts.resHeaders) ?? undefined;
-    ctx.admin = await getAdminFromCookie(opts.req.headers) ?? undefined;
+    ctx.admin = await getAdminFromCookie(opts.req.headers, opts.resHeaders) ?? undefined;
     ctx.driver = await getDriverFromCookie(opts.req.headers, opts.resHeaders) ?? undefined;
     ctx.merchant = await getMerchantFromCookie(opts.req.headers, opts.resHeaders) ?? undefined;
   } catch {}

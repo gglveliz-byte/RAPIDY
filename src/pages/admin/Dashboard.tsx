@@ -92,24 +92,24 @@ export default function AdminDashboard() {
 
   return (
     <AdminLayout>
-      <header className="bg-white border-b border-gray-200 px-3 lg:px-6 py-2 lg:py-3 flex items-center justify-between shrink-0">
+      <header className="bg-white border-b border-gray-200 px-3 lg:px-6 py-2.5 lg:py-3.5 flex items-center justify-between shrink-0">
         <h1 className="text-base lg:text-lg font-bold text-gray-800">Panel administrativo</h1>
         <div className="flex items-center gap-2 lg:gap-4">
-          <div className="hidden lg:flex items-center gap-2 text-xs text-gray-400">
-            <span className={`inline-block w-1.5 h-1.5 rounded-full ${connected ? "bg-green-500" : "bg-amber-500"}`} />
-            <span>{connected ? "En vivo" : "Reconectando..."}</span>
+          <div className="hidden sm:flex items-center gap-2 text-xs text-gray-400">
+            <span className={`inline-block w-2 h-2 rounded-full ${connected ? "bg-green-500 animate-pulse" : "bg-amber-500"}`} />
+            <span className="font-medium text-gray-600">{connected ? "En vivo" : "Reconectando..."}</span>
             <span className="text-gray-300 mx-1">|</span>
             <span>Actualizado hace {secondsAgo}s</span>
           </div>
           <button
             onClick={loadAll}
             disabled={refreshing}
-            className="flex items-center gap-1.5 text-xs text-[#2E7D32] font-medium hover:bg-green-50 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+            className="min-h-[36px] flex items-center gap-1.5 text-xs text-[#2E7D32] font-semibold hover:bg-green-50 px-3 py-1.5 rounded-xl border border-green-200 transition-colors disabled:opacity-50 active:scale-95 shadow-2xs"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
-            Recargar
+            <span>Recargar</span>
           </button>
-          <div className="w-7 h-7 lg:w-8 lg:h-8 bg-[#2E7D32] rounded-full flex items-center justify-center text-white text-xs lg:text-sm font-medium">A</div>
+          <div className="w-8 h-8 bg-[#2E7D32] rounded-full flex items-center justify-center text-white text-xs lg:text-sm font-bold shadow-xs">A</div>
         </div>
       </header>
 
@@ -117,11 +117,11 @@ export default function AdminDashboard() {
         {!kpi ? (
           <div className="text-center py-12 text-gray-500 text-sm">Cargando...</div>
         ) : (
-          <div className="lg:h-full lg:grid lg:grid-cols-3 gap-0 lg:gap-3 p-1.5 lg:p-3">
+          <div className="lg:h-full lg:grid lg:grid-cols-3 gap-0 lg:gap-3 p-2 sm:p-3 lg:p-4">
             {/* Left Column */}
-            <div className="lg:col-span-2 lg:overflow-y-auto space-y-1.5 lg:space-y-3 pb-14 lg:pb-0">
+            <div className="lg:col-span-2 lg:overflow-y-auto space-y-2 lg:space-y-3 pb-4 lg:pb-0">
               {/* KPI Cards */}
-              <div className="grid grid-cols-2 xl:grid-cols-4 gap-1.5 lg:gap-3">
+              <div className="grid grid-cols-2 xl:grid-cols-4 gap-2 lg:gap-3">
                 <KpiCard icon={ShoppingBag} label="Pedidos totales" value={String(kpi.totalOrders)} color="bg-blue-100 text-blue-600" />
                 <KpiCard icon={Store} label="Comercios" value={`${kpi.activeCommerces}/${kpi.totalCommerces}`} color="bg-green-100 text-green-600" />
                 <KpiCard icon={Truck} label="Repartidores (Activos)" value={String(kpi.onlineDrivers)} color="bg-orange-100 text-orange-600" />
@@ -129,33 +129,33 @@ export default function AdminDashboard() {
               </div>
 
               {/* Revenue + Sales Chart */}
-              <div className="bg-white rounded-xl card-shadow p-2 lg:p-4">
+              <div className="bg-white rounded-xl card-shadow p-3 lg:p-4">
                 <div className="flex items-center justify-between mb-2 lg:mb-3">
                   <div>
-                    <p className="text-[10px] lg:text-xs text-gray-500">Facturacion total</p>
-                    <p className="text-lg lg:text-2xl font-bold text-gray-800">${kpi.totalRevenue}</p>
+                    <p className="text-[10px] lg:text-xs text-gray-500 font-medium">Facturación total</p>
+                    <p className="text-xl lg:text-2xl font-black text-gray-900">${kpi.totalRevenue}</p>
                     {growthPercent !== null && (
-                      <div className={`flex items-center gap-1 mt-0.5 text-[10px] lg:text-xs ${growthPercent >= 0 ? "text-green-600" : "text-red-600"}`}>
-                        {growthPercent >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                      <div className={`flex items-center gap-1 mt-0.5 text-[10px] lg:text-xs font-semibold ${growthPercent >= 0 ? "text-green-600" : "text-red-600"}`}>
+                        {growthPercent >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
                         <span>{growthPercent >= 0 ? "+" : ""}{growthPercent}% vs periodo anterior</span>
                       </div>
                     )}
                   </div>
                   <div className="text-right">
-                    <p className="text-[10px] lg:text-xs text-gray-500">Comisiones</p>
-                    <p className="text-sm lg:text-lg font-bold text-[#2E7D32]">${kpi.totalCommission}</p>
+                    <p className="text-[10px] lg:text-xs text-gray-500 font-medium">Comisiones</p>
+                    <p className="text-base lg:text-xl font-extrabold text-[#2E7D32]">${kpi.totalCommission}</p>
                   </div>
                 </div>
-                <div className="flex items-center justify-between mb-2">
-                  <h2 className="text-xs lg:text-sm font-semibold text-gray-800">Ventas Totales de Comercios (Bruto)</h2>
-                  <div className="flex bg-gray-100 rounded-lg p-0.5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                  <h2 className="text-xs lg:text-sm font-bold text-gray-800">Ventas Totales de Comercios (Bruto)</h2>
+                  <div className="flex bg-gray-100 rounded-lg p-0.5 shrink-0 self-start sm:self-auto">
                     {(["day", "week", "month", "year"] as Period[]).map((p) => (
                       <button
                         key={p}
                         onClick={() => setPeriod(p)}
-                        className={`px-2 lg:px-3 py-1 text-[10px] lg:text-xs font-medium rounded-md transition-colors ${period === p ? "bg-white text-[#2E7D32] shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+                        className={`min-h-[28px] px-2.5 sm:px-3 py-1 text-[11px] sm:text-xs font-semibold rounded-md transition-all active:scale-95 ${period === p ? "bg-white text-[#2E7D32] shadow-xs" : "text-gray-500 hover:text-gray-800"}`}
                       >
-                        {p === "day" ? "Dia" : p === "week" ? "Semana" : p === "month" ? "Mes" : "Año"}
+                        {p === "day" ? "Día" : p === "week" ? "Semana" : p === "month" ? "Mes" : "Año"}
                       </button>
                     ))}
                   </div>
@@ -331,12 +331,12 @@ export default function AdminDashboard() {
             </div>
 
             {/* Right Column — scrollable tables */}
-            <div className="flex flex-col gap-3 lg:overflow-hidden mt-1.5 lg:mt-0 pb-14 lg:pb-0">
+            <div className="flex flex-col gap-3 lg:overflow-hidden mt-2 lg:mt-0 pb-4 lg:pb-0">
               {/* Commerce Commissions */}
               <div className="bg-white rounded-xl card-shadow flex-1 flex flex-col lg:overflow-hidden">
-                <div className="p-3 border-b border-gray-100 shrink-0">
-                  <h2 className="text-xs font-semibold text-gray-800 flex items-center gap-2">
-                    <Percent className="w-3.5 h-3.5 text-[#2E7D32]" />
+                <div className="p-3.5 border-b border-gray-100 shrink-0">
+                  <h2 className="text-xs sm:text-sm font-bold text-gray-800 flex items-center gap-2">
+                    <Percent className="w-4 h-4 text-[#2E7D32]" />
                     Comisiones por comercio
                   </h2>
                 </div>
@@ -367,7 +367,7 @@ export default function AdminDashboard() {
                       {commerceCommissions.map((c) => (
                         <div key={c.commerceId} className="flex items-center justify-between p-3 active:bg-gray-50 transition-colors">
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-green-50 flex items-center justify-center shrink-0">
+                            <div className="w-9 h-9 rounded-xl bg-green-50 flex items-center justify-center shrink-0">
                               <Store className="w-4 h-4 text-[#2E7D32]" />
                             </div>
                             <div>
@@ -390,9 +390,9 @@ export default function AdminDashboard() {
 
               {/* Driver Earnings */}
               <div className="bg-white rounded-xl card-shadow flex-1 flex flex-col lg:overflow-hidden">
-                <div className="p-3 border-b border-gray-100 shrink-0">
-                  <h2 className="text-xs font-semibold text-gray-800 flex items-center gap-2">
-                    <Truck className="w-3.5 h-3.5 text-[#2E7D32]" />
+                <div className="p-3.5 border-b border-gray-100 shrink-0">
+                  <h2 className="text-xs sm:text-sm font-bold text-gray-800 flex items-center gap-2">
+                    <Truck className="w-4 h-4 text-[#2E7D32]" />
                     Comisiones por Repartidor
                   </h2>
                 </div>
@@ -424,7 +424,7 @@ export default function AdminDashboard() {
                         <div key={d.driverId} className="p-3 active:bg-gray-50 transition-colors">
                           <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
+                              <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
                                 <Truck className="w-4 h-4 text-blue-600" />
                               </div>
                               <p className="text-sm font-semibold text-gray-800">{d.name}</p>
@@ -458,13 +458,13 @@ export default function AdminDashboard() {
 
 function KpiCard({ icon: Icon, label, value, color }: { icon: React.ElementType; label: string; value: string; color: string }) {
   return (
-    <div className="bg-white rounded-xl card-shadow p-2 lg:p-3 flex lg:flex-col items-center lg:items-start gap-2 lg:gap-0.5">
-      <div className={`w-7 h-7 lg:w-9 lg:h-9 rounded-lg flex shrink-0 items-center justify-center ${color}`}>
-        <Icon className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
+    <div className="bg-white rounded-xl card-shadow p-2.5 sm:p-3 lg:p-4 flex lg:flex-col items-center lg:items-start gap-2.5 lg:gap-1.5 transition-all">
+      <div className={`w-8 h-8 lg:w-9 lg:h-9 rounded-xl flex shrink-0 items-center justify-center ${color}`}>
+        <Icon className="w-4 h-4 lg:w-4.5 lg:h-4.5" />
       </div>
       <div className="min-w-0">
-        <p className="text-sm lg:text-xl font-bold text-gray-800 leading-tight">{value}</p>
-        <p className="text-[9px] lg:text-[11px] text-gray-500 leading-tight truncate">{label}</p>
+        <p className="text-base sm:text-lg lg:text-xl font-extrabold text-gray-900 leading-tight">{value}</p>
+        <p className="text-[10px] sm:text-xs text-gray-500 font-medium leading-tight truncate">{label}</p>
       </div>
     </div>
   );

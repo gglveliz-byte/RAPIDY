@@ -23,15 +23,21 @@ export default function AdminProducts() {
   const [activeTab, setActiveTab] = useState<"ranking" | "all">("ranking");
   const [allProducts, setAllProducts] = useState<any[]>([]);
   const [loadingAll, setLoadingAll] = useState(false);
+  const [errorAll, setErrorAll] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+
+  const loadAllProducts = () => {
+    setLoadingAll(true);
+    setErrorAll(null);
+    trpcCall<any[]>("admin.listProducts")
+      .then(setAllProducts)
+      .catch((e: any) => setErrorAll(e?.message || "No se pudieron cargar los productos"))
+      .finally(() => setLoadingAll(false));
+  };
 
   useEffect(() => {
     if (activeTab === "all" && allProducts.length === 0) {
-      setLoadingAll(true);
-      trpcCall<any[]>("admin.listProducts")
-        .then(setAllProducts)
-        .catch(() => alert("Error al cargar la lista de productos"))
-        .finally(() => setLoadingAll(false));
+      loadAllProducts();
     }
   }, [activeTab]);
 
@@ -60,49 +66,49 @@ export default function AdminProducts() {
           <div className="flex gap-2 mb-3 lg:mb-4 lg:shrink-0">
             <button
               onClick={() => setActiveTab("ranking")}
-              className={`px-3 lg:px-4 py-1.5 lg:py-2 rounded-lg text-xs lg:text-sm font-medium transition-colors ${
+              className={`min-h-[40px] px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all active:scale-95 shadow-xs ${
                 activeTab === "ranking"
-                  ? "bg-[#2E7D32] text-white"
-                  : "bg-white text-gray-600 card-shadow hover:bg-gray-50"
+                  ? "bg-[#2E7D32] text-white shadow-sm shadow-[#2E7D32]/20"
+                  : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
               }`}
             >
-              Mas vendidos
+              Más vendidos
             </button>
             <button
               onClick={() => setActiveTab("all")}
-              className={`px-3 lg:px-4 py-1.5 lg:py-2 rounded-lg text-xs lg:text-sm font-medium transition-colors ${
+              className={`min-h-[40px] px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all active:scale-95 shadow-xs ${
                 activeTab === "all"
-                  ? "bg-[#2E7D32] text-white"
-                  : "bg-white text-gray-600 card-shadow hover:bg-gray-50"
+                  ? "bg-[#2E7D32] text-white shadow-sm shadow-[#2E7D32]/20"
+                  : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
               }`}
             >
-              Todos
+              Todos los productos
             </button>
           </div>
 
           {activeTab === "ranking" && (
             <div className="lg:flex-1 lg:min-h-0 lg:flex lg:flex-col gap-2 lg:gap-3">
               {topProductsQuery.isLoading ? (
-                <div className="text-center py-10 text-gray-500">Cargando productos top...</div>
+                <div className="text-center py-10 text-gray-500 text-sm">Cargando productos top...</div>
               ) : (
                 <>
                   <div className="grid grid-cols-3 gap-2 lg:gap-4 lg:shrink-0">
-                <div className="bg-white rounded-xl card-shadow p-2 lg:p-5 text-center lg:text-left">
-                  <Package className="w-4 h-4 lg:w-5 lg:h-5 text-[#2E7D32] mb-1 lg:mb-2 mx-auto lg:mx-0" />
-                  <p className="text-lg lg:text-2xl font-bold text-gray-800">{totalProducts}</p>
-                  <p className="text-[10px] lg:text-xs text-gray-500 leading-tight">Prods. top</p>
-                </div>
-                <div className="bg-white rounded-xl card-shadow p-2 lg:p-5 text-center lg:text-left">
-                  <TrendingUp className="w-4 h-4 lg:w-5 lg:h-5 text-[#2E7D32] mb-1 lg:mb-2 mx-auto lg:mx-0" />
-                  <p className="text-lg lg:text-2xl font-bold text-gray-800">{totalSold.toLocaleString()}</p>
-                  <p className="text-[10px] lg:text-xs text-gray-500 leading-tight">U. vendidas</p>
-                </div>
-                <div className="bg-white rounded-xl card-shadow p-2 lg:p-5 text-center lg:text-left">
-                  <DollarSign className="w-4 h-4 lg:w-5 lg:h-5 text-[#2E7D32] mb-1 lg:mb-2 mx-auto lg:mx-0" />
-                  <p className="text-lg lg:text-2xl font-bold text-gray-800">${totalRevenue.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
-                  <p className="text-[10px] lg:text-xs text-gray-500 leading-tight">Ingresos</p>
-                </div>
-              </div>
+                    <div className="bg-white rounded-xl card-shadow p-2.5 sm:p-3 lg:p-5 text-center lg:text-left">
+                      <Package className="w-4 h-4 lg:w-5 lg:h-5 text-[#2E7D32] mb-1 lg:mb-2 mx-auto lg:mx-0" />
+                      <p className="text-base sm:text-xl lg:text-2xl font-extrabold text-gray-900 leading-tight">{totalProducts}</p>
+                      <p className="text-[10px] sm:text-xs text-gray-500 font-medium leading-tight">Prods. top</p>
+                    </div>
+                    <div className="bg-white rounded-xl card-shadow p-2.5 sm:p-3 lg:p-5 text-center lg:text-left">
+                      <TrendingUp className="w-4 h-4 lg:w-5 lg:h-5 text-[#2E7D32] mb-1 lg:mb-2 mx-auto lg:mx-0" />
+                      <p className="text-base sm:text-xl lg:text-2xl font-extrabold text-gray-900 leading-tight">{totalSold.toLocaleString()}</p>
+                      <p className="text-[10px] sm:text-xs text-gray-500 font-medium leading-tight">U. vendidas</p>
+                    </div>
+                    <div className="bg-white rounded-xl card-shadow p-2.5 sm:p-3 lg:p-5 text-center lg:text-left">
+                      <DollarSign className="w-4 h-4 lg:w-5 lg:h-5 text-[#2E7D32] mb-1 lg:mb-2 mx-auto lg:mx-0" />
+                      <p className="text-base sm:text-xl lg:text-2xl font-extrabold text-gray-900 leading-tight">${totalRevenue.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
+                      <p className="text-[10px] sm:text-xs text-gray-500 font-medium leading-tight">Ingresos</p>
+                    </div>
+                  </div>
 
               <div className="bg-white lg:bg-transparent lg:rounded-xl lg:card-shadow lg:overflow-hidden lg:flex-1 lg:min-h-0">
                 {/* Desktop Table View */}
@@ -188,19 +194,29 @@ export default function AdminProducts() {
               {/* Search bar */}
               <div className="bg-white rounded-xl card-shadow p-2 lg:p-4 lg:shrink-0">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input
                     type="text"
-                    placeholder="Buscar producto..."
+                    placeholder="Buscar producto por nombre..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="w-full pl-9 lg:pl-10 pr-4 py-1.5 lg:py-2 border border-gray-200 rounded-lg text-xs lg:text-sm focus:outline-none focus:ring-2 focus:ring-[#2E7D32]/30 focus:border-[#2E7D32]"
+                    className="w-full min-h-[44px] pl-10 pr-4 border border-gray-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#2E7D32]/30 focus:border-[#2E7D32] transition-colors"
                   />
                 </div>
               </div>
 
               <div className="bg-white lg:bg-transparent lg:rounded-xl lg:card-shadow lg:overflow-hidden lg:flex-1 lg:min-h-0">
-                {loadingAll ? (
+                {errorAll ? (
+                  <div className="bg-white rounded-xl p-6 text-center">
+                    <p className="text-sm font-medium text-red-600 mb-3">{errorAll}</p>
+                    <button
+                      onClick={loadAllProducts}
+                      className="min-h-[40px] px-4 py-2 bg-[#2E7D32] text-white rounded-xl text-xs sm:text-sm font-semibold hover:bg-[#1B5E20] transition-colors"
+                    >
+                      Reintentar
+                    </button>
+                  </div>
+                ) : loadingAll ? (
                   <div className="flex items-center justify-center py-16 bg-white rounded-xl">
                     <div className="w-6 h-6 border-2 border-[#2E7D32] border-t-transparent rounded-full animate-spin" />
                   </div>

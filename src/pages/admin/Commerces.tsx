@@ -284,14 +284,26 @@ export default function AdminCommerces() {
                           </div>
                         </div>
 
-                        <div className="pt-3 border-t border-gray-100 flex justify-end gap-2">
-                          <button onClick={() => toggleStatus(c.id)} className="p-2 text-gray-400 hover:text-[#2E7D32] bg-gray-50 hover:bg-green-50 rounded-lg transition-colors" title={c.status === "active" ? "Suspender" : "Activar"}>
-                            {c.status === "active" || c.status === "pending" ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        <div className="pt-3 border-t border-gray-100 flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => toggleStatus(c.id)}
+                            className="min-h-[40px] px-3 flex items-center gap-1.5 text-xs font-semibold text-gray-700 hover:text-[#2E7D32] bg-gray-100 hover:bg-green-50 rounded-xl transition-all active:scale-95"
+                            title={c.status === "active" ? "Suspender" : "Activar"}
+                          >
+                            {c.status === "active" || c.status === "pending" ? <EyeOff className="w-4 h-4 text-amber-600" /> : <Eye className="w-4 h-4 text-green-600" />}
+                            <span>{c.status === "active" ? "Pausar" : "Activar"}</span>
                           </button>
-                          <button onClick={() => openEdit(c)} className="px-3 py-2 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
+                          <button
+                            onClick={() => openEdit(c)}
+                            className="min-h-[40px] px-3.5 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-xl transition-all active:scale-95"
+                          >
                             Editar
                           </button>
-                          <button onClick={() => openDeleteConfirm(c)} className="p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors" title="Eliminar">
+                          <button
+                            onClick={() => openDeleteConfirm(c)}
+                            className="min-h-[40px] w-10 flex items-center justify-center text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-all active:scale-95"
+                            title="Eliminar"
+                          >
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
@@ -307,81 +319,146 @@ export default function AdminCommerces() {
 
       {/* Modal Nuevo Comercio (crea usuario merchant) */}
       {showNewMerchant && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-gray-800">Nuevo comercio</h2>
-              <button onClick={() => setShowNewMerchant(false)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl w-full max-w-md p-4 sm:p-6 max-h-[90dvh] overflow-y-auto shadow-2xl">
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <h2 className="text-base sm:text-lg font-bold text-gray-800">Nuevo comercio</h2>
+              <button
+                onClick={() => setShowNewMerchant(false)}
+                className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
-            <p className="text-xs text-gray-500 mb-4 leading-relaxed">Crea los credenciales de acceso para este negocio. Con este email y contraseña, el dueño del local podrá entrar a su propio panel para agregar sus productos y ver sus ventas.</p>
-            <form onSubmit={handleCreateMerchant} className="space-y-4">
+            <p className="text-xs text-gray-500 mb-4 leading-relaxed">
+              Crea los credenciales de acceso para este negocio. Con este email y contraseña, el dueño del local podrá entrar a su propio panel para agregar sus productos y ver sus ventas.
+            </p>
+            <form onSubmit={handleCreateMerchant} className="space-y-3.5 sm:space-y-4">
               <div>
                 <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Nombre Comercial</label>
-                <input placeholder="Ej: Pizzería Don Juan" value={merchantForm.name} onChange={(e) => setMerchantForm({...merchantForm, name: e.target.value})} className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32]" required />
+                <input
+                  placeholder="Ej: Pizzería Don Juan"
+                  value={merchantForm.name}
+                  onChange={(e) => setMerchantForm({...merchantForm, name: e.target.value})}
+                  className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20"
+                  required
+                />
               </div>
               <div>
                 <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Correo de Acceso (Email)</label>
-                <input type="email" placeholder="contacto@pizzeria.com" value={merchantForm.email} onChange={(e) => setMerchantForm({...merchantForm, email: e.target.value})} className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32]" required />
+                <input
+                  type="email"
+                  placeholder="contacto@pizzeria.com"
+                  value={merchantForm.email}
+                  onChange={(e) => setMerchantForm({...merchantForm, email: e.target.value})}
+                  className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20"
+                  required
+                />
               </div>
               <div>
                 <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Contraseña temporal</label>
-                <input type="password" placeholder="Min. 6 caracteres" value={merchantForm.password} onChange={(e) => setMerchantForm({...merchantForm, password: e.target.value})} className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32]" required />
+                <input
+                  type="password"
+                  placeholder="Min. 6 caracteres"
+                  value={merchantForm.password}
+                  onChange={(e) => setMerchantForm({...merchantForm, password: e.target.value})}
+                  className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20"
+                  required
+                />
               </div>
               <div>
                 <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Categoría principal</label>
-                <select value={merchantForm.categoryId} onChange={(e) => setMerchantForm({...merchantForm, categoryId: e.target.value})} className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] bg-white" required>
+                <select
+                  value={merchantForm.categoryId}
+                  onChange={(e) => setMerchantForm({...merchantForm, categoryId: e.target.value})}
+                  className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20 bg-white"
+                  required
+                >
                   <option value="">Seleccionar categoría...</option>
                   {categories.map((cat) => (
                     <option key={cat.id} value={cat.id}>{cat.name}</option>
                   ))}
                 </select>
               </div>
-              <div className="flex gap-3 pt-4 border-t border-gray-100">
-                <button type="button" onClick={() => setShowNewMerchant(false)} className="flex-1 h-11 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50">Cancelar</button>
-                <button type="submit" disabled={saving} className="flex-1 h-11 bg-[#2E7D32] text-white rounded-xl text-sm font-medium hover:bg-[#1B5E20] disabled:opacity-50">{saving ? "Creando..." : "Crear comercio"}</button>
+              <div className="flex gap-2.5 sm:gap-3 pt-3 sm:pt-4 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setShowNewMerchant(false)}
+                  className="flex-1 h-11 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 active:scale-98 transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="flex-1 h-11 bg-[#2E7D32] text-white rounded-xl text-sm font-semibold hover:bg-[#1B5E20] disabled:opacity-50 active:scale-98 transition-all shadow-sm shadow-[#2E7D32]/20"
+                >
+                  {saving ? "Creando..." : "Crear comercio"}
+                </button>
               </div>
             </form>
           </div>
         </div>
       )}
 
+      {/* Modal Eliminar Comercio */}
       {confirmingDelete && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-sm p-6">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl w-full max-w-sm p-4 sm:p-6 shadow-2xl">
             {deleteError ? (
               <>
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-bold text-red-600">No se puede eliminar</h2>
-                  <button onClick={closeConfirm} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+                <div className="flex items-center justify-between mb-3 sm:mb-4">
+                  <h2 className="text-base sm:text-lg font-bold text-red-600">No se puede eliminar</h2>
+                  <button
+                    onClick={closeConfirm}
+                    className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
                 </div>
                 <p className="text-sm text-gray-600 mb-2">
                   El comercio <strong>{confirmingDelete.name}</strong> tiene pedidos que comparten productos con otros comercios.
                 </p>
-                <p className="text-sm text-gray-500 mb-5">
+                <p className="text-xs text-gray-500 mb-5 leading-relaxed">
                   {deleteError}
                 </p>
                 <div className="flex gap-2">
-                  <button onClick={closeConfirm} className="flex-1 h-10 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200">
+                  <button
+                    onClick={closeConfirm}
+                    className="flex-1 h-11 bg-gray-100 text-gray-700 text-sm font-medium rounded-xl hover:bg-gray-200 active:scale-98 transition-all"
+                  >
                     Cerrar
                   </button>
                 </div>
               </>
             ) : (
               <>
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-bold text-gray-800">Eliminar comercio</h2>
-                  <button onClick={closeConfirm} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+                <div className="flex items-center justify-between mb-3 sm:mb-4">
+                  <h2 className="text-base sm:text-lg font-bold text-gray-800">Eliminar comercio</h2>
+                  <button
+                    onClick={closeConfirm}
+                    className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
                 </div>
                 <p className="text-sm text-gray-600 mb-1">
                   ¿Estás seguro de eliminar <strong>{confirmingDelete.name}</strong>?
                 </p>
-                <p className="text-xs text-gray-400 mb-5">Se borrarán sus productos y datos relacionados. Esta acción no se puede deshacer.</p>
-                <div className="flex gap-2">
-                  <button onClick={confirmDelete} disabled={deleting} className="flex-1 h-10 bg-red-500 text-white text-sm font-medium rounded-lg hover:bg-red-600 disabled:opacity-50">
-                    {deleting ? "Eliminando..." : "Eliminar"}
-                  </button>
-                  <button onClick={closeConfirm} className="flex-1 h-10 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200">
+                <p className="text-xs text-gray-400 mb-5 leading-relaxed">Se borrarán sus productos y datos relacionados. Esta acción no se puede deshacer.</p>
+                <div className="flex gap-2.5 sm:gap-3">
+                  <button
+                    onClick={closeConfirm}
+                    className="flex-1 h-11 bg-gray-100 text-gray-700 text-sm font-medium rounded-xl hover:bg-gray-200 active:scale-98 transition-all"
+                  >
                     Cancelar
+                  </button>
+                  <button
+                    onClick={confirmDelete}
+                    disabled={deleting}
+                    className="flex-1 h-11 bg-red-600 text-white text-sm font-semibold rounded-xl hover:bg-red-700 disabled:opacity-50 active:scale-98 transition-all shadow-sm shadow-red-600/20"
+                  >
+                    {deleting ? "Eliminando..." : "Eliminar"}
                   </button>
                 </div>
               </>
@@ -392,26 +469,37 @@ export default function AdminCommerces() {
 
       {/* Modal Editar Comercio */}
       {showForm && editing && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-gray-800">Editar comercio</h2>
-              <button onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl w-full max-w-lg p-4 sm:p-6 max-h-[90dvh] overflow-y-auto shadow-2xl">
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <h2 className="text-base sm:text-lg font-bold text-gray-800">Editar comercio</h2>
+              <button
+                onClick={() => setShowForm(false)}
+                className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
-            <p className="text-xs text-gray-500 mb-4 leading-relaxed">Modifica la información pública del negocio, los horarios en los que operan, y el porcentaje exacto de comisión que les vas a cobrar por cada venta que hagan a través de la app.</p>
-            <form onSubmit={handleEdit} className="space-y-4">
-              {/* Logo + Portada */}
-              <div className="grid grid-cols-2 gap-3">
+            <p className="text-xs text-gray-500 mb-4 leading-relaxed">
+              Modifica la información pública del negocio, los horarios en los que operan, y el porcentaje exacto de comisión que les vas a cobrar por cada venta que hagan a través de la app.
+            </p>
+            <form onSubmit={handleEdit} className="space-y-3.5 sm:space-y-4">
+              {/* Logo + Portada: responsive 1 col mobile, 2 col sm+ */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-gray-50 p-3 rounded-xl border border-gray-100">
                 <div>
-                  <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Logo del Comercio</label>
-                  <div className="flex gap-2 items-start">
-                    {editForm.logo && (
-                      <div className="w-14 h-14 rounded-lg overflow-hidden border border-gray-200 flex-shrink-0">
+                  <label className="text-[10px] uppercase font-bold text-gray-500 mb-1.5 block">Logo del Comercio</label>
+                  <div className="flex gap-2.5 items-center">
+                    {editForm.logo ? (
+                      <div className="w-14 h-14 rounded-xl overflow-hidden border border-gray-200 shrink-0 bg-white shadow-xs">
                         <img src={editForm.logo} alt="logo" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
                       </div>
+                    ) : (
+                      <div className="w-14 h-14 rounded-xl bg-gray-200 flex items-center justify-center shrink-0 text-gray-400">
+                        <Store className="w-6 h-6" />
+                      </div>
                     )}
-                    <label className="flex items-center gap-1.5 text-sm text-[#2E7D32] cursor-pointer hover:text-[#1B5E20]">
-                      <Camera className="w-4 h-4" />
+                    <label className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-[#2E7D32] cursor-pointer hover:text-[#1B5E20] bg-white px-3 py-2 rounded-lg border border-green-200 hover:bg-green-50 transition-colors">
+                      <Camera className="w-4 h-4 shrink-0" />
                       {editForm.logo ? "Cambiar" : "Subir"}
                       <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
                         const f = e.target.files?.[0];
@@ -421,15 +509,19 @@ export default function AdminCommerces() {
                   </div>
                 </div>
                 <div>
-                  <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Foto de Portada</label>
-                  <div className="flex gap-2 items-start">
-                    {editForm.coverImage && (
-                      <div className="w-14 h-14 rounded-lg overflow-hidden border border-gray-200 flex-shrink-0">
+                  <label className="text-[10px] uppercase font-bold text-gray-500 mb-1.5 block">Foto de Portada</label>
+                  <div className="flex gap-2.5 items-center">
+                    {editForm.coverImage ? (
+                      <div className="w-14 h-14 rounded-xl overflow-hidden border border-gray-200 shrink-0 bg-white shadow-xs">
                         <img src={editForm.coverImage} alt="cover" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
                       </div>
+                    ) : (
+                      <div className="w-14 h-14 rounded-xl bg-gray-200 flex items-center justify-center shrink-0 text-gray-400">
+                        <Camera className="w-6 h-6" />
+                      </div>
                     )}
-                    <label className="flex items-center gap-1.5 text-sm text-[#2E7D32] cursor-pointer hover:text-[#1B5E20]">
-                      <Camera className="w-4 h-4" />
+                    <label className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-[#2E7D32] cursor-pointer hover:text-[#1B5E20] bg-white px-3 py-2 rounded-lg border border-green-200 hover:bg-green-50 transition-colors">
+                      <Camera className="w-4 h-4 shrink-0" />
                       {editForm.coverImage ? "Cambiar" : "Subir"}
                       <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
                         const f = e.target.files?.[0];
@@ -442,29 +534,54 @@ export default function AdminCommerces() {
 
               <div>
                 <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Nombre Público</label>
-                <input placeholder="Nombre que verán los clientes" value={editForm.name} onChange={(e) => setEditForm({...editForm, name: e.target.value})} className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32]" required />
+                <input
+                  placeholder="Nombre que verán los clientes"
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({...editForm, name: e.target.value})}
+                  className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20"
+                  required
+                />
               </div>
               
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Teléfono</label>
-                  <input placeholder="Para contacto" value={editForm.phone} onChange={(e) => setEditForm({...editForm, phone: e.target.value})} className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32]" />
+                  <input
+                    placeholder="Para contacto"
+                    value={editForm.phone}
+                    onChange={(e) => setEditForm({...editForm, phone: e.target.value})}
+                    className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20"
+                  />
                 </div>
                 <div>
                   <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Email</label>
-                  <input placeholder="Correo público" value={editForm.email} onChange={(e) => setEditForm({...editForm, email: e.target.value})} className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32]" />
+                  <input
+                    placeholder="Correo público"
+                    value={editForm.email}
+                    onChange={(e) => setEditForm({...editForm, email: e.target.value})}
+                    className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20"
+                  />
                 </div>
               </div>
 
               <div>
                 <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Dirección física</label>
-                <input placeholder="Calle y número" value={editForm.address} onChange={(e) => setEditForm({...editForm, address: e.target.value})} className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32]" />
+                <input
+                  placeholder="Calle y número"
+                  value={editForm.address}
+                  onChange={(e) => setEditForm({...editForm, address: e.target.value})}
+                  className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20"
+                />
               </div>
               
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Categoría</label>
-                  <select value={editForm.categoryId} onChange={(e) => setEditForm({...editForm, categoryId: e.target.value})} className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] bg-white">
+                  <select
+                    value={editForm.categoryId}
+                    onChange={(e) => setEditForm({...editForm, categoryId: e.target.value})}
+                    className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20 bg-white"
+                  >
                     <option value="">Seleccione...</option>
                     {categories.map((cat) => (
                       <option key={cat.id} value={cat.id}>{cat.name}</option>
@@ -473,47 +590,95 @@ export default function AdminCommerces() {
                 </div>
                 <div>
                   <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Disponibilidad</label>
-                  <select value={editForm.isOpen} onChange={(e) => setEditForm({...editForm, isOpen: e.target.value})} className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] bg-white">
+                  <select
+                    value={editForm.isOpen}
+                    onChange={(e) => setEditForm({...editForm, isOpen: e.target.value})}
+                    className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20 bg-white"
+                  >
                     <option value="open">Abierto recibiendo pedidos</option>
                     <option value="closed">Cerrado actualmente</option>
                   </select>
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              {/* Commission, Rating, MinOrder: 1 col on mobile, 3 col on sm+ */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Comisión (%)</label>
-                  <input placeholder="Ej: 10" value={editForm.commissionRate} onChange={(e) => setEditForm({...editForm, commissionRate: e.target.value})} className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32]" />
+                  <input
+                    placeholder="Ej: 10"
+                    value={editForm.commissionRate}
+                    onChange={(e) => setEditForm({...editForm, commissionRate: e.target.value})}
+                    className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20"
+                  />
                 </div>
                 <div>
                   <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Rating (Estrellas)</label>
-                  <input placeholder="Ej: 4.5" value={editForm.rating} onChange={(e) => setEditForm({...editForm, rating: e.target.value})} className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32]" />
+                  <input
+                    placeholder="Ej: 4.5"
+                    value={editForm.rating}
+                    onChange={(e) => setEditForm({...editForm, rating: e.target.value})}
+                    className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20"
+                  />
                 </div>
                 <div>
                   <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Pedido Mín ($)</label>
-                  <input placeholder="Ej: 5.00" value={editForm.minOrder} onChange={(e) => setEditForm({...editForm, minOrder: e.target.value})} className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32]" />
+                  <input
+                    placeholder="Ej: 5.00"
+                    value={editForm.minOrder}
+                    onChange={(e) => setEditForm({...editForm, minOrder: e.target.value})}
+                    className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20"
+                  />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Tiempo de entrega</label>
-                  <input placeholder="Ej: 30-45 min" value={editForm.deliveryTime} onChange={(e) => setEditForm({...editForm, deliveryTime: e.target.value})} className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32]" />
+                  <input
+                    placeholder="Ej: 30-45 min"
+                    value={editForm.deliveryTime}
+                    onChange={(e) => setEditForm({...editForm, deliveryTime: e.target.value})}
+                    className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20"
+                  />
                 </div>
                 <div>
                   <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Horarios de atención</label>
-                  <input placeholder="Ej: Lun-Vie 9-21" value={editForm.openHours} onChange={(e) => setEditForm({...editForm, openHours: e.target.value})} className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32]" />
+                  <input
+                    placeholder="Ej: Lun-Vie 9-21"
+                    value={editForm.openHours}
+                    onChange={(e) => setEditForm({...editForm, openHours: e.target.value})}
+                    className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20"
+                  />
                 </div>
               </div>
 
               <div>
                 <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Descripción breve</label>
-                <textarea placeholder="De qué trata este negocio..." value={editForm.description} onChange={(e) => setEditForm({...editForm, description: e.target.value})} rows={2} className="w-full px-4 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] resize-none" />
+                <textarea
+                  placeholder="De qué trata este negocio..."
+                  value={editForm.description}
+                  onChange={(e) => setEditForm({...editForm, description: e.target.value})}
+                  rows={2}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20 resize-none"
+                />
               </div>
               
-              <div className="flex gap-3 pt-4 border-t border-gray-100">
-                <button type="button" onClick={() => setShowForm(false)} className="flex-1 h-11 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50">Cancelar</button>
-                <button type="submit" disabled={saving} className="flex-1 h-11 bg-[#2E7D32] text-white rounded-xl text-sm font-medium hover:bg-[#1B5E20] disabled:opacity-50">{saving ? "Guardando..." : "Guardar cambios"}</button>
+              <div className="flex gap-2.5 sm:gap-3 pt-3 sm:pt-4 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setShowForm(false)}
+                  className="flex-1 h-11 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 active:scale-98 transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="flex-1 h-11 bg-[#2E7D32] text-white rounded-xl text-sm font-semibold hover:bg-[#1B5E20] disabled:opacity-50 active:scale-98 transition-all shadow-sm shadow-[#2E7D32]/20"
+                >
+                  {saving ? "Guardando..." : "Guardar cambios"}
+                </button>
               </div>
             </form>
           </div>

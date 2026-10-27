@@ -269,3 +269,12 @@ input, textarea {
   border-bottom: 0;
   margin-bottom: -4px;
 }
+
+/* Hide debug floating overlays on mobile */
+@media (max-width: 768px) {
+  button[aria-label="Open Tanstack query devtools"],
+  .tsqd-parent-container {
+    display: none !important;
+  }
+}
+
