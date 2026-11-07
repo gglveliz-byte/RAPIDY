@@ -308,8 +308,8 @@ export default function CommerceProfile() {
           </div>
 
           {/* Avatar and Store Title */}
-          <div className="px-3 min-[360px]:px-5 pb-3 min-[360px]:pb-4 -mt-9 min-[360px]:-mt-10">
-            <div className="flex items-end gap-3">
+          <div className="px-3 min-[360px]:px-5 pb-3 min-[360px]:pb-4">
+            <div className="flex items-center gap-3 -mt-9 min-[360px]:-mt-10">
               <div className="relative w-18 h-18 min-[360px]:w-20 min-[360px]:h-20 rounded-2xl bg-white border-4 border-white shadow-md overflow-hidden flex-shrink-0 flex items-center justify-center">
                 {form.logo ? (
                   <img
@@ -329,7 +329,7 @@ export default function CommerceProfile() {
                 </label>
               </div>
 
-              <div className="flex-1 min-w-0 pb-1">
+              <div className="flex-1 min-w-0 pt-9 min-[360px]:pt-10">
                 <h2 className="text-sm min-[360px]:text-base font-extrabold text-slate-800 truncate">
                   {form.name || commerce?.name}
                 </h2>

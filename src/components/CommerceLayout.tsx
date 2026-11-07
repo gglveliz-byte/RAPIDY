@@ -130,10 +130,16 @@ export default function CommerceLayout({ children }: { children: ReactNode }) {
         </div>
       </aside>
 
-      {/* Mobile Top Header (Fixed so it never hides on scroll) */}
-      <header className="md:hidden fixed top-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 min-[380px]:px-5 pt-[max(env(safe-area-inset-top,0px),2.25rem)] pb-3 flex items-center justify-between shadow-xs">
+      {/* Mobile Top Header (Fixed so it never hides on scroll, with safe-area spacing for notch/status bar) */}
+      <header
+        className="md:hidden fixed top-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 min-[380px]:px-5 pb-3 flex items-center justify-between shadow-xs transition-all"
+        style={{
+          paddingTop: "max(env(safe-area-inset-top, 0px), 44px)",
+          minHeight: "calc(max(env(safe-area-inset-top, 0px), 44px) + 52px)",
+        }}
+      >
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 min-[380px]:w-9 min-[380px]:h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-xs min-[380px]:text-sm flex-shrink-0 shadow-2xs">
+          <div className="w-8 h-8 min-[380px]:w-9 min-[380px]:h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-xs min-[380px]:text-sm flex-shrink-0 shadow-xs">
             {storeName.charAt(0).toUpperCase()}
           </div>
           <div className="min-w-0">
@@ -153,15 +159,20 @@ export default function CommerceLayout({ children }: { children: ReactNode }) {
           onClick={handleLogout}
           title="Cerrar sesión"
           aria-label="Cerrar sesión de mi comercio"
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-slate-600 hover:text-red-600 hover:bg-red-50 border border-slate-200 hover:border-red-200 active:scale-95 transition-all text-xs font-semibold flex-shrink-0 shadow-2xs"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-slate-600 hover:text-red-600 hover:bg-red-50 border border-slate-200 hover:border-red-200 active:scale-95 transition-all text-xs font-semibold flex-shrink-0 shadow-2xs"
         >
           <LogOut className="w-3.5 h-3.5 text-red-500" />
           <span className="text-red-600">Salir</span>
         </button>
       </header>
 
-      {/* Main Content Area (with top padding to account for fixed header) */}
-      <main className="flex-1 md:ml-64 pt-[calc(max(env(safe-area-inset-top,0px),2.25rem)+3.5rem)] md:pt-0 pb-20 min-[360px]:pb-24 md:pb-8 overflow-x-hidden">
+      {/* Main Content Area (with top padding to account for fixed header + elegant breathing room) */}
+      <main
+        className="flex-1 md:ml-64 md:pt-0 pb-24 md:pb-8 overflow-x-hidden"
+        style={{
+          paddingTop: "calc(max(env(safe-area-inset-top, 0px), 44px) + 60px)",
+        }}
+      >
         {children}
       </main>
 
