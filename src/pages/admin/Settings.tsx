@@ -9,8 +9,9 @@ import {
   Download,
   FileSpreadsheet,
   FileText,
+  LogOut,
 } from "lucide-react";
-import { useGetAdminReports, useUpdateSetting } from "@/hooks/useDeliveryData";
+import { useGetAdminReports, useUpdateSetting, trpcMutate } from "@/hooks/useDeliveryData";
 import { trpc } from "@/providers/trpc";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -129,14 +130,30 @@ export default function AdminSettings() {
     }
   };
 
+  const handleLogout = async () => {
+    await trpcMutate("login.logout", {}).catch(() => {});
+    localStorage.removeItem("qs_session");
+    navigate("/login");
+  };
+
   return (
     <AdminLayout>
-      <header className="bg-white border-b border-gray-200 px-3 lg:px-4 py-2 lg:py-4">
-        <div className="flex items-center gap-2 lg:gap-3">
-          <button onClick={() => navigate("/admin")} className="touch-target">
-            <ArrowLeft className="w-4 h-4 lg:w-5 lg:h-5 text-gray-600" />
+      <header className="bg-white border-b border-gray-200 px-3 lg:px-4 pt-safe-top pb-2 lg:py-4">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 lg:gap-3 min-w-0">
+            <button onClick={() => navigate("/admin")} className="touch-target shrink-0">
+              <ArrowLeft className="w-4 h-4 lg:w-5 lg:h-5 text-gray-600" />
+            </button>
+            <h1 className="text-base lg:text-lg font-bold text-gray-800 truncate">Configuración</h1>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors border border-red-200 shrink-0 shadow-2xs active:scale-95"
+            title="Cerrar sesión"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span className="hidden xs:inline sm:inline">Cerrar sesión</span>
           </button>
-          <h1 className="text-base lg:text-lg font-bold text-gray-800">Configuracion</h1>
         </div>
       </header>
 
@@ -311,6 +328,21 @@ export default function AdminSettings() {
                   </div>
                 ))}
               </div>
+            </div>
+
+            {/* Logout Card */}
+            <div className="bg-red-50/70 border border-red-200/80 rounded-2xl p-4 sm:p-5 flex items-center justify-between gap-3 shadow-xs">
+              <div>
+                <h3 className="text-xs sm:text-sm font-bold text-red-900">Sesión de Administrador</h3>
+                <p className="text-[11px] text-red-600 font-medium">Cierra tu sesión en este dispositivo</p>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-red-600 text-white text-xs font-bold rounded-xl shadow-xs hover:bg-red-700 active:scale-95 transition-all shrink-0"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Cerrar sesión</span>
+              </button>
             </div>
           </>
         )}

@@ -146,17 +146,17 @@ export default function AdminCommerces() {
 
   return (
     <AdminLayout>
-      <header className="bg-white border-b border-gray-200 px-3 lg:px-4 py-2 lg:py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 lg:gap-3">
-            <button onClick={() => navigate("/admin")} className="touch-target">
+      <header className="bg-white border-b border-gray-200 px-3 lg:px-4 pt-safe-top pb-2 lg:py-4">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 lg:gap-3 min-w-0">
+            <button onClick={() => navigate("/admin")} className="touch-target shrink-0">
               <ArrowLeft className="w-4 h-4 lg:w-5 lg:h-5 text-gray-600" />
             </button>
-            <h1 className="text-base lg:text-lg font-bold text-gray-800">Comercios</h1>
+            <h1 className="text-base lg:text-lg font-bold text-gray-800 truncate">Comercios</h1>
           </div>
-          <button onClick={openNewMerchant} className="flex items-center gap-1.5 lg:gap-2 bg-[#2E7D32] text-white px-3 lg:px-4 py-1.5 lg:py-2 rounded-xl text-xs lg:text-sm font-medium hover:bg-[#1B5E20] transition-colors">
+          <button onClick={openNewMerchant} className="flex items-center gap-1.5 lg:gap-2 bg-[#2E7D32] text-white px-3 lg:px-4 py-1.5 lg:py-2 rounded-xl text-xs lg:text-sm font-medium hover:bg-[#1B5E20] transition-colors shrink-0 shadow-xs">
             <Plus className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
-            Nuevo
+            <span>Nuevo</span>
           </button>
         </div>
       </header>
@@ -319,72 +319,79 @@ export default function AdminCommerces() {
 
       {/* Modal Nuevo Comercio (crea usuario merchant) */}
       {showNewMerchant && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl w-full max-w-md p-4 sm:p-6 max-h-[90dvh] overflow-y-auto shadow-2xl">
-            <div className="flex items-center justify-between mb-3 sm:mb-4">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center z-[70] p-2.5 sm:p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl w-full max-w-md max-h-[80dvh] sm:max-h-[85dvh] flex flex-col shadow-2xl border border-gray-100 overflow-hidden my-auto">
+            {/* Sticky Header */}
+            <div className="flex items-center justify-between p-3.5 sm:p-5 border-b border-gray-100 shrink-0 bg-white">
               <h2 className="text-base sm:text-lg font-bold text-gray-800">Nuevo comercio</h2>
               <button
                 onClick={() => setShowNewMerchant(false)}
-                className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <p className="text-xs text-gray-500 mb-4 leading-relaxed">
-              Crea los credenciales de acceso para este negocio. Con este email y contraseña, el dueño del local podrá entrar a su propio panel para agregar sus productos y ver sus ventas.
-            </p>
-            <form onSubmit={handleCreateMerchant} className="space-y-3.5 sm:space-y-4">
-              <div>
-                <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Nombre Comercial</label>
-                <input
-                  placeholder="Ej: Pizzería Don Juan"
-                  value={merchantForm.name}
-                  onChange={(e) => setMerchantForm({...merchantForm, name: e.target.value})}
-                  className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20"
-                  required
-                />
+
+            {/* Scrollable Form Body */}
+            <form onSubmit={handleCreateMerchant} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <div className="p-3.5 sm:p-5 overflow-y-auto flex-1 space-y-3.5 overscroll-contain">
+                <p className="text-xs text-gray-500 leading-relaxed">
+                  Crea los credenciales de acceso para este negocio. Con este email y contraseña, el dueño del local podrá entrar a su propio panel para agregar sus productos y ver sus ventas.
+                </p>
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Nombre Comercial</label>
+                  <input
+                    placeholder="Ej: Pizzería Don Juan"
+                    value={merchantForm.name}
+                    onChange={(e) => setMerchantForm({...merchantForm, name: e.target.value})}
+                    className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Correo de Acceso (Email)</label>
+                  <input
+                    type="email"
+                    placeholder="contacto@pizzeria.com"
+                    value={merchantForm.email}
+                    onChange={(e) => setMerchantForm({...merchantForm, email: e.target.value})}
+                    className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Contraseña temporal</label>
+                  <input
+                    type="password"
+                    placeholder="Min. 6 caracteres"
+                    value={merchantForm.password}
+                    onChange={(e) => setMerchantForm({...merchantForm, password: e.target.value})}
+                    className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Categoría principal</label>
+                  <select
+                    value={merchantForm.categoryId}
+                    onChange={(e) => setMerchantForm({...merchantForm, categoryId: e.target.value})}
+                    className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20 bg-white"
+                    required
+                  >
+                    <option value="">Seleccionar categoría...</option>
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
-              <div>
-                <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Correo de Acceso (Email)</label>
-                <input
-                  type="email"
-                  placeholder="contacto@pizzeria.com"
-                  value={merchantForm.email}
-                  onChange={(e) => setMerchantForm({...merchantForm, email: e.target.value})}
-                  className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20"
-                  required
-                />
-              </div>
-              <div>
-                <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Contraseña temporal</label>
-                <input
-                  type="password"
-                  placeholder="Min. 6 caracteres"
-                  value={merchantForm.password}
-                  onChange={(e) => setMerchantForm({...merchantForm, password: e.target.value})}
-                  className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20"
-                  required
-                />
-              </div>
-              <div>
-                <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Categoría principal</label>
-                <select
-                  value={merchantForm.categoryId}
-                  onChange={(e) => setMerchantForm({...merchantForm, categoryId: e.target.value})}
-                  className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20 bg-white"
-                  required
-                >
-                  <option value="">Seleccionar categoría...</option>
-                  {categories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>{cat.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex gap-2.5 sm:gap-3 pt-3 sm:pt-4 border-t border-gray-100">
+
+              {/* Sticky Action Footer */}
+              <div className="p-3.5 sm:p-5 border-t border-gray-100 bg-gray-50/90 shrink-0 flex gap-2.5">
                 <button
                   type="button"
                   onClick={() => setShowNewMerchant(false)}
-                  className="flex-1 h-11 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 active:scale-98 transition-all"
+                  className="flex-1 h-11 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-white active:scale-98 transition-all"
                 >
                   Cancelar
                 </button>
@@ -403,8 +410,8 @@ export default function AdminCommerces() {
 
       {/* Modal Eliminar Comercio */}
       {confirmingDelete && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl w-full max-w-sm p-4 sm:p-6 shadow-2xl">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-[70] p-3 sm:p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl w-full max-w-sm p-4 sm:p-6 shadow-2xl border border-gray-100 my-auto">
             {deleteError ? (
               <>
                 <div className="flex items-center justify-between mb-3 sm:mb-4">
@@ -469,21 +476,25 @@ export default function AdminCommerces() {
 
       {/* Modal Editar Comercio */}
       {showForm && editing && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl w-full max-w-lg p-4 sm:p-6 max-h-[90dvh] overflow-y-auto shadow-2xl">
-            <div className="flex items-center justify-between mb-3 sm:mb-4">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center z-[70] p-2.5 sm:p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl w-full max-w-lg max-h-[80dvh] sm:max-h-[85dvh] flex flex-col shadow-2xl border border-gray-100 overflow-hidden my-auto">
+            {/* Sticky Header */}
+            <div className="flex items-center justify-between p-3.5 sm:p-5 border-b border-gray-100 shrink-0 bg-white">
               <h2 className="text-base sm:text-lg font-bold text-gray-800">Editar comercio</h2>
               <button
                 onClick={() => setShowForm(false)}
-                className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <p className="text-xs text-gray-500 mb-4 leading-relaxed">
-              Modifica la información pública del negocio, los horarios en los que operan, y el porcentaje exacto de comisión que les vas a cobrar por cada venta que hagan a través de la app.
-            </p>
-            <form onSubmit={handleEdit} className="space-y-3.5 sm:space-y-4">
+
+            {/* Scrollable Form Body */}
+            <form onSubmit={handleEdit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <div className="p-3.5 sm:p-5 overflow-y-auto flex-1 space-y-3.5 overscroll-contain">
+                <p className="text-xs text-gray-500 leading-relaxed">
+                  Modifica la información pública del negocio, los horarios en los que operan, y el porcentaje exacto de comisión que les vas a cobrar por cada venta que hagan a través de la app.
+                </p>
               {/* Logo + Portada: responsive 1 col mobile, 2 col sm+ */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-gray-50 p-3 rounded-xl border border-gray-100">
                 <div>
@@ -664,11 +675,14 @@ export default function AdminCommerces() {
                 />
               </div>
               
-              <div className="flex gap-2.5 sm:gap-3 pt-3 sm:pt-4 border-t border-gray-100">
+              </div>
+              
+              {/* Sticky Action Footer */}
+              <div className="p-3.5 sm:p-5 border-t border-gray-100 bg-gray-50/90 shrink-0 flex gap-2.5">
                 <button
                   type="button"
                   onClick={() => setShowForm(false)}
-                  className="flex-1 h-11 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 active:scale-98 transition-all"
+                  className="flex-1 h-11 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-white active:scale-98 transition-all"
                 >
                   Cancelar
                 </button>

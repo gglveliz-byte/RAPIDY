@@ -1,88 +1,212 @@
-import type { ReactNode } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import { useNavigate, useLocation } from "react-router";
 import {
   LayoutDashboard, ShoppingBag, Package, BarChart3,
-  LogOut, User,
+  LogOut, User, Store,
 } from "lucide-react";
-import { trpcMutate } from "@/hooks/useDeliveryData";
+import { trpcMutate, useMerchantCommerceId, useCommerceOrders } from "@/hooks/useDeliveryData";
 
 const navItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/commerce" },
+  { icon: LayoutDashboard, label: "Inicio", path: "/commerce" },
   { icon: ShoppingBag, label: "Pedidos", path: "/commerce/orders" },
   { icon: Package, label: "Productos", path: "/commerce/products" },
-  { icon: BarChart3, label: "Estadisticas", path: "/commerce/stats" },
+  { icon: BarChart3, label: "Estadísticas", path: "/commerce/stats" },
   { icon: User, label: "Perfil", path: "/commerce/profile" },
 ];
 
 export default function CommerceLayout({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const [storeName, setStoreName] = useState("Mi Comercio");
+
+  const { commerceId } = useMerchantCommerceId();
+  const { data: rawOrders } = useCommerceOrders(commerceId || 0);
+  
+  // Pending orders badge count (received or preparing)
+  const pendingCount = (rawOrders || []).filter(
+    (o) => o.status === "received" || o.status === "preparing"
+  ).length;
+
+  useEffect(() => {
+    try {
+      const storedUser = localStorage.getItem("merchant_user");
+      if (storedUser) {
+        const user = JSON.parse(storedUser);
+        if (user?.name) setStoreName(user.name);
+      }
+    } catch {
+      // fallback
+    }
+  }, []);
 
   const handleLogout = async () => {
-    await trpcMutate("login.logout", {}).catch(() => {});
+    try {
+      await trpcMutate("login.logout", {});
+    } catch {
+      // ignore
+    }
     localStorage.removeItem("merchant_user");
     localStorage.removeItem("qs_session");
     navigate("/login");
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      {/* Sidebar - desktop */}
-      <aside className="hidden md:flex w-64 bg-white border-r border-gray-200 flex-col fixed h-full z-30">
-        <div className="p-6 border-b border-gray-100">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-[#2E7D32] rounded-lg flex items-center justify-center">
-              <Package className="w-4 h-4 text-white" />
+    <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row text-slate-800 antialiased overflow-x-hidden">
+      
+      {/* Sidebar - Desktop */}
+      <aside className="hidden md:flex w-64 bg-white border-r border-slate-200 flex-col fixed inset-y-0 left-0 z-30 shadow-xs">
+        {/* Brand header */}
+        <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-emerald-600 rounded-xl flex items-center justify-center text-white shadow-sm shadow-emerald-600/30">
+              <Store className="w-5 h-5" />
             </div>
-            <span className="font-bold text-gray-800">YA LLEGA</span>
+            <div className="min-w-0">
+              <h2 className="font-bold text-slate-900 text-sm truncate leading-tight">YA LLEGA</h2>
+              <p className="text-[11px] text-slate-400 font-medium truncate">Panel Comercio</p>
+            </div>
           </div>
         </div>
-        <nav className="flex-1 p-4 space-y-1">
-          {navItems.map((item) => (
-            <button
-              key={item.path}
-              onClick={() => navigate(item.path)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                location.pathname === item.path
-                  ? "bg-[#2E7D32] text-white"
-                  : "text-gray-600 hover:bg-gray-100"
-              }`}
-            >
-              <item.icon className="w-5 h-5" />
-              {item.label}
-            </button>
-          ))}
+
+        {/* Store badge info */}
+        <div className="px-4 py-3 mx-3 my-2 bg-slate-50 border border-slate-200/60 rounded-xl flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center text-xs flex-shrink-0">
+            {storeName.charAt(0).toUpperCase()}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold text-slate-800 truncate">{storeName}</p>
+            <span className="inline-flex items-center gap-1 text-[10px] text-emerald-600 font-medium">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              En línea
+            </span>
+          </div>
+        </div>
+
+        {/* Navigation links */}
+        <nav className="flex-1 px-3 py-2 space-y-1">
+          {navItems.map((item) => {
+            const isActive = location.pathname === item.path;
+            const Icon = item.icon;
+            const isOrders = item.path === "/commerce/orders";
+            return (
+              <button
+                key={item.path}
+                type="button"
+                onClick={() => navigate(item.path)}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                  isActive
+                    ? "bg-emerald-600 text-white shadow-sm shadow-emerald-600/25"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                }`}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? "text-white" : "text-slate-400"}`} />
+                  <span className="truncate">{item.label}</span>
+                </div>
+                {isOrders && pendingCount > 0 && (
+                  <span
+                    className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                      isActive ? "bg-white text-emerald-700" : "bg-emerald-100 text-emerald-800"
+                    }`}
+                  >
+                    {pendingCount}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </nav>
-        <div className="p-4 border-t border-gray-100">
-          <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-red-500 hover:bg-red-50 rounded-lg transition-colors">
-            <LogOut className="w-5 h-5" />
-            Salir
+
+        {/* Logout button at bottom of desktop sidebar */}
+        <div className="p-3 border-t border-slate-100">
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-3.5 py-2.5 text-xs font-semibold text-red-600 hover:bg-red-50 rounded-xl transition-colors group"
+          >
+            <LogOut className="w-4 h-4 text-red-400 group-hover:text-red-600 transition-colors" />
+            <span>Cerrar sesión</span>
           </button>
         </div>
       </aside>
 
-      {/* Main content */}
-      <main className="flex-1 md:ml-64 pb-16 md:pb-0">
+      {/* Mobile Top Header (with Logout Button!) */}
+      <header className="md:hidden sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-2.5 min-[360px]:px-4 h-12 min-[360px]:h-13 flex items-center justify-between shadow-2xs">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-7 h-7 min-[360px]:w-8 min-[360px]:h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-xs flex-shrink-0 shadow-2xs">
+            {storeName.charAt(0).toUpperCase()}
+          </div>
+          <div className="min-w-0">
+            <h1 className="text-xs min-[360px]:text-sm font-bold text-slate-800 truncate leading-tight">
+              {storeName}
+            </h1>
+            <p className="text-[9px] min-[360px]:text-[10px] text-emerald-600 font-medium flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              Panel de Comercio
+            </p>
+          </div>
+        </div>
+
+        {/* Mobile Quick Logout Button */}
+        <button
+          type="button"
+          onClick={handleLogout}
+          title="Cerrar sesión"
+          aria-label="Cerrar sesión de mi comercio"
+          className="flex items-center gap-1 px-2 py-1 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-50 border border-slate-200 hover:border-red-200 active:scale-95 transition-all text-[10px] min-[360px]:text-xs font-semibold flex-shrink-0"
+        >
+          <LogOut className="w-3.5 h-3.5 text-red-500" />
+          <span className="hidden min-[360px]:inline text-red-600">Salir</span>
+        </button>
+      </header>
+
+      {/* Main Content Area */}
+      <main className="flex-1 md:ml-64 pb-16 min-[360px]:pb-20 md:pb-6 overflow-x-hidden">
         {children}
       </main>
 
-      {/* Bottom nav - mobile */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-gray-200 flex justify-around py-1 z-50">
-        {navItems.map((item) => (
-          <button
-            key={item.path}
-            onClick={() => navigate(item.path)}
-            className={`flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-lg transition-colors ${
-              location.pathname === item.path
-                ? "text-[#2E7D32]"
-                : "text-gray-400"
-            }`}
-          >
-            <item.icon className="w-5 h-5" />
-            <span className="text-[10px] font-medium">{item.label}</span>
-          </button>
-        ))}
+      {/* Bottom Nav - Mobile (Optimized for 240px wide!) */}
+      <nav
+        aria-label="Navegación principal móvil"
+        className="md:hidden fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-slate-200/90 z-40 shadow-[0_-4px_16px_rgba(0,0,0,0.04)] px-1 py-1"
+        style={{ paddingBottom: "max(0.25rem, env(safe-area-inset-bottom))" }}
+      >
+        <div className="flex items-center justify-around w-full max-w-lg mx-auto">
+          {navItems.map((item) => {
+            const isActive = location.pathname === item.path;
+            const Icon = item.icon;
+            const isOrders = item.path === "/commerce/orders";
+
+            return (
+              <button
+                key={item.path}
+                type="button"
+                onClick={() => navigate(item.path)}
+                className={`relative flex-1 flex flex-col items-center justify-center py-1 px-0.5 rounded-lg transition-all active:scale-95 ${
+                  isActive
+                    ? "text-emerald-700 font-bold bg-emerald-50/80"
+                    : "text-slate-400 hover:text-slate-600 font-medium"
+                }`}
+              >
+                <div className="relative">
+                  <Icon
+                    className={`w-4 h-4 min-[360px]:w-5 min-[360px]:h-5 transition-transform ${
+                      isActive ? "scale-110 text-emerald-700" : ""
+                    }`}
+                  />
+                  {isOrders && pendingCount > 0 && (
+                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full ring-2 ring-white" />
+                  )}
+                </div>
+                <span className="text-[8px] min-[320px]:text-[9px] min-[360px]:text-[10px] mt-0.5 truncate max-w-full tracking-tight">
+                  {item.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </nav>
+
     </div>
   );
 }

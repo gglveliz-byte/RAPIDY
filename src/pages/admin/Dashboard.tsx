@@ -3,10 +3,10 @@ import { useNavigate } from "react-router";
 import {
   ShoppingBag, Store, Users, Truck,
   TrendingUp, TrendingDown, Settings,
-  DollarSign, Percent, RefreshCw, ChevronRight,
+  DollarSign, Percent, RefreshCw, ChevronRight, LogOut,
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
-import { trpcCall } from "@/hooks/useDeliveryData";
+import { trpcCall, trpcMutate } from "@/hooks/useDeliveryData";
 import { useAdminSSE } from "@/hooks/useAdminSSE";
 import AdminLayout from "@/components/AdminLayout";
 
@@ -90,11 +90,22 @@ export default function AdminDashboard() {
     loadCharts(period);
   }, [period, loadCharts]);
 
+  const handleLogout = async () => {
+    await trpcMutate("login.logout", {}).catch(() => {});
+    localStorage.removeItem("qs_session");
+    navigate("/login");
+  };
+
   return (
     <AdminLayout>
-      <header className="bg-white border-b border-gray-200 px-3 lg:px-6 py-2.5 lg:py-3.5 flex items-center justify-between shrink-0">
-        <h1 className="text-base lg:text-lg font-bold text-gray-800">Panel administrativo</h1>
-        <div className="flex items-center gap-2 lg:gap-4">
+      <header className="bg-white border-b border-gray-200 px-3 lg:px-6 pt-safe-top pb-2.5 lg:py-3.5 flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-2 min-w-0">
+          <h1 className="text-sm sm:text-base lg:text-lg font-bold text-gray-800 truncate">
+            <span className="sm:hidden">Panel Admin</span>
+            <span className="hidden sm:inline">Panel administrativo</span>
+          </h1>
+        </div>
+        <div className="flex items-center gap-1.5 sm:gap-2 lg:gap-3 shrink-0">
           <div className="hidden sm:flex items-center gap-2 text-xs text-gray-400">
             <span className={`inline-block w-2 h-2 rounded-full ${connected ? "bg-green-500 animate-pulse" : "bg-amber-500"}`} />
             <span className="font-medium text-gray-600">{connected ? "En vivo" : "Reconectando..."}</span>
@@ -104,12 +115,21 @@ export default function AdminDashboard() {
           <button
             onClick={loadAll}
             disabled={refreshing}
-            className="min-h-[36px] flex items-center gap-1.5 text-xs text-[#2E7D32] font-semibold hover:bg-green-50 px-3 py-1.5 rounded-xl border border-green-200 transition-colors disabled:opacity-50 active:scale-95 shadow-2xs"
+            className="min-h-[34px] sm:min-h-[36px] flex items-center gap-1.5 text-xs text-[#2E7D32] font-semibold hover:bg-green-50 px-2.5 sm:px-3 py-1.5 rounded-xl border border-green-200 transition-colors disabled:opacity-50 active:scale-95 shadow-2xs"
+            title="Recargar datos"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
-            <span>Recargar</span>
+            <span className="hidden sm:inline">Recargar</span>
           </button>
-          <div className="w-8 h-8 bg-[#2E7D32] rounded-full flex items-center justify-center text-white text-xs lg:text-sm font-bold shadow-xs">A</div>
+          <button
+            onClick={handleLogout}
+            className="min-h-[34px] sm:min-h-[36px] flex items-center gap-1 text-xs text-red-600 font-semibold hover:bg-red-50 px-2 sm:px-2.5 py-1.5 rounded-xl border border-red-200 transition-colors active:scale-95 shadow-2xs"
+            title="Cerrar sesión"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span className="hidden xs:inline sm:inline">Salir</span>
+          </button>
+          <div className="w-7 h-7 sm:w-8 sm:h-8 bg-[#2E7D32] rounded-full flex items-center justify-center text-white text-xs sm:text-sm font-bold shadow-xs">A</div>
         </div>
       </header>
 
@@ -177,17 +197,17 @@ export default function AdminDashboard() {
               </div>
 
               {/* Comisiones Chart */}
-              <div className="bg-white rounded-xl card-shadow p-2 lg:p-4">
-                <div className="flex items-center justify-between mb-2 lg:mb-3">
+              <div className="bg-white rounded-xl card-shadow p-2.5 sm:p-3 lg:p-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-2 mb-2 lg:mb-3">
                   <h2 className="text-xs lg:text-sm font-semibold text-gray-800">Tu Ganancia: Comisiones a Comercios</h2>
-                  <div className="flex bg-gray-100 rounded-lg p-0.5">
+                  <div className="flex bg-gray-100 rounded-lg p-0.5 self-start sm:self-auto shrink-0">
                     {(["day", "week", "month", "year"] as Period[]).map((p) => (
                       <button
                         key={`comm-${p}`}
                         onClick={() => setPeriod(p)}
-                        className={`px-2 lg:px-3 py-1 text-[10px] lg:text-xs font-medium rounded-md transition-colors ${period === p ? "bg-white text-[#2E7D32] shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+                        className={`min-h-[26px] px-2 sm:px-3 py-1 text-[10px] sm:text-xs font-semibold rounded-md transition-all active:scale-95 ${period === p ? "bg-white text-[#2E7D32] shadow-xs" : "text-gray-500 hover:text-gray-700"}`}
                       >
-                        {p === "day" ? "Dia" : p === "week" ? "Semana" : p === "month" ? "Mes" : "Año"}
+                        {p === "day" ? "Día" : p === "week" ? "Semana" : p === "month" ? "Mes" : "Año"}
                       </button>
                     ))}
                   </div>
@@ -209,17 +229,17 @@ export default function AdminDashboard() {
               </div>
 
               {/* Delivery Net Chart */}
-              <div className="bg-white rounded-xl card-shadow p-2 lg:p-4">
-                <div className="flex items-center justify-between mb-2 lg:mb-3">
+              <div className="bg-white rounded-xl card-shadow p-2.5 sm:p-3 lg:p-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-2 mb-2 lg:mb-3">
                   <h2 className="text-xs lg:text-sm font-semibold text-gray-800">Tu Ganancia: Envíos (Neto)</h2>
-                  <div className="flex bg-gray-100 rounded-lg p-0.5">
+                  <div className="flex bg-gray-100 rounded-lg p-0.5 self-start sm:self-auto shrink-0">
                     {(["day", "week", "month", "year"] as Period[]).map((p) => (
                       <button
                         key={`del-${p}`}
                         onClick={() => setPeriod(p)}
-                        className={`px-2 lg:px-3 py-1 text-[10px] lg:text-xs font-medium rounded-md transition-colors ${period === p ? "bg-white text-[#2E7D32] shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+                        className={`min-h-[26px] px-2 sm:px-3 py-1 text-[10px] sm:text-xs font-semibold rounded-md transition-all active:scale-95 ${period === p ? "bg-white text-[#2E7D32] shadow-xs" : "text-gray-500 hover:text-gray-700"}`}
                       >
-                        {p === "day" ? "Dia" : p === "week" ? "Semana" : p === "month" ? "Mes" : "Año"}
+                        {p === "day" ? "Día" : p === "week" ? "Semana" : p === "month" ? "Mes" : "Año"}
                       </button>
                     ))}
                   </div>
@@ -458,12 +478,12 @@ export default function AdminDashboard() {
 
 function KpiCard({ icon: Icon, label, value, color }: { icon: React.ElementType; label: string; value: string; color: string }) {
   return (
-    <div className="bg-white rounded-xl card-shadow p-2.5 sm:p-3 lg:p-4 flex lg:flex-col items-center lg:items-start gap-2.5 lg:gap-1.5 transition-all">
-      <div className={`w-8 h-8 lg:w-9 lg:h-9 rounded-xl flex shrink-0 items-center justify-center ${color}`}>
-        <Icon className="w-4 h-4 lg:w-4.5 lg:h-4.5" />
+    <div className="bg-white rounded-xl card-shadow p-2.5 sm:p-3 lg:p-4 flex flex-col items-start gap-1 sm:gap-1.5 transition-all min-w-0">
+      <div className={`w-7 h-7 sm:w-8 sm:h-8 lg:w-9 lg:h-9 rounded-xl flex shrink-0 items-center justify-center ${color}`}>
+        <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 lg:w-4.5 lg:h-4.5" />
       </div>
-      <div className="min-w-0">
-        <p className="text-base sm:text-lg lg:text-xl font-extrabold text-gray-900 leading-tight">{value}</p>
+      <div className="min-w-0 w-full">
+        <p className="text-base sm:text-lg lg:text-xl font-extrabold text-gray-900 leading-tight truncate">{value}</p>
         <p className="text-[10px] sm:text-xs text-gray-500 font-medium leading-tight truncate">{label}</p>
       </div>
     </div>

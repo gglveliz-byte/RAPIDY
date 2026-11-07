@@ -118,12 +118,12 @@ export default function AdminOrders() {
 
   return (
     <AdminLayout>
-      <header className="bg-white border-b border-gray-200 px-3 lg:px-4 py-2 lg:py-4">
-        <div className="flex items-center gap-2 lg:gap-3">
-          <button onClick={() => navigate("/admin")} className="touch-target">
+      <header className="bg-white border-b border-gray-200 px-3 lg:px-4 pt-safe-top pb-2 lg:py-4">
+        <div className="flex items-center gap-2 lg:gap-3 min-w-0">
+          <button onClick={() => navigate("/admin")} className="touch-target shrink-0">
             <ArrowLeft className="w-4 h-4 lg:w-5 lg:h-5 text-gray-600" />
           </button>
-          <h1 className="text-base lg:text-lg font-bold text-gray-800">Pedidos</h1>
+          <h1 className="text-base lg:text-lg font-bold text-gray-800 truncate">Pedidos</h1>
         </div>
       </header>
 
@@ -362,16 +362,16 @@ export default function AdminOrders() {
 
       {/* Details Modal */}
       {selectedOrderId && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90dvh] flex flex-col overflow-hidden shadow-2xl">
-            <div className="p-3.5 sm:p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50 shrink-0">
-              <h2 className="text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2">
-                <Package className="w-5 h-5 text-[#2E7D32]" />
-                Detalles del Pedido #{selectedOrderId}
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center z-[70] p-2.5 sm:p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl w-full max-w-lg max-h-[80dvh] sm:max-h-[85dvh] flex flex-col overflow-hidden shadow-2xl border border-gray-100 my-auto">
+            <div className="p-3.5 sm:p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/80 shrink-0">
+              <h2 className="text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2 truncate pr-2">
+                <Package className="w-5 h-5 text-[#2E7D32] shrink-0" />
+                <span className="truncate">Detalles del Pedido #{selectedOrderId}</span>
               </h2>
               <button
                 onClick={() => setSelectedOrderId(null)}
-                className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-200 transition-colors"
+                className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-200 transition-colors shrink-0"
               >
                 <X className="w-5 h-5" />
               </button>

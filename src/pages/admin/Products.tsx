@@ -51,12 +51,12 @@ export default function AdminProducts() {
 
   return (
     <AdminLayout>
-      <header className="bg-white border-b border-gray-200 px-3 lg:px-4 py-2 lg:py-4">
-        <div className="flex items-center gap-2 lg:gap-3">
-          <button onClick={() => navigate("/admin")} className="touch-target">
+      <header className="bg-white border-b border-gray-200 px-3 lg:px-4 pt-safe-top pb-2 lg:py-4">
+        <div className="flex items-center gap-2 lg:gap-3 min-w-0">
+          <button onClick={() => navigate("/admin")} className="touch-target shrink-0">
             <ArrowLeft className="w-4 h-4 lg:w-5 lg:h-5 text-gray-600" />
           </button>
-          <h1 className="text-base lg:text-lg font-bold text-gray-800">Productos</h1>
+          <h1 className="text-base lg:text-lg font-bold text-gray-800 truncate">Productos</h1>
         </div>
       </header>
 

@@ -75,21 +75,21 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       </main>
 
       {/* Bottom nav — mobile */}
-      <nav className="lg:hidden fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-gray-200 flex items-center justify-around px-1 pt-1 pb-[max(0.35rem,env(safe-area-inset-bottom,6px))] z-50 shadow-lg">
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-gray-200 flex items-center justify-around px-1 pt-1 pb-[max(0.35rem,env(safe-area-inset-bottom,6px))] z-30 shadow-lg">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
           return (
             <button
               key={item.path}
               onClick={() => navigate(item.path)}
-              className={`flex-1 min-h-[44px] flex flex-col items-center justify-center gap-0.5 px-0.5 py-1 rounded-xl transition-all active:scale-95 ${
+              className={`flex-1 min-h-[44px] max-w-[54px] flex flex-col items-center justify-center gap-0.5 px-0.5 py-1 rounded-xl transition-all active:scale-95 ${
                 isActive
                   ? "text-[#2E7D32] font-bold"
                   : "text-gray-400 hover:text-gray-600 font-medium"
               }`}
             >
-              <item.icon className={`w-5 h-5 transition-transform ${isActive ? "scale-110" : ""}`} />
-              <span className="text-[8px] sm:text-[9px] leading-tight text-center truncate max-w-full">
+              <item.icon className={`w-4 h-4 sm:w-5 sm:h-5 transition-transform ${isActive ? "scale-110" : ""}`} />
+              <span className="text-[7.5px] sm:text-[9px] leading-tight text-center truncate max-w-full font-medium">
                 {item.label}
               </span>
             </button>

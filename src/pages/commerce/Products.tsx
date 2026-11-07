@@ -1,75 +1,80 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router";
 import {
-  ArrowLeft, Plus, Search, Pencil, Trash2, Star, X, Camera,
+  ArrowLeft, Plus, Search, Pencil, Trash2, Star, Sparkles,
+  Package, CheckCircle2, XCircle
 } from "lucide-react";
-import { useCreateProduct, useDeleteProduct, useMerchantCommerceId, useProductsByCommerce, useUpdateProduct } from "@/hooks/useDeliveryData";
+import {
+  useCreateProduct,
+  useDeleteProduct,
+  useMerchantCommerceId,
+  useProductsByCommerce,
+  useUpdateProduct,
+} from "@/hooks/useDeliveryData";
 import CommerceLayout from "@/components/CommerceLayout";
-
-function readFileAsDataURL(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
+import ProductModal from "@/components/commerce/ProductModal";
+import DeleteConfirmModal from "@/components/commerce/DeleteConfirmModal";
 
 export default function CommerceProducts() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<any>(null);
-  const [form, setForm] = useState({ name: "", description: "", price: "", category: "", image: "", unitType: "unit", isFeatured: "no", isAvailable: "yes" });
   const [saving, setSaving] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState<any>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
   const { commerceId } = useMerchantCommerceId();
-  const { data: products, loading } = useProductsByCommerce(commerceId || 0);
+  const { data: products = [], loading } = useProductsByCommerce(commerceId || 0);
   const createProduct = useCreateProduct(commerceId || 0);
   const updateProduct = useUpdateProduct(commerceId || 0);
   const deleteProductMutation = useDeleteProduct(commerceId || 0);
 
-  const filtered = products.filter((p) =>
-    p.name?.toLowerCase().includes(search.toLowerCase())
-  );
+  // Extract unique categories
+  const categories = useMemo(() => {
+    const set = new Set<string>();
+    products.forEach((p: any) => {
+      if (p.category && p.category.trim()) {
+        set.add(p.category.trim());
+      }
+    });
+    return Array.from(set);
+  }, [products]);
+
+  // Filter products
+  const filtered = products.filter((p: any) => {
+    const matchesSearch =
+      p.name?.toLowerCase().includes(search.toLowerCase()) ||
+      p.description?.toLowerCase().includes(search.toLowerCase());
+    const matchesCategory =
+      selectedCategory === "all" || p.category?.trim().toLowerCase() === selectedCategory.toLowerCase();
+    return matchesSearch && matchesCategory;
+  });
 
   const openAdd = () => {
     setEditing(null);
-    setForm({ name: "", description: "", price: "", category: "", image: "", unitType: "unit", isFeatured: "no", isAvailable: "yes" });
     setShowModal(true);
   };
 
   const openEdit = (p: any) => {
     setEditing(p);
-    setForm({
-      name: p.name || "",
-      description: p.description || "",
-      price: p.price || "",
-      category: p.category || "",
-      image: p.image || "",
-      unitType: p.unitType || "unit",
-      isFeatured: p.isFeatured || "no",
-      isAvailable: p.isAvailable || "yes",
-    });
     setShowModal(true);
   };
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.name || !form.price) return;
+  const handleSaveProduct = async (formData: any) => {
     setSaving(true);
     try {
       if (editing) {
-        await updateProduct.mutateAsync({ id: editing.id, ...form });
+        await updateProduct.mutateAsync({ id: editing.id, ...formData });
       } else {
-        await createProduct.mutateAsync(form);
+        await createProduct.mutateAsync(formData);
       }
       setShowModal(false);
+      setEditing(null);
     } catch (err: any) {
-      alert(err?.message || "Error al guardar");
+      alert(err?.message || "Error al guardar producto");
     } finally {
       setSaving(false);
     }
@@ -79,241 +84,282 @@ export default function CommerceProducts() {
     const newVal = current === "yes" ? "no" : "yes";
     try {
       await updateProduct.mutateAsync({ id, isAvailable: newVal });
-    } catch { }
-  };
-
-  const closeConfirm = () => {
-    setConfirmingDelete(null);
-    setDeleteError(null);
-    setDeleting(false);
-  };
-
-  const openDeleteConfirm = (p: any) => {
-    setConfirmingDelete(p);
-    setDeleteError(null);
-    setDeleting(false);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const confirmDelete = async () => {
     if (!confirmingDelete) return;
     setDeleting(true);
+    setDeleteError(null);
     try {
-      await deleteProductMutation.mutateAsync({ id: confirmingDelete.id });
-      closeConfirm();
+      await deleteProductMutation.mutateAsync(confirmingDelete.id);
+      setConfirmingDelete(null);
     } catch (err: any) {
-      setDeleteError(err?.message || "Error al eliminar el producto");
+      setDeleteError(err?.message || "No se pudo eliminar el producto.");
+    } finally {
       setDeleting(false);
     }
   };
 
-  const markAsInactive = async () => {
-    if (!confirmingDelete) return;
-    try {
-      await updateProduct.mutateAsync({ id: confirmingDelete.id, isAvailable: "no" });
-      closeConfirm();
-    } catch { }
-  };
-
   return (
     <CommerceLayout>
-      <header className="bg-white border-b border-gray-200 px-4 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button onClick={() => navigate("/commerce")} className="touch-target">
-              <ArrowLeft className="w-5 h-5 text-gray-600" />
+      <div className="p-2.5 min-[360px]:p-4 lg:p-6 max-w-6xl mx-auto space-y-3 min-[360px]:space-y-4">
+        
+        {/* Header Bar */}
+        <div className="flex items-center justify-between gap-2 bg-white rounded-2xl p-2.5 min-[360px]:p-4 border border-slate-200/80 shadow-2xs">
+          <div className="flex items-center gap-2 min-w-0">
+            <button
+              type="button"
+              onClick={() => navigate("/commerce")}
+              className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors flex-shrink-0"
+              aria-label="Volver"
+            >
+              <ArrowLeft className="w-4 h-4" />
             </button>
-            <h1 className="text-lg font-bold text-gray-800">Productos</h1>
+            <div className="min-w-0">
+              <h1 className="text-sm min-[360px]:text-base font-extrabold text-slate-800 truncate">
+                Catálogo de Productos
+              </h1>
+              <p className="text-[10px] text-slate-400 truncate">
+                {products.length} productos registrados
+              </p>
+            </div>
           </div>
-          {commerceId && (
-            <button onClick={openAdd} className="h-9 px-4 bg-[#2E7D32] text-white text-sm font-medium rounded-lg hover:bg-[#1B5E20] flex items-center gap-1.5">
-              <Plus className="w-4 h-4" /> Nuevo
-            </button>
-          )}
+
+          <button
+            type="button"
+            onClick={openAdd}
+            className="h-8 min-[360px]:h-9 px-2.5 min-[360px]:px-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs flex items-center gap-1 shadow-sm shadow-emerald-600/25 active:scale-95 transition-all flex-shrink-0"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Nuevo</span>
+          </button>
         </div>
-      </header>
 
-      <div className="p-3 lg:p-4 max-w-4xl mx-auto">
-        {loading ? (
-          <div className="text-center py-12 text-gray-500">Cargando...</div>
-        ) : !commerceId ? (
-          <div className="text-center py-12 text-gray-500">No se encontró tu comercio. Contactá al administrador.</div>
-        ) : (
-          <>
-            <div className="relative mb-3 lg:mb-4">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar productos..." className="w-full h-10 pl-9 pr-4 bg-white rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#2E7D32]/20" />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 lg:gap-3">
-              {filtered.map((p) => (
-                <div key={p.id} className="bg-white rounded-xl card-shadow p-3 lg:p-4 flex gap-2 lg:gap-3">
-                  <img src={p.image || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=200&h=200&fit=crop"} alt="" className="w-16 h-16 rounded-lg object-cover flex-shrink-0" onError={(e) => { (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 48%22%3E%3Crect width=%2248%22 height=%2248%22 rx=%228%22 fill=%22%23fefce8%22/%3E%3Crect x=%2212%22 y=%2214%22 width=%2224%22 height=%2226%22 rx=%222%22 fill=%22%23fef9c3%22/%3E%3Crect x=%2212%22 y=%2214%22 width=%2224%22 height=%228%22 rx=%221%22 fill=%22%23fef08a%22/%3E%3Cline x1=%2212%22 y1=%2220%22 x2=%2236%22 y2=%2220%22 stroke=%22%23eab308%22 stroke-width=%221%22/%3E%3Crect x=%2220%22 y=%2226%22 width=%228%22 height=%2214%22 rx=%221%22 fill=%22%23fef08a%22/%3E%3C/svg%3E' }} />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-800">{p.name}</h3>
-                        <p className="text-xs text-gray-500 truncate">{p.category}</p>
-                      </div>
-                      <div className="flex gap-1 ml-2">
-                        <button onClick={() => openEdit(p)} className="p-1 text-gray-400 hover:text-[#2E7D32]"><Pencil className="w-3.5 h-3.5" /></button>
-                        <button onClick={() => openDeleteConfirm(p)} className="p-1 text-gray-400 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>
-                      </div>
-                    </div>
-                    <p className="text-xs text-gray-500 line-clamp-1 mt-0.5">{p.description}</p>
-                    <div className="flex items-center justify-between mt-2">
-                      <span className="text-sm font-bold text-[#2E7D32]">
-                        ${p.price} {p.unitType === "kg" ? "/ kg" : ""}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        {p.isFeatured === "yes" && <Star className="w-3.5 h-3.5 text-[#FFC107]" />}
-                        <button onClick={() => toggleAvailable(p.id, p.isAvailable)} className={`text-xs px-2 py-0.5 rounded-full font-medium ${p.isAvailable === "yes" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
-                          {p.isAvailable === "yes" ? "Activo" : "Inactivo"}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-              {filtered.length === 0 && (
-                <div className="col-span-2 text-center py-8 text-gray-400">Sin productos. Crea el primero!</div>
-              )}
-            </div>
-          </>
-        )}
-      </div>
-
-      {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-gray-800">{editing ? "Editar producto" : "Nuevo producto"}</h2>
-              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
-            </div>
-            <p className="text-xs text-gray-500 mb-4 leading-relaxed">
-              {editing
-                ? "Modifica los detalles de este producto, como su precio, descripción o disponibilidad en la tienda."
-                : "Agrega un nuevo producto a tu menú o catálogo. Completa los detalles para que los clientes puedan verlo y comprarlo."}
-            </p>
-            <form onSubmit={handleSave} className="space-y-4">
-              <div>
-                <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Nombre del Producto</label>
-                <input placeholder="Ej: Hamburguesa Doble Queso" value={form.name} onChange={(e) => setForm({...form, name: e.target.value})} className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2E7D32]/20" required />
-              </div>
-              
-              <div>
-                <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Descripción (Opcional)</label>
-                <textarea placeholder="Ingredientes o detalles del producto..." value={form.description} onChange={(e) => setForm({...form, description: e.target.value})} rows={2} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2E7D32]/20 resize-none" />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Precio Final ($)</label>
-                  <input type="number" step="0.01" min="0" placeholder="Ej: 15.50" value={form.price} onChange={(e) => setForm({...form, price: e.target.value})} className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2E7D32]/20" required />
-                </div>
-                <div>
-                  <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Categoría Interna</label>
-                  <input placeholder="Ej: Bebidas, Postres" value={form.category} onChange={(e) => setForm({...form, category: e.target.value})} className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2E7D32]/20" />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">¿Cómo se cobra este producto?</label>
-                <select value={form.unitType} onChange={(e) => setForm({...form, unitType: e.target.value})} className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2E7D32]/20 bg-white">
-                  <option value="unit">Por Unidad (Ej: 1 Hamburguesa)</option>
-                  <option value="kg">Por Kilogramo (Ej: Carnes, Helado)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Foto del Producto</label>
-                <div className="flex gap-2 items-start">
-                  <div className="flex-1 space-y-2">
-                    <input placeholder="Pegar URL de internet o subir archivo" value={form.image} onChange={(e) => setForm({...form, image: e.target.value})} className="w-full h-10 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2E7D32]/20" />
-                    <label className="flex items-center gap-2 text-sm text-[#2E7D32] cursor-pointer hover:text-[#1B5E20]">
-                      <Camera className="w-4 h-4" />
-                      Subir foto desde este dispositivo
-                      <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
-                        const f = e.target.files?.[0];
-                        if (f) setForm({...form, image: await readFileAsDataURL(f)});
-                      }} />
-                    </label>
-                  </div>
-                  {form.image && (
-                    <div className="w-16 h-16 rounded-lg overflow-hidden border border-gray-200 flex-shrink-0 bg-gray-50">
-                      <img src={form.image} alt="preview" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex gap-4 pt-2">
-                <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-                  <input type="checkbox" checked={form.isFeatured === "yes"} onChange={(e) => setForm({...form, isFeatured: e.target.checked ? "yes" : "no"})} className="w-4 h-4 accent-[#2E7D32]" /> 
-                  Destacar (Aparece primero)
-                </label>
-                <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-                  <input type="checkbox" checked={form.isAvailable === "yes"} onChange={(e) => setForm({...form, isAvailable: e.target.checked ? "yes" : "no"})} className="w-4 h-4 accent-[#2E7D32]" /> 
-                  Hay stock disponible
-                </label>
-              </div>
-
-              <div className="pt-4 border-t border-gray-100">
-                <button type="submit" disabled={saving} className="w-full h-11 bg-[#2E7D32] text-white font-medium rounded-lg hover:bg-[#1B5E20] disabled:opacity-50 transition-colors">
-                  {saving ? "Guardando..." : editing ? "Guardar cambios" : "Crear producto"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {confirmingDelete && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-sm p-6">
-            {deleteError ? (
-              <>
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-bold text-red-600">No se puede eliminar</h2>
-                  <button onClick={closeConfirm} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
-                </div>
-                <p className="text-sm text-gray-600 mb-2">
-                  El producto <strong>{confirmingDelete.name}</strong> tiene historial de pedidos asociado.
-                </p>
-                <p className="text-sm text-gray-500 mb-5">
-                  No se puede eliminar, pero puedes marcarlo como inactivo para que no aparezca en la tienda.
-                </p>
-                <div className="flex gap-2">
-                  <button onClick={markAsInactive} className="flex-1 h-10 bg-[#2E7D32] text-white text-sm font-medium rounded-lg hover:bg-[#1B5E20]">
-                    Marcar como inactivo
-                  </button>
-                  <button onClick={closeConfirm} className="flex-1 h-10 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200">
-                    Cancelar
-                  </button>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-bold text-gray-800">Eliminar producto</h2>
-                  <button onClick={closeConfirm} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
-                </div>
-                <p className="text-sm text-gray-600 mb-1">
-                  ¿Estás seguro de eliminar <strong>{confirmingDelete.name}</strong>?
-                </p>
-                <p className="text-xs text-gray-400 mb-5">Esta acción no se puede deshacer.</p>
-                <div className="flex gap-2">
-                  <button onClick={confirmDelete} disabled={deleting} className="flex-1 h-10 bg-red-500 text-white text-sm font-medium rounded-lg hover:bg-red-600 disabled:opacity-50">
-                    {deleting ? "Eliminando..." : "Eliminar"}
-                  </button>
-                  <button onClick={closeConfirm} className="flex-1 h-10 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200">
-                    Cancelar
-                  </button>
-                </div>
-              </>
+        {/* Search & Category Filter Section */}
+        <div className="space-y-2">
+          {/* Search bar */}
+          <div className="relative">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar por nombre o ingredientes..."
+              className="w-full h-9 min-[360px]:h-10 pl-9 pr-3 bg-white border border-slate-200/90 rounded-xl text-xs min-[360px]:text-sm focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20 outline-none text-slate-800 shadow-2xs placeholder:text-slate-400 transition-all"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs px-1"
+              >
+                Limpiar
+              </button>
             )}
           </div>
+
+          {/* Category Pills (Horizontal scroll) */}
+          {categories.length > 0 && (
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar text-xs">
+              <button
+                type="button"
+                onClick={() => setSelectedCategory("all")}
+                className={`px-3 py-1 rounded-full text-[11px] font-bold whitespace-nowrap transition-all ${
+                  selectedCategory === "all"
+                    ? "bg-emerald-600 text-white shadow-2xs"
+                    : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
+                }`}
+              >
+                Todos ({products.length})
+              </button>
+              {categories.map((cat) => {
+                const count = products.filter((p: any) => p.category?.trim() === cat).length;
+                const isSelected = selectedCategory.toLowerCase() === cat.toLowerCase();
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setSelectedCategory(cat)}
+                    className={`px-3 py-1 rounded-full text-[11px] font-bold whitespace-nowrap transition-all ${
+                      isSelected
+                        ? "bg-emerald-600 text-white shadow-2xs"
+                        : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
+                    }`}
+                  >
+                    {cat} ({count})
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
-      )}
+
+        {/* Loading Spinner */}
+        {loading && (
+          <div className="flex items-center justify-center py-12">
+            <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+          </div>
+        )}
+
+        {/* Empty State */}
+        {!loading && filtered.length === 0 && (
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-8 text-center shadow-2xs">
+            <Package className="w-12 h-12 text-slate-300 mx-auto mb-2" />
+            <h3 className="text-sm font-bold text-slate-700">Sin productos</h3>
+            <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
+              {search || selectedCategory !== "all"
+                ? "No hay productos que coincidan con la búsqueda."
+                : "Aún no tienes productos en tu menú. ¡Crea el primero ahora!"}
+            </p>
+            {(!search && selectedCategory === "all") && (
+              <button
+                type="button"
+                onClick={openAdd}
+                className="mt-4 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold inline-flex items-center gap-1.5 shadow-sm active:scale-95 transition-all"
+              >
+                <Plus className="w-4 h-4" />
+                Crear Primer Producto
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Products Grid (Fluid 1 col on <540px, 2 col on tablet, 3 on desktop) */}
+        {!loading && (
+          <div className="grid grid-cols-1 min-[540px]:grid-cols-2 lg:grid-cols-3 gap-2.5 min-[360px]:gap-3">
+            {filtered.map((p: any) => {
+              const isAvail = p.isAvailable === "yes";
+              const isFeat = p.isFeatured === "yes";
+
+              return (
+                <div
+                  key={p.id}
+                  className={`bg-white rounded-2xl border transition-all p-2.5 min-[360px]:p-3 flex flex-col justify-between shadow-2xs hover:shadow-xs ${
+                    isAvail ? "border-slate-200/80" : "border-slate-200 opacity-75 bg-slate-50/50"
+                  }`}
+                >
+                  {/* Top section: image + info */}
+                  <div className="flex gap-2.5 items-start">
+                    {/* Thumbnail */}
+                    <div className="relative w-16 h-16 min-[360px]:w-18 min-[360px]:h-18 rounded-xl bg-slate-100 overflow-hidden flex-shrink-0 border border-slate-100 shadow-2xs">
+                      <img
+                        src={
+                          p.image ||
+                          "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=160&h=160&fit=crop"
+                        }
+                        alt={p.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src =
+                            "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=160&h=160&fit=crop";
+                        }}
+                      />
+                      {isFeat && (
+                        <div className="absolute top-1 left-1 bg-amber-500 text-white p-0.5 rounded-md shadow-xs">
+                          <Star className="w-3 h-3 fill-white" />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-1">
+                        <div className="min-w-0">
+                          <h3 className="text-xs min-[360px]:text-sm font-bold text-slate-800 truncate">
+                            {p.name}
+                          </h3>
+                          <span className="text-[10px] text-slate-400 font-medium truncate block">
+                            {p.category || "General"}
+                          </span>
+                        </div>
+
+                        {/* Action buttons */}
+                        <div className="flex items-center gap-0.5 flex-shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => openEdit(p)}
+                            title="Editar"
+                            className="w-7 h-7 rounded-lg hover:bg-emerald-50 text-slate-400 hover:text-emerald-700 flex items-center justify-center transition-colors"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setConfirmingDelete(p);
+                              setDeleteError(null);
+                            }}
+                            title="Eliminar"
+                            className="w-7 h-7 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 flex items-center justify-center transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {p.description && (
+                        <p className="text-[10px] min-[360px]:text-[11px] text-slate-500 line-clamp-1 mt-0.5 leading-snug">
+                          {p.description}
+                        </p>
+                      )}
+
+                      {/* Price and Stock Toggle */}
+                      <div className="flex items-center justify-between gap-1 mt-2 pt-1 border-t border-slate-100">
+                        <span className="text-xs min-[360px]:text-sm font-black text-emerald-700">
+                          ${parseFloat(p.price || 0).toFixed(2)}
+                          {p.unitType === "kg" && (
+                            <span className="text-[10px] font-normal text-slate-400 ml-0.5">/ kg</span>
+                          )}
+                        </span>
+
+                        <button
+                          type="button"
+                          onClick={() => toggleAvailable(p.id, p.isAvailable)}
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition-all flex items-center gap-1 ${
+                            isAvail
+                              ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+                              : "bg-slate-200 text-slate-600 hover:bg-slate-300"
+                          }`}
+                        >
+                          <span className={`w-1.5 h-1.5 rounded-full ${isAvail ? "bg-emerald-600" : "bg-slate-400"}`} />
+                          {isAvail ? "Activo" : "Pausado"}
+                        </button>
+                      </div>
+
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Responsive Product Modal (Works from 240px to Desktop!) */}
+        <ProductModal
+          isOpen={showModal}
+          onClose={() => {
+            setShowModal(false);
+            setEditing(null);
+          }}
+          onSave={handleSaveProduct}
+          initialData={editing}
+          saving={saving}
+        />
+
+        {/* Delete Confirmation Modal */}
+        <DeleteConfirmModal
+          isOpen={!!confirmingDelete}
+          onClose={() => setConfirmingDelete(null)}
+          onConfirm={confirmDelete}
+          productName={confirmingDelete?.name || ""}
+          deleting={deleting}
+          error={deleteError}
+        />
+
+      </div>
     </CommerceLayout>
   );
 }

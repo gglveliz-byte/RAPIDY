@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router";
 import {
   ArrowLeft, Star, Search, Bike, X, Plus, Trash2,
@@ -74,17 +74,17 @@ export default function AdminDrivers() {
 
   return (
     <AdminLayout>
-      <header className="bg-white border-b border-gray-200 px-3 lg:px-4 py-2 lg:py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 lg:gap-3">
-            <button onClick={() => navigate("/admin")} className="touch-target">
+      <header className="bg-white border-b border-gray-200 px-3 lg:px-4 pt-safe-top pb-2 lg:py-4">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 lg:gap-3 min-w-0">
+            <button onClick={() => navigate("/admin")} className="touch-target shrink-0">
               <ArrowLeft className="w-4 h-4 lg:w-5 lg:h-5 text-gray-600" />
             </button>
-            <h1 className="text-base lg:text-lg font-bold text-gray-800">Repartidores</h1>
+            <h1 className="text-base lg:text-lg font-bold text-gray-800 truncate">Repartidores</h1>
           </div>
-          <button onClick={openCreate} className="flex items-center gap-1.5 lg:gap-2 bg-[#2E7D32] text-white px-3 lg:px-4 py-1.5 lg:py-2 rounded-xl text-xs lg:text-sm font-medium hover:bg-[#1B5E20] transition-colors">
+          <button onClick={openCreate} className="flex items-center gap-1.5 lg:gap-2 bg-[#2E7D32] text-white px-3 lg:px-4 py-1.5 lg:py-2 rounded-xl text-xs lg:text-sm font-medium hover:bg-[#1B5E20] transition-colors shrink-0 shadow-xs">
             <Plus className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
-            Nuevo
+            <span>Nuevo</span>
           </button>
         </div>
       </header>
@@ -257,90 +257,96 @@ export default function AdminDrivers() {
 
       {/* Modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl w-full max-w-md p-4 sm:p-6 max-h-[90dvh] overflow-y-auto shadow-2xl">
-            <div className="flex items-center justify-between mb-3 sm:mb-4">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center z-[70] p-2.5 sm:p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl w-full max-w-md max-h-[80dvh] sm:max-h-[85dvh] flex flex-col shadow-2xl border border-gray-100 overflow-hidden my-auto">
+            {/* Sticky Header */}
+            <div className="flex items-center justify-between p-3.5 sm:p-5 border-b border-gray-100 shrink-0 bg-white">
               <h2 className="text-base sm:text-lg font-bold text-gray-800">{editing ? "Editar repartidor" : "Nuevo repartidor"}</h2>
               <button
                 onClick={() => setShowForm(false)}
-                className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <p className="text-xs text-gray-500 mb-4 leading-relaxed">
-              {editing 
-                ? "Edita los datos del repartidor, su vehículo o el porcentaje de comisión que gana por cada viaje que realiza." 
-                : "Registra a un nuevo repartidor en el sistema. Con el teléfono y la contraseña que ingreses aquí, el repartidor podrá iniciar sesión en su propia aplicación."}
-            </p>
-            <form onSubmit={handleSave} className="space-y-3.5 sm:space-y-4">
-              <div>
-                <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Nombre completo</label>
-                <input
-                  placeholder="Ej: Carlos Ramírez"
-                  value={form.name}
-                  onChange={(e) => setForm({...form, name: e.target.value})}
-                  className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Teléfono (Usuario para Login)</label>
-                <PhoneInput value={form.phone} onChange={(v) => setForm({...form, phone: v})} />
-              </div>
 
-              <div>
-                <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">{editing ? "Cambiar Contraseña (opcional)" : "Contraseña de acceso"}</label>
-                <input
-                  type="password"
-                  placeholder={editing ? "Dejar vacío para no cambiarla" : "Min. 6 caracteres"}
-                  value={form.password}
-                  onChange={(e) => setForm({...form, password: e.target.value})}
-                  className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20"
-                  required={!editing}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Scrollable Form Body */}
+            <form onSubmit={handleSave} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <div className="p-3.5 sm:p-5 overflow-y-auto flex-1 space-y-3.5 overscroll-contain">
+                <p className="text-xs text-gray-500 leading-relaxed">
+                  {editing 
+                    ? "Edita los datos del repartidor, su vehículo o el porcentaje de comisión que gana por cada viaje que realiza." 
+                    : "Registra a un nuevo repartidor en el sistema. Con el teléfono y la contraseña que ingreses aquí, el repartidor podrá iniciar sesión en su propia aplicación."}
+                </p>
                 <div>
-                  <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Vehículo</label>
+                  <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Nombre completo</label>
                   <input
-                    placeholder="Ej: Moto Honda 150"
-                    value={form.vehicle}
-                    onChange={(e) => setForm({...form, vehicle: e.target.value})}
+                    placeholder="Ej: Carlos Ramírez"
+                    value={form.name}
+                    onChange={(e) => setForm({...form, name: e.target.value})}
+                    className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Teléfono (Usuario para Login)</label>
+                  <PhoneInput value={form.phone} onChange={(v) => setForm({...form, phone: v})} />
+                </div>
+
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">{editing ? "Cambiar Contraseña (opcional)" : "Contraseña de acceso"}</label>
+                  <input
+                    type="password"
+                    placeholder={editing ? "Dejar vacío para no cambiarla" : "Min. 6 caracteres"}
+                    value={form.password}
+                    onChange={(e) => setForm({...form, password: e.target.value})}
+                    className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20"
+                    required={!editing}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Vehículo</label>
+                    <input
+                      placeholder="Ej: Moto Honda 150"
+                      value={form.vehicle}
+                      onChange={(e) => setForm({...form, vehicle: e.target.value})}
+                      className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Patente</label>
+                    <input
+                      placeholder="Ej: ABC-123"
+                      value={form.licensePlate}
+                      onChange={(e) => setForm({...form, licensePlate: e.target.value})}
+                      className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Ganancia del Repartidor (%)</label>
+                  <p className="text-[10px] text-gray-400 mb-2">Porcentaje del "Costo de Envío" que el repartidor se queda para él.</p>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={form.commissionRate}
+                    onChange={(e) => setForm({...form, commissionRate: e.target.value})}
                     className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20"
                   />
                 </div>
-                <div>
-                  <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Patente</label>
-                  <input
-                    placeholder="Ej: ABC-123"
-                    value={form.licensePlate}
-                    onChange={(e) => setForm({...form, licensePlate: e.target.value})}
-                    className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20"
-                  />
-                </div>
               </div>
 
-              <div>
-                <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Ganancia del Repartidor (%)</label>
-                <p className="text-[10px] text-gray-400 mb-2">Porcentaje del "Costo de Envío" que el repartidor se queda para él.</p>
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={form.commissionRate}
-                  onChange={(e) => setForm({...form, commissionRate: e.target.value})}
-                  className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20"
-                />
-              </div>
-
-              <div className="flex gap-2.5 sm:gap-3 pt-3 sm:pt-4 border-t border-gray-100">
+              {/* Sticky Action Footer */}
+              <div className="p-3.5 sm:p-5 border-t border-gray-100 bg-gray-50/90 shrink-0 flex gap-2.5">
                 <button
                   type="button"
                   onClick={() => setShowForm(false)}
-                  className="flex-1 h-11 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 active:scale-98 transition-all"
+                  className="flex-1 h-11 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-white active:scale-98 transition-all"
                 >
                   Cancelar
                 </button>
