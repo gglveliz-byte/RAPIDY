@@ -39,12 +39,14 @@ Detalle de las vistas accesibles por los usuarios (definidas en `src/App.tsx`).
 - `/commerce/profile` - **CommerceProfile**: Configuración del comercio.
 
 ### Panel de Administración (Requiere rol `admin`)
-- `/admin` - **AdminDashboard**: Panel de métricas globales de la plataforma.
-- `/admin/commerces` - **AdminCommerces**: Gestión centralizada de comercios.
-- `/admin/drivers` - **AdminDrivers**: Gestión de repartidores.
-- `/admin/orders` - **AdminOrders**: Monitoreo de todos los pedidos del sistema.
-- `/admin/products` - **AdminProducts**: Vista del catálogo global.
-- `/admin/settings` - **AdminSettings**: Configuración global de la plataforma.
+> *Para el desglose técnico exhaustivo, flujo de datos por archivo y matriz de auditoría forense, consultar [`docs/ADMIN_LIVE_ARCHITECTURE_LEDGER.md`](docs/ADMIN_LIVE_ARCHITECTURE_LEDGER.md).*
+
+- `/admin` - **AdminDashboard** (`src/pages/admin/Dashboard.tsx`): Panel de métricas globales de la plataforma. Consume `admin.dashboard`, `admin.salesByPeriod`, `admin.earningsByPeriod`, `admin.topCommerces`, `admin.categoryRanking`, `admin.driverPerformance`, `admin.commerceCommissions`, `admin.adminDeliveryEarnings`. Conectado al canal SSE en tiempo real `/api/events/admin-dashboard`.
+- `/admin/commerces` - **AdminCommerces** (`src/pages/admin/Commerces.tsx`): Gestión centralizada de comercios. Consume `admin.listCommerces`, `admin.createMerchant`, `admin.updateCommerce`, `admin.deleteCommerce` y `admin.listCategories`. Gestiona estado operativo (`isOpen`) y estado de habilitación (`status`).
+- `/admin/drivers` - **AdminDrivers** (`src/pages/admin/Drivers.tsx`): Gestión y activación de repartidores. Consume `driver.list`, `admin.createDriver`, `admin.updateDriver`, `admin.deleteDriver`. Integra `PhoneInput.tsx` para prefijos telefónicos y visualiza estados (online, busy, offline).
+- `/admin/orders` - **AdminOrders** (`src/pages/admin/Orders.tsx`): Monitoreo de todos los pedidos del sistema en tiempo real. Consume `admin.orders`, `admin.orderDetail`, `admin.updateOrderStatus`, `admin.toggleCommerceSettled`, `admin.toggleDriverSettled`. Gestiona validación de comprobantes de pago por transferencia y liquidación.
+- `/admin/products` - **AdminProducts** (`src/pages/admin/Products.tsx`): Vista unificada del catálogo global y ranking de más vendidos. Consume `admin.listProducts` y `admin.topProducts`. Permite filtrado en memoria y visualización de precios y categorías.
+- `/admin/settings` - **AdminSettings** (`src/pages/admin/Settings.tsx`): Configuración global de la plataforma y parámetros de negocio. Consume `admin.settings`, `admin.updateSetting`, `admin.getReports`. Gestiona tarifas de envío base, pedido mínimo, datos de transferencia bancaria y exportación de reportes PDF/Excel.
 
 ---
 
