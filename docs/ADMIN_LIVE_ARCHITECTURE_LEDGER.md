@@ -1,12 +1,14 @@
 # ADMIN LIVE ARCHITECTURE LEDGER & MAPA INTEGRAL DEL SISTEMA
 > **Fecha de creación:** 2026-11-07  
 > **Alcance:** Mapeo completo, flujo de datos y auditoría quirúrgica de las 6 rutas del Panel de Administración (`/admin`).  
-> **Estado:** Auditoría en curso (Subagentes en paralelo).  
-> **Modo:** 100% Solo Lectura (Inspección estricta sin modificación de código fuente).
+> **Estado:** ✅ Auditoría Completada al 100% (6 de 6 rutas analizadas en simultáneo).  
+> **Modo:** 100% Solo Lectura (Inspección estricta sin modificación de código fuente).  
+> **Propósito:** Fuente única de verdad técnica (Single Source of Truth) para el Panel de Administración.
 
 ---
 
 ## 📑 ÍNDICE GENERAL DEL LEDGER
+0. [Motor Matemático y Reglas de Liquidación](#0-motor-matemático-y-reglas-de-liquidación)
 1. [Ruta 1: `/admin` - Dashboard Principal](#ruta-1-admin---dashboard-principal) *(✅ COMPLETADO por Subagente 1)*
 2. [Ruta 2: `/admin/commerces` - Gestión de Comercios](#ruta-2-admincommerces---gestión-de-comercios) *(✅ COMPLETADO por Subagente 2)*
 3. [Ruta 3: `/admin/drivers` - Gestión de Repartidores](#ruta-3-admindrivers---gestión-de-repartidores) *(✅ COMPLETADO por Subagente 3)*
@@ -14,6 +16,55 @@
 5. [Ruta 5: `/admin/products` - Catálogo Global de Productos](#ruta-5-adminproducts---catálogo-global-de-productos) *(✅ COMPLETADO por Subagente 5)*
 6. [Ruta 6: `/admin/settings` - Configuración Global del Sistema](#ruta-6-adminsettings---configuración-global-del-sistema) *(✅ COMPLETADO por Subagente 6)*
 7. [Matriz Consolidada de Vulnerabilidades y Errores Matemáticos](#matriz-consolidada-de-vulnerabilidades-y-errores-matemáticos)
+
+---
+
+## 0. MOTOR MATEMÁTICO Y REGLAS DE LIQUIDACIÓN
+> Este apartado explica matemáticamente cómo se calcula cada monto financiero en el backend y cómo debería liquidarse para evitar descuadres contables.
+
+```mermaid
+flowchart TD
+    Cliente["Cliente Final Paga: Total = Subtotal + DeliveryFee"] --> Metodo{"¿Método de Pago?"}
+    
+    Metodo -- "Transferencia a la Plataforma" --> PlataformaTiene["La Plataforma recauda el 100%"]
+    Metodo -- "Efectivo al Repartidor" --> ChoferTiene["El Repartidor recauda el 100% en mano"]
+
+    PlataformaTiene --> LiqTrans1["Comercio: Pagarle (Subtotal - ComisiónComercio)"]
+    PlataformaTiene --> LiqTrans2["Repartidor: Pagarle (DeliveryFee * %Chofer)"]
+    PlataformaTiene --> LiqTrans3["Plataforma retiene: ComisiónComercio + (DeliveryFee * %Plataforma)"]
+
+    ChoferTiene --> LiqCash1["Repartidor debe pagar a Comercio: Subtotal"]
+    ChoferTiene --> LiqCash2["Plataforma debe cobrarle a Repartidor: DeliveryFee * %Plataforma"]
+    ChoferTiene --> LiqCash3["Plataforma debe cobrarle a Comercio: ComisiónComercio"]
+```
+
+### Fórmulas del Sistema
+
+1. **Total de la Orden:**
+   $$\text{Total} = \text{Subtotal} + \text{DeliveryFee}$$
+   *(Donde $\text{Subtotal} = \sum (\text{quantity} \times \text{unitPrice})$).*
+
+2. **Comisión del Comercio:**
+   $$\text{ComisiónComercio} = \text{Subtotal} \times \left( \frac{\text{commerceCommissionRate}}{100} \right)$$
+   *(Tasa típica: 10.00% según `commerces.commissionRate`).*
+
+3. **Corte del Repartidor (Driver Share):**
+   $$\text{PagoRepartidor} = \text{DeliveryFee} \times \left( \frac{\text{driverCommissionRate}}{100} \right)$$
+   *(Tasa típica: 75.00% según `drivers.commissionRate`).*
+
+4. **Comisión de Delivery para la Plataforma:**
+   $$\text{GananciaPlataformaDelivery} = \text{DeliveryFee} - \text{PagoRepartidor} = \text{DeliveryFee} \times \left( 1 - \frac{\text{driverCommissionRate}}{100} \right)$$
+
+5. **Ganancia Neta Total de la Plataforma por Pedido:**
+   $$\text{GananciaNetaPlataforma} = \text{ComisiónComercio} + \text{GananciaPlataformaDelivery}$$
+
+6. **Lógica de Liquidación en `admin.orders` (`commerceAction` / `driverAction`):**
+   * **Si `paymentMethod === 'transfer'` (Dinero en cuenta del Admin):**
+     * Al Comercio se le debe **PAGAR**: $\text{Subtotal} - \text{ComisiónComercio}$.
+     * Al Repartidor se le debe **PAGAR**: $\text{PagoRepartidor}$.
+   * **Si `paymentMethod === 'cash'` (Dinero en mano del Repartidor):**
+     * Al Comercio se le debe **COBRAR**: $\text{ComisiónComercio}$.
+     * Al Repartidor se le debe **COBRAR**: $\text{GananciaPlataformaDelivery}$.
 
 ---
 
