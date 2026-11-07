@@ -223,10 +223,10 @@ export default function CommerceProfile() {
 
   return (
     <CommerceLayout>
-      <div className="p-2.5 min-[360px]:p-4 lg:p-6 max-w-3xl mx-auto space-y-3 min-[360px]:space-y-4">
+      <div className="px-4 min-[380px]:px-6 py-4 sm:py-6 max-w-5xl mx-auto space-y-4 min-[380px]:space-y-5">
         
         {/* Header Bar */}
-        <div className="flex items-center justify-between gap-2 bg-white rounded-2xl p-2.5 min-[360px]:p-4 border border-slate-200/80 shadow-2xs">
+        <div className="flex items-center justify-between gap-2 bg-white rounded-2xl min-[380px]:rounded-3xl p-3 min-[380px]:p-4.5 border border-slate-200/80 shadow-2xs">
           <div className="flex items-center gap-2 min-w-0">
             <button
               type="button"

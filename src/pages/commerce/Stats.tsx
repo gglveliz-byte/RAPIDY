@@ -39,10 +39,10 @@ export default function CommerceStats() {
 
   return (
     <CommerceLayout>
-      <div className="p-2.5 min-[360px]:p-4 lg:p-6 max-w-4xl mx-auto space-y-3 min-[360px]:space-y-4">
+      <div className="px-4 min-[380px]:px-6 py-4 sm:py-6 max-w-5xl mx-auto space-y-4 min-[380px]:space-y-5">
         
         {/* Header */}
-        <div className="flex items-center justify-between gap-2 bg-white rounded-2xl p-2.5 min-[360px]:p-4 border border-slate-200/80 shadow-2xs">
+        <div className="flex items-center justify-between gap-2 bg-white rounded-2xl min-[380px]:rounded-3xl p-3 min-[380px]:p-4.5 border border-slate-200/80 shadow-2xs">
           <div className="flex items-center gap-2 min-w-0">
             <button
               type="button"
@@ -63,10 +63,10 @@ export default function CommerceStats() {
           </div>
         </div>
 
-        {/* 4 KPI Cards (Fluid: 1 col on <340px, 2 on 340px+, 4 on desktop) */}
-        <div className="grid grid-cols-1 min-[340px]:grid-cols-2 lg:grid-cols-4 gap-2 min-[360px]:gap-3">
+        {/* 4 KPI Cards */}
+        <div className="grid grid-cols-1 min-[340px]:grid-cols-2 lg:grid-cols-4 gap-2.5 min-[380px]:gap-3.5">
           
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-3 min-[360px]:p-4 shadow-2xs">
+          <div className="bg-white rounded-2xl min-[380px]:rounded-3xl border border-slate-200/80 p-3.5 min-[380px]:p-4.5 shadow-2xs">
             <div className="flex items-center justify-between mb-1.5">
               <span className="text-[10px] min-[360px]:text-xs font-bold text-slate-400 uppercase tracking-wider">
                 Ventas Totales

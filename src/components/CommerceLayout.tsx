@@ -130,18 +130,18 @@ export default function CommerceLayout({ children }: { children: ReactNode }) {
         </div>
       </aside>
 
-      {/* Mobile Top Header (with Logout Button!) */}
-      <header className="md:hidden sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-2.5 min-[360px]:px-4 h-12 min-[360px]:h-13 flex items-center justify-between shadow-2xs">
-        <div className="flex items-center gap-2 min-w-0">
-          <div className="w-7 h-7 min-[360px]:w-8 min-[360px]:h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-xs flex-shrink-0 shadow-2xs">
+      {/* Mobile Top Header (with status bar clearance and comfortable margins) */}
+      <header className="md:hidden sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 min-[380px]:px-5 pt-[max(env(safe-area-inset-top,0px),2.25rem)] pb-3 flex items-center justify-between shadow-2xs">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-8 h-8 min-[380px]:w-9 min-[380px]:h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-xs min-[380px]:text-sm flex-shrink-0 shadow-2xs">
             {storeName.charAt(0).toUpperCase()}
           </div>
           <div className="min-w-0">
-            <h1 className="text-xs min-[360px]:text-sm font-bold text-slate-800 truncate leading-tight">
+            <h1 className="text-xs min-[380px]:text-sm font-bold text-slate-800 truncate leading-tight">
               {storeName}
             </h1>
-            <p className="text-[9px] min-[360px]:text-[10px] text-emerald-600 font-medium flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+            <p className="text-[10px] min-[380px]:text-[11px] text-emerald-600 font-medium flex items-center gap-1.5 mt-0.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
               Panel de Comercio
             </p>
           </div>
@@ -153,23 +153,22 @@ export default function CommerceLayout({ children }: { children: ReactNode }) {
           onClick={handleLogout}
           title="Cerrar sesión"
           aria-label="Cerrar sesión de mi comercio"
-          className="flex items-center gap-1 px-2 py-1 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-50 border border-slate-200 hover:border-red-200 active:scale-95 transition-all text-[10px] min-[360px]:text-xs font-semibold flex-shrink-0"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-slate-600 hover:text-red-600 hover:bg-red-50 border border-slate-200 hover:border-red-200 active:scale-95 transition-all text-xs font-semibold flex-shrink-0 shadow-2xs"
         >
           <LogOut className="w-3.5 h-3.5 text-red-500" />
-          <span className="hidden min-[360px]:inline text-red-600">Salir</span>
+          <span className="text-red-600">Salir</span>
         </button>
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 md:ml-64 pb-16 min-[360px]:pb-20 md:pb-6 overflow-x-hidden">
+      <main className="flex-1 md:ml-64 pb-20 min-[360px]:pb-24 md:pb-8 overflow-x-hidden">
         {children}
       </main>
 
-      {/* Bottom Nav - Mobile (Optimized for 240px wide!) */}
+      {/* Bottom Nav - Mobile */}
       <nav
         aria-label="Navegación principal móvil"
-        className="md:hidden fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-slate-200/90 z-40 shadow-[0_-4px_16px_rgba(0,0,0,0.04)] px-1 py-1"
-        style={{ paddingBottom: "max(0.25rem, env(safe-area-inset-bottom))" }}
+        className="md:hidden fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-slate-200/90 z-40 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] px-2 pt-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom,8px))]"
       >
         <div className="flex items-center justify-around w-full max-w-lg mx-auto">
           {navItems.map((item) => {
