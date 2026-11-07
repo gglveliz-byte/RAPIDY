@@ -9,7 +9,20 @@ import { verifyDriverRefreshToken, clearDriverCookies, setDriverCookies } from "
 export const driverRouter = createRouter({
   list: publicQuery.query(async () => {
     const db = getDb();
-    return db.select().from(drivers);
+    return db
+      .select({
+        id: drivers.id,
+        name: drivers.name,
+        phone: drivers.phone,
+        vehicle: drivers.vehicle,
+        licensePlate: drivers.licensePlate,
+        status: drivers.status,
+        rating: drivers.rating,
+        currentLat: drivers.currentLat,
+        currentLng: drivers.currentLng,
+        commissionRate: drivers.commissionRate,
+      })
+      .from(drivers);
   }),
 
   getById: publicQuery
@@ -17,7 +30,9 @@ export const driverRouter = createRouter({
     .query(async ({ input }) => {
       const db = getDb();
       const result = await db.select().from(drivers).where(eq(drivers.id, input.id));
-      return result[0] || null;
+      if (!result[0]) return null;
+      const { passwordHash: _, fcmToken: __, ...safeDriver } = result[0];
+      return safeDriver;
     }),
 
   getProfile: publicQuery
@@ -30,8 +45,9 @@ export const driverRouter = createRouter({
       const earnings = await db.select().from(driverEarnings).where(eq(driverEarnings.driverId, input.id));
       const totalEarnings = earnings.reduce((acc, e) => acc + parseFloat(String(e.amount)), 0);
 
+      const { passwordHash: _, fcmToken: __, ...safeDriver } = driver[0];
       return {
-        ...driver[0],
+        ...safeDriver,
         totalEarnings: totalEarnings.toFixed(2),
       };
     }),
@@ -44,11 +60,15 @@ export const driverRouter = createRouter({
       })
     )
     .mutation(async ({ input, ctx }) => {
+      if (ctx.driver.id !== input.id) {
+        throw new Error("No tienes autorización para modificar el estado de otro repartidor");
+      }
       const db = getDb();
       await db.update(drivers).set({ status: input.status }).where(eq(drivers.id, input.id));
       const result = await db.select().from(drivers).where(eq(drivers.id, input.id));
       emit("admin:dashboard", { type: "dashboard_update" });
-      return result[0];
+      const { passwordHash: _, fcmToken: __, ...safeDriver } = result[0];
+      return safeDriver;
     }),
 
   updateLocation: driverQuery
@@ -60,6 +80,9 @@ export const driverRouter = createRouter({
       })
     )
     .mutation(async ({ input, ctx }) => {
+      if (ctx.driver.id !== input.id) {
+        throw new Error("No tienes autorización para modificar la ubicación de otro repartidor");
+      }
       const db = getDb();
       await db
         .update(drivers)
@@ -81,6 +104,9 @@ export const driverRouter = createRouter({
       })
     )
     .mutation(async ({ input, ctx }) => {
+      if (ctx.driver.id !== input.id) {
+        throw new Error("No tienes autorización para modificar el perfil de otro repartidor");
+      }
       const db = getDb();
       const { id, ...data } = input;
       const updateData: any = {};
@@ -92,12 +118,16 @@ export const driverRouter = createRouter({
       }
       const result = await db.select().from(drivers).where(eq(drivers.id, id));
       emit("admin:dashboard", { type: "dashboard_update" });
-      return result[0];
+      const { passwordHash: _, fcmToken: __, ...safeDriver } = result[0];
+      return safeDriver;
     }),
 
   getEarnings: driverQuery
     .input(z.object({ id: z.number() }))
     .query(async ({ input, ctx }) => {
+      if (ctx.driver.id !== input.id) {
+        throw new Error("No tienes autorización para ver las ganancias de otro repartidor");
+      }
       const db = getDb();
       return db.select().from(driverEarnings).where(eq(driverEarnings.driverId, input.id));
     }),
@@ -105,6 +135,9 @@ export const driverRouter = createRouter({
   getActiveOrders: driverQuery
     .input(z.object({ id: z.number() }))
     .query(async ({ input, ctx }) => {
+      if (ctx.driver.id !== input.id) {
+        throw new Error("No tienes autorización para ver los pedidos de otro repartidor");
+      }
       const db = getDb();
       return db
         .select({

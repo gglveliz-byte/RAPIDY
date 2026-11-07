@@ -58,14 +58,24 @@ export default function PhoneInput({ value, onChange, error }: PhoneInputProps) 
   }, []);
 
   useEffect(() => {
-    const existingDial = countries.find(c => value.startsWith(c.dial));
+    if (!value) {
+      setLocalNumber("");
+      return;
+    }
+    const cleanVal = value.trim();
+    const existingDial = countries.find(
+      (c) => cleanVal.startsWith(c.dial) || cleanVal.startsWith(c.dial.replace("+", ""))
+    );
     if (existingDial) {
       setSelected(existingDial);
-      setLocalNumber(value.slice(existingDial.dial.length).trim());
-    } else if (value) {
-      setLocalNumber(value);
+      const prefix = cleanVal.startsWith(existingDial.dial)
+        ? existingDial.dial
+        : existingDial.dial.replace("+", "");
+      setLocalNumber(cleanVal.slice(prefix.length).trim());
+    } else {
+      setLocalNumber(cleanVal);
     }
-  }, []);
+  }, [value]);
 
   const handleNumberChange = (text: string) => {
     const cleaned = text.replace(/\D/g, "");

@@ -44,7 +44,7 @@ export default function AdminDrivers() {
     if (!confirm(`Eliminar repartidor "${name}"?`)) return;
     try {
       await trpcMutate("admin.deleteDriver", { id });
-      setDriverList(driverList.filter(d => d.id !== id));
+      await utils.driver.list.invalidate();
     } catch (err: any) {
       alert(err?.message || "Error al eliminar");
     }

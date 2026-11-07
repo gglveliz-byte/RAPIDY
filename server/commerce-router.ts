@@ -62,7 +62,6 @@ export const commerceRouter = createRouter({
         status: z.enum(["active", "inactive", "suspended", "pending"]).optional(),
         isOpen: z.enum(["open", "closed"]).optional(),
         openHours: z.string().optional(),
-        commissionRate: z.string().optional(),
         lat: z.string().optional(),
         lng: z.string().optional(),
       })
@@ -70,6 +69,13 @@ export const commerceRouter = createRouter({
     .mutation(async ({ input, ctx }) => {
       const db = getDb();
       const { id, ...data } = input;
+
+      // Verificación estricta de propiedad anti-IDOR
+      const existing = await db.select().from(commerces).where(eq(commerces.id, id));
+      if (!existing[0] || existing[0].merchantUserId !== ctx.merchant.id) {
+        throw new Error("No tienes autorización para modificar este comercio");
+      }
+
       const updateData: Record<string, any> = {};
       for (const [key, val] of Object.entries(data)) {
         if (val !== undefined) updateData[key] = val;
@@ -88,6 +94,12 @@ export const commerceRouter = createRouter({
       const db = getDb();
       const commerce = await db.select().from(commerces).where(eq(commerces.id, input.id));
       if (commerce.length === 0) return null;
+
+      // Verificación estricta de propiedad anti-IDOR
+      if (commerce[0].merchantUserId !== ctx.merchant.id) {
+        throw new Error("No tienes autorización para alterar el estado de este comercio");
+      }
+
       const newStatus = commerce[0].isOpen === "open" ? "closed" : "open";
       await db.update(commerces).set({ isOpen: newStatus }).where(eq(commerces.id, input.id));
       emit("admin:dashboard", { type: "dashboard_update" });

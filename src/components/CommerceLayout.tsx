@@ -132,10 +132,10 @@ export default function CommerceLayout({ children }: { children: ReactNode }) {
 
       {/* Mobile Top Header (Fixed so it never hides on scroll, with safe-area spacing for notch/status bar) */}
       <header
-        className="md:hidden fixed top-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 min-[380px]:px-5 pb-3 flex items-center justify-between shadow-xs transition-all"
+        className="md:hidden fixed top-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 min-[380px]:px-5 pt-12 pb-3 flex items-center justify-between shadow-xs transition-all"
         style={{
-          paddingTop: "max(env(safe-area-inset-top, 0px), 44px)",
-          minHeight: "calc(max(env(safe-area-inset-top, 0px), 44px) + 52px)",
+          paddingTop: "max(48px, env(safe-area-inset-top, 48px))",
+          minHeight: "calc(max(48px, env(safe-area-inset-top, 48px)) + 52px)",
         }}
       >
         <div className="flex items-center gap-2.5 min-w-0">
@@ -168,9 +168,9 @@ export default function CommerceLayout({ children }: { children: ReactNode }) {
 
       {/* Main Content Area (with top padding to account for fixed header + elegant breathing room) */}
       <main
-        className="flex-1 md:ml-64 md:pt-0 pb-24 md:pb-8 overflow-x-hidden"
+        className="flex-1 md:ml-64 pt-28 md:pt-0 pb-24 md:pb-8 overflow-x-hidden"
         style={{
-          paddingTop: "calc(max(env(safe-area-inset-top, 0px), 44px) + 60px)",
+          paddingTop: "calc(max(48px, env(safe-area-inset-top, 48px)) + 56px)",
         }}
       >
         {children}

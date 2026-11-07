@@ -54,7 +54,7 @@ export default function AdminDashboard() {
         }
       }
     } catch (error) {
-      alert("Error al cargar los gráficos");
+      console.warn("Error al cargar los gráficos:", error);
       setGrowthPercent(null);
     }
   }, []);
@@ -186,7 +186,7 @@ export default function AdminDashboard() {
                       <BarChart data={salesData.slice(-12)}>
                         <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={(v) => v.slice(-5)} />
                         <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
-                        <Tooltip formatter={(value: number) => [`$${value.toFixed(2)}`, "Ventas"]} />
+                        <Tooltip formatter={(value: any) => [`$${Number(value || 0).toFixed(2)}`, "Ventas"]} />
                         <Bar dataKey="sales" fill="#2E7D32" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
@@ -218,7 +218,7 @@ export default function AdminDashboard() {
                       <BarChart data={earningsData.slice(-12)}>
                         <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={(v) => v.slice(-5)} />
                         <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
-                        <Tooltip formatter={(value: number) => [`$${value.toFixed(2)}`, "Comisión"]} />
+                        <Tooltip formatter={(value: any) => [`$${Number(value || 0).toFixed(2)}`, "Comisión"]} />
                         <Bar dataKey="commission" fill="#2E7D32" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
@@ -250,7 +250,7 @@ export default function AdminDashboard() {
                       <BarChart data={earningsData.slice(-12)}>
                         <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={(v) => v.slice(-5)} />
                         <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
-                        <Tooltip formatter={(value: number) => [`$${value.toFixed(2)}`, "Neto Envíos"]} />
+                        <Tooltip formatter={(value: any) => [`$${Number(value || 0).toFixed(2)}`, "Neto Envíos"]} />
                         <Bar dataKey="deliveryNet" fill="#2E7D32" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>

@@ -7,6 +7,7 @@ import { appRouter } from "./router";
 import { createContext } from "./context";
 import { env } from "./lib/env";
 import { subscribe } from "./events";
+import { verifyAdminToken, verifyAdminRefreshToken } from "./admin-auth";
 
 async function seedAdmin() {
   try {
@@ -125,8 +126,26 @@ app.get("/api/events/driver/:driverId", async (c) => {
   });
 });
 
-// SSE endpoint global para productos
+// SSE endpoint para el panel de administración (protegido por token/refresh cookie)
 app.get("/api/events/admin-dashboard", async (c) => {
+  const cookieHeader = c.req.header("cookie") || "";
+  const tokenMatch = cookieHeader.match(/quickgo_admin=([^;]+)/);
+  const refreshMatch = cookieHeader.match(/quickgo_admin_refresh=([^;]+)/);
+
+  let isAdmin = false;
+  if (tokenMatch) {
+    const adminId = await verifyAdminToken(tokenMatch[1]);
+    if (adminId) isAdmin = true;
+  }
+  if (!isAdmin && refreshMatch) {
+    const adminId = await verifyAdminRefreshToken(refreshMatch[1]);
+    if (adminId) isAdmin = true;
+  }
+
+  if (!isAdmin) {
+    return c.text("Unauthorized", 401);
+  }
+
   return streamSSE(c, async (stream) => {
     const { cleanup, isClosed } = setupSSE(c, "admin:dashboard", stream);
     try {

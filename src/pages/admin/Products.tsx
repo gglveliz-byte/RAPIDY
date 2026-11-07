@@ -255,7 +255,12 @@ export default function AdminProducts() {
                             <td className="px-4 py-3">
                               <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full">{p.category || "-"}</span>
                             </td>
-                            <td className="px-4 py-3 font-medium text-gray-800">${Number(p.price || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                            <td className="px-4 py-3 font-medium text-gray-800">
+                              ${Number(p.price || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}
+                              <span className="text-[11px] text-gray-400 font-normal ml-1">
+                                {p.unitType === "kg" ? "/kg" : "/u"}
+                              </span>
+                            </td>
                             <td className="px-4 py-3">
                               <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                                 p.isAvailable === "yes"
@@ -309,7 +314,12 @@ export default function AdminProducts() {
                                 <p className="text-[10px] text-gray-500 truncate">{p.commerceName}</p>
                               </div>
                               <div className="text-right shrink-0">
-                                <p className="font-bold text-[#2E7D32]">${Number(p.price || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
+                                <p className="font-bold text-[#2E7D32]">
+                                  ${Number(p.price || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}
+                                  <span className="text-[10px] text-gray-400 font-normal ml-0.5">
+                                    {p.unitType === "kg" ? "/kg" : "/u"}
+                                  </span>
+                                </p>
                               </div>
                             </div>
                             

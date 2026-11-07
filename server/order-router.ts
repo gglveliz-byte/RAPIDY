@@ -33,7 +33,14 @@ export const orderRouter = createRouter({
       const db = getDb();
 
       let subtotal = 0;
-      const itemsData = [];
+      const itemsData: Array<{
+        productId: number;
+        commerceId: number;
+        productName: string;
+        quantity: number;
+        unitPrice: string;
+        total: string;
+      }> = [];
       const commerceIds = [...new Set(input.items.map((i) => i.commerceId))];
 
       for (const item of input.items) {
