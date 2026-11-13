@@ -20,8 +20,9 @@
  *   - `lucide-react`: Iconos `X`, `Camera`, `Image as ImageIcon`, `Sparkles`
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { X, Camera, Image as ImageIcon, Sparkles } from "lucide-react";
+import { fileToCompressedDataUrl } from "@/lib/imageUpload";
 
 interface ProductModalProps {
   isOpen: boolean;
@@ -47,18 +48,7 @@ interface ProductModalProps {
     isAvailable?: string;
   } | null;
   saving?: boolean;
-}
-
-/**
- * Convierte un objeto File en una cadena Data URL en formato Base64.
- */
-function readFileAsDataURL(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
+  error?: string | null;
 }
 
 /**
@@ -70,6 +60,7 @@ export default function ProductModal({
   onSave,
   initialData,
   saving = false,
+  error = null,
 }: ProductModalProps) {
   const [form, setForm] = useState({
     name: initialData?.name || "",
@@ -82,24 +73,59 @@ export default function ProductModal({
     isAvailable: initialData?.isAvailable || "yes",
   });
   const [activeImageTab, setActiveImageTab] = useState<"file" | "url">("file");
+  const [imageError, setImageError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  // El modal permanece montado entre aperturas. Sin este reset, la primera
+  // edición abre vacía y luego se reutilizan los datos del producto anterior.
+  useEffect(() => {
+    if (!isOpen) return;
+    setForm({
+      name: initialData?.name || "",
+      description: initialData?.description || "",
+      price: initialData?.price ? String(initialData.price) : "",
+      category: initialData?.category || "",
+      image: initialData?.image || "",
+      unitType: initialData?.unitType || "unit",
+      isFeatured: initialData?.isFeatured || "no",
+      isAvailable: initialData?.isAvailable || "yes",
+    });
+    setActiveImageTab(
+      initialData?.image?.startsWith("data:") || !initialData?.image ? "file" : "url",
+    );
+    setImageError(null);
+    setFormError(null);
+  }, [isOpen, initialData]);
 
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name.trim() || !form.price.trim()) return;
+    if (!form.name.trim() || !form.price.trim()) {
+      setFormError("El nombre y el precio son obligatorios.");
+      return;
+    }
+    if (!Number.isFinite(Number(form.price)) || Number(form.price) <= 0) {
+      setFormError("El precio debe ser mayor que cero.");
+      return;
+    }
+    setFormError(null);
     await onSave(form);
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      try {
-        const base64 = await readFileAsDataURL(file);
-        setForm((prev) => ({ ...prev, image: base64 }));
-      } catch (err) {
-        console.error("Error al leer archivo:", err);
-      }
+    if (!file) return;
+    try {
+      const base64 = await fileToCompressedDataUrl(file, {
+        maxWidth: 1200,
+        maxHeight: 1200,
+        quality: 0.82,
+      });
+      setForm((prev) => ({ ...prev, image: base64 }));
+      setImageError(null);
+    } catch (err) {
+      setImageError(err instanceof Error ? err.message : "No se pudo procesar la imagen");
     }
   };
 
@@ -370,6 +396,17 @@ export default function ProductModal({
               </div>
             </div>
           </div>
+
+          {imageError && (
+            <div role="alert" className="p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-[11px] font-medium">
+              {imageError}
+            </div>
+          )}
+          {(formError || error) && (
+            <div role="alert" className="p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-[11px] font-medium">
+              {formError || error}
+            </div>
+          )}
         </form>
 
         {/* Pie Fijo con Botones de Acción */}

@@ -21,6 +21,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router";
 import { ArrowLeft, Camera, Store, LocateFixed, MapPin, Save, LogOut, Power } from "lucide-react";
 import { safeImage } from "@/lib/imageUtils";
+import { fileToCompressedDataUrl } from "@/lib/imageUpload";
 import {
   useCommerce,
   useMerchantCommerceId,
@@ -56,14 +57,7 @@ function createFlamePinIcon(): L.DivIcon {
   });
 }
 
-function readFileAsDataURL(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
+
 
 async function getAddressFromCoords(lat: number, lng: number): Promise<string> {
   try {
@@ -85,6 +79,7 @@ export default function CommerceProfile() {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
+  const hydratedCommerceRef = useRef<number | null>(null);
 
   const merchantUser = getRoleUser<{ email?: string }>("merchant");
   const registeredEmail = merchantUser?.email || "";
@@ -131,15 +126,24 @@ export default function CommerceProfile() {
 
   useEffect(() => {
     if (!commerce) return;
-    // Coordenadas por defecto en Quito, Ecuador (-0.1807, -78.4678) si no están asignadas
-    const clat = parseFloat(commerce.lat) || -0.1807;
-    const clng = parseFloat(commerce.lng) || -78.4678;
+    // Solo hidratar al cambiar de comercio; un refetch no debe borrar
+    // cambios locales que el usuario todavía no guardó.
+    if (hydratedCommerceRef.current === commerce.id) return;
+    hydratedCommerceRef.current = commerce.id;
+
+    // Quito solo se usa para centrar el mapa; no se persiste si el comercio
+    // todavía no tiene coordenadas.
+    const hasCoords = Boolean(commerce.lat && commerce.lng);
+    const clat = hasCoords ? parseFloat(commerce.lat) : -0.1807;
+    const clng = hasCoords ? parseFloat(commerce.lng) : -78.4678;
     setForm({
       name: commerce.name || "", description: commerce.description || "",
       address: commerce.address || "", phone: commerce.phone || "", email: commerce.email || "",
       logo: commerce.logo || "", coverImage: commerce.coverImage || "",
       minOrder: commerce.minOrder || "", deliveryTime: commerce.deliveryTime || "",
-      openHours: commerce.openHours || "", lat: String(clat), lng: String(clng),
+      openHours: commerce.openHours || "",
+      lat: hasCoords ? String(commerce.lat) : "",
+      lng: hasCoords ? String(commerce.lng) : "",
     });
     const t = setTimeout(() => initMap(clat, clng), 150);
     return () => {
@@ -159,12 +163,17 @@ export default function CommerceProfile() {
     setSaving(true);
     setSaved(false);
     try {
-      await updateCommerceProfile.mutateAsync(form);
+      const { email: _email, ...editable } = form;
+      const payload: Record<string, unknown> = { ...editable };
+      if (!payload.minOrder) delete payload.minOrder;
+      if (!payload.lat) delete payload.lat;
+      if (!payload.lng) delete payload.lng;
+      await updateCommerceProfile.mutateAsync(payload);
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch (err) {
       console.error(err);
-      alert("Error al guardar el perfil");
+      alert(err instanceof Error ? err.message : "Error al guardar el perfil");
     } finally {
       setSaving(false);
     }
@@ -182,7 +191,11 @@ export default function CommerceProfile() {
   const handleLogoFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const dataUrl = await readFileAsDataURL(file);
+      const dataUrl = await fileToCompressedDataUrl(file, {
+        maxWidth: 640,
+        maxHeight: 640,
+        quality: 0.82,
+      });
       setForm((prev) => ({ ...prev, logo: dataUrl }));
     }
   };
@@ -190,7 +203,11 @@ export default function CommerceProfile() {
   const handleCoverFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const dataUrl = await readFileAsDataURL(file);
+      const dataUrl = await fileToCompressedDataUrl(file, {
+        maxWidth: 1600,
+        maxHeight: 900,
+        quality: 0.8,
+      });
       setForm((prev) => ({ ...prev, coverImage: dataUrl }));
     }
   };
