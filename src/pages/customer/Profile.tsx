@@ -340,9 +340,9 @@ export default function CustomerProfile() {
               className="w-full p-3.5 flex items-center justify-between text-left hover:bg-zinc-50 transition-colors cursor-pointer"
             >
               <div className="flex items-center gap-3">
-                <Undo2 className="w-4 h-4 text-amber-500" />
+                <Undo2 className="w-4 h-4 text-[#FF6A00]" />
                 <span className="text-xs sm:text-sm font-semibold text-zinc-800">
-                  Botón de Arrepentimiento (🇦🇷)
+                  Devolución y Desistimiento (🇪🇨)
                 </span>
               </div>
               <ChevronRight className="w-4 h-4 text-zinc-400" />

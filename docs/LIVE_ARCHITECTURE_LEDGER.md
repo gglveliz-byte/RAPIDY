@@ -193,6 +193,31 @@
   - `src/pages/customer/Profile.tsx` (314 líneas).
   - `docs/LIVE_ARCHITECTURE_LEDGER.md` (Actualizado).
 
+### [2026-11-13 19:48 UTC] - Transformación Jurídica Integral de las 7 Rutas Legales para Ecuador 🇪🇨 con 7 Subagentes Concurrentes
+- **Resumen Técnico:**
+  1. Se desplegó un equipo de 7 subagentes autónomos en simultáneo para reformar y certificar las 7 rutas del marco regulatorio de Rapidy bajo la jurisdicción exclusiva de la **República del Ecuador 🇪🇨**.
+  2. **Erradicación 100% de Jurisdicción Foránea:** Eliminadas todas las menciones a Argentina, Ley 24.240, AFIP, AAIP, COPREC, DNU y prefijos `ARR-AR`. Moneda exclusiva en Dólares de los Estados Unidos de América (**$ USD**).
+  3. **`LegalHub.tsx` (312 líneas):** Centro legal reestructurado con los 6 pilares de protección ecuatoriana (LODC, LOPDP, Devolución, ARCSA, DPE, SRI), cobertura en Quito, Guayaquil y Cuenca, y línea directa `1800-DEFENSA` (`1800 333 367`).
+  4. **`TermsAndConditions.tsx` (321 líneas) y `termsData.ts` (282 líneas):** Cláusulas canónicas de intermediación tecnológica bajo la **LODC** (Arts. 4, 15, 45, 47, 50), Ley de Comercio Electrónico (Ley 2002-67), deslinde de inocuidad alimentaria según **ARCSA**, desglose de IVA (15%), capacidad civil con Cédula/RUC y fuero arbitral en Ecuador.
+  5. **`PrivacyPolicy.tsx` (449 líneas):** Adaptación a la **Ley Orgánica de Protección de Datos Personales (LOPDP - R.O. 459)**, derechos ARCO+ (Arts. 21-26), Superintendencia de Protección de Datos Personales, geolocalización protegida sin rastreo en background, y conformidad estricta con Google Play Data Safety.
+  6. **`RefundPolicy.tsx` (359 líneas):** Protocolo de reintegros en $ USD bajo el **Art. 46 LODC**, tiempos de restitución bancaria (Banco Pichincha, Banco Guayaquil, Banco del Pacífico, Produbanco) en 24 a 72 horas hábiles, y reglas de cancelación de órdenes gastronómicas.
+  7. **`RegretButton.tsx` (438 líneas):** Transformado al **Derecho a la Devolución y Desistimiento en Ventas Electrónicas (Art. 45 LODC Ecuador)**, con formulario validado de Cédula (10 dígitos) / RUC (13 dígitos), radicación con ticket oficial `DEV-EC-${año}-${código}` y persistencia local.
+  8. **`ConsumerProtection.tsx` (491 líneas):** Vínculos directos con la Defensoría del Pueblo del Ecuador (DPE) y MPCEIP, línea 1800-DEFENSA, y Libro Digital de Reclamos de Rapidy con generación de ticket `REC-EC-${año}-${código}` y SLA de respuesta en 5 días.
+  9. **`DeleteAccount.tsx` (477 líneas):** Supresión de datos personales conforme al Art. 15 LOPDP, retención tributaria obligatoria de 7 años ante el SRI para comprobantes fiscales, y ticket formal de baja `BAJA-EC-${año}-${código}` para Google Play.
+  10. **Diseño Visual Oficial Rapidy:** Cabeceras Dark Velvet `#0E0E12`, micro-borde `border-white/10`, acentos luminosos Flame Orange `#FF6A00` y erradicación al 100% de verdes `#2E7D32`. Todos los archivos cumplen estrictamente la regla de modularidad de **menos de 500 líneas**.
+- **Archivos Creados:**
+  - `src/pages/legal/termsData.ts` (282 líneas).
+- **Archivos Modificados:**
+  - `src/pages/legal/LegalHub.tsx` (312 líneas).
+  - `src/pages/legal/TermsAndConditions.tsx` (321 líneas).
+  - `src/pages/PrivacyPolicy.tsx` (449 líneas).
+  - `src/pages/legal/RefundPolicy.tsx` (359 líneas).
+  - `src/pages/legal/RegretButton.tsx` (438 líneas).
+  - `src/pages/legal/ConsumerProtection.tsx` (491 líneas).
+  - `src/pages/legal/DeleteAccount.tsx` (477 líneas).
+  - `src/pages/customer/Profile.tsx` (378 líneas - Etiqueta a Devolución y Desistimiento Ecuador).
+  - `docs/LIVE_ARCHITECTURE_LEDGER.md` (Actualizado).
+
 ### [2026-11-13 19:25 UTC] - Rediseño Oficial Rapidy de OrderTracking, Chat, Optimización 0ms y Flujo de Checkout
 - **Resumen Técnico:**
   1. **Rediseño Integral de Seguimiento (`/order/:id`):** Erradicación total de todos los remanentes de verde legado (`#2E7D32`, `#1B5E20`) en mapas, polilíneas, pines animados, barras de estado, desgloses y pantallas de entrega.

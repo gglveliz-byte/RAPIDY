@@ -1,189 +1,477 @@
+/**
+ * @file DeleteAccount.tsx
+ * @description Portal público de Eliminación de Cuenta y Supresión de Datos Personales (Rapidy Ecuador 🇪🇨).
+ * Cumple con la Ley Orgánica de Protección de Datos Personales (LOPDP Arts. 15 y 16), las políticas de
+ * seguridad de Google Play Store (Google Play Data Deletion Policy), y la conservación tributaria de 7 años
+ * establecida por el Servicio de Rentas Internas (SRI).
+ * Sistema de Diseño: Dark Velvet (#0E0E12), fondo #F7F7FA, acentos Flame Orange (#FF6A00) y botones rose-600.
+ */
+
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { ArrowLeft, UserX, AlertTriangle, CheckCircle2, ShieldCheck, Lock } from "lucide-react";
+import {
+  ArrowLeft,
+  Trash2,
+  AlertTriangle,
+  CheckCircle2,
+  ShieldCheck,
+  Lock,
+  Phone,
+  User,
+  HelpCircle,
+  Copy,
+  Check,
+  Clock,
+  FileSpreadsheet,
+  Layers,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
+
+interface DeletionRecord {
+  ticketId: string;
+  fullName: string;
+  phone: string;
+  role: string;
+  reason: string;
+  requestedAt: string;
+  sla: string;
+  status: "pendiente" | "en_proceso";
+  legalBasis: string;
+}
 
 export default function DeleteAccount() {
   const navigate = useNavigate();
+
   const [form, setForm] = useState({
-    phone: "",
     fullName: "",
+    phone: "",
     role: "customer",
-    reason: "",
+    reasonCategory: "privacy",
+    reasonDetails: "",
     confirmCheck: false,
   });
-  const [submitted, setSubmitted] = useState(false);
+
+  const [ticketResult, setTicketResult] = useState<DeletionRecord | null>(null);
   const [loading, setLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [showFaq, setShowFaq] = useState<string | null>("sri");
+
+  const isValidEcPhone = (phone: string) => {
+    const cleaned = phone.replace(/[\s-]/g, "");
+    return /^(?:(?:\+?593)|0)?9\d{8}$/.test(cleaned);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.phone || !form.fullName || !form.confirmCheck) return;
+    if (!form.fullName.trim() || !form.phone.trim() || !form.confirmCheck) return;
 
     setLoading(true);
+    const year = new Date().getFullYear();
+    const randomCode = Math.floor(100000 + Math.random() * 900000);
+    const generatedTicket = `BAJA-EC-${year}-${randomCode}`;
+
+    const newRecord: DeletionRecord = {
+      ticketId: generatedTicket,
+      fullName: form.fullName.trim(),
+      phone: form.phone.trim(),
+      role: form.role,
+      reason: `${form.reasonCategory}${form.reasonDetails ? `: ${form.reasonDetails.trim()}` : ""}`,
+      requestedAt: new Date().toISOString(),
+      sla: "48 horas hábiles",
+      status: "pendiente",
+      legalBasis: "LOPDP Ecuador (Arts. 15 y 16) & Google Play Data Deletion Policy",
+    };
+
     setTimeout(() => {
       try {
-        const stored = JSON.parse(localStorage.getItem("qs_deletion_requests") || "[]");
-        stored.push({ ...form, requestedAt: new Date().toISOString() });
-        localStorage.setItem("qs_deletion_requests", JSON.stringify(stored));
-      } catch {}
+        const stored = JSON.parse(localStorage.getItem("rapidy_account_deletions") || "[]");
+        stored.push(newRecord);
+        localStorage.setItem("rapidy_account_deletions", JSON.stringify(stored));
+      } catch (err) {
+        console.error("Error al persistir baja en localStorage:", err);
+      }
       setLoading(false);
-      setSubmitted(true);
+      setTicketResult(newRecord);
     }, 500);
   };
 
+  const handleCopyTicket = (ticket: string) => {
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(ticket);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
   return (
-    <div className="mobile-container max-w-2xl mx-auto bg-gray-50 min-h-screen pb-12">
-      {/* Header oficial estilo Rapidy */}
-      <div className="bg-[#2E7D32] px-4 pt-4 pb-8">
-        <button
-          onClick={() => navigate(-1)}
-          className="text-white/90 hover:text-white mb-3 touch-target flex items-center gap-1.5 transition-colors"
-        >
-          <ArrowLeft className="w-6 h-6" />
-          <span className="text-sm font-medium">Volver</span>
-        </button>
-        <div className="flex items-center gap-2">
-          <span className="text-[11px] font-bold uppercase tracking-wider bg-white/20 text-white px-2.5 py-0.5 rounded-full">
-            Seguridad del Usuario
-          </span>
-          <span className="text-[11px] text-white/80">Google Play Data Safety</span>
-        </div>
-        <h1 className="text-2xl font-bold text-white tracking-tight mt-1">
-          Eliminación de Cuenta y Datos
-        </h1>
-        <p className="text-white/80 text-xs mt-0.5">
-          Derecho de Supresión • Ley 25.326 & LOPDP
-        </p>
-      </div>
-
-      {/* Contenedor superpuesto -mt-4 */}
-      <div className="px-4 -mt-4 space-y-3">
-        
-        {/* Advertencia previa */}
-        <div className="bg-white rounded-2xl card-shadow p-4 border-l-4 border-amber-500">
-          <div className="flex items-center gap-2 text-xs font-bold text-amber-950 mb-1">
-            <AlertTriangle className="w-4 h-4 text-amber-600" />
-            <span>Consecuencias de la baja de cuenta</span>
+    <div className="mobile-container max-w-2xl mx-auto bg-[#F7F7FA] min-h-screen pb-16 font-sans">
+      {/* Cabecera Fija Dark Velvet */}
+      <header className="sticky top-0 z-30 bg-[#0E0E12] border-b border-white/10 px-4 pt-4 pb-4 shadow-md">
+        <div className="flex items-center justify-between mb-2">
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="text-white/80 hover:text-white flex items-center gap-1.5 transition-colors touch-target"
+            aria-label="Volver"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            <span className="text-xs font-semibold">Volver</span>
+          </button>
+          <div className="inline-flex items-center gap-1.5 bg-white/10 border border-white/15 px-2.5 py-1 rounded-full">
+            <span className="w-2 h-2 rounded-full bg-[#FF6A00] animate-pulse" />
+            <span className="text-[11px] font-bold text-white tracking-wide">
+              LOPDP Ecuador 🇪🇨 & Google Play
+            </span>
           </div>
-          <p className="text-xs text-gray-600 leading-relaxed">
-            Al confirmar la baja de tu cuenta en <strong>Rapidy</strong>, eliminaremos permanentemente tu número de teléfono, direcciones registradas e historial de actividad en la plataforma.
-          </p>
-          <p className="text-[11px] text-gray-500 mt-2 bg-amber-50/70 p-2.5 rounded-xl border border-amber-200/60">
-            *Obligación contable: Los registros fiscales de órdenes o pagos ya completados se conservarán por el plazo legal mínimo obligatorio para cumplir con la AFIP (Argentina) o SRI (Ecuador).
-          </p>
         </div>
+        <h1 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
+          <Trash2 className="w-5 h-5 text-[#FF6A00]" />
+          Eliminación de Cuenta y Supresión de Datos
+        </h1>
+        <p className="text-white/70 text-xs mt-0.5">
+          Derecho de Supresión • Ley Orgánica de Protección de Datos Personales del Ecuador
+        </p>
+      </header>
 
-        {submitted ? (
-          <div className="bg-white rounded-2xl card-shadow p-6 text-center animate-in fade-in duration-300">
-            <div className="w-12 h-12 bg-green-100 text-[#2E7D32] rounded-full flex items-center justify-center mx-auto mb-3">
-              <CheckCircle2 className="w-7 h-7" />
+      {/* Contenido Principal */}
+      <main className="px-4 pt-4 space-y-4">
+        {/* Banner de Garantía Legal */}
+        <section className="bg-white rounded-3xl p-4 border border-gray-200/80 shadow-xs">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center shrink-0">
+              <AlertTriangle className="w-5 h-5 text-amber-600" />
             </div>
-            <h2 className="text-base font-bold text-gray-900 mb-1">
-              Solicitud de Eliminación Recibida
-            </h2>
-            <p className="text-xs text-gray-600 max-w-sm mx-auto mb-4">
-              Hemos registrado la petición para el número <strong>{form.phone}</strong>. Tus datos serán dados de baja en un plazo máximo de <strong>48 horas hábiles</strong>.
+            <div>
+              <h2 className="text-sm font-bold text-gray-950">Aviso Legal de Supresión Definitiva</h2>
+              <p className="text-xs text-gray-600 mt-1 leading-relaxed">
+                Conforme al <strong>Art. 15 de la LOPDP</strong> y las normativas de{" "}
+                <strong>Google Play Store</strong>, puedes tramitar el borrado irreversible de tu cuenta
+                y datos personales en Rapidy.
+              </p>
+            </div>
+          </div>
+          <div className="mt-3 pt-3 border-t border-gray-100 grid grid-cols-2 gap-2 text-[11px]">
+            <div className="bg-[#F7F7FA] p-2.5 rounded-2xl border border-gray-200/60">
+              <span className="font-bold text-gray-900 block mb-0.5">⏱️ Tiempo de Respuesta</span>
+              <span className="text-gray-600">Máximo <strong>48 horas hábiles</strong>.</span>
+            </div>
+            <div className="bg-[#F7F7FA] p-2.5 rounded-2xl border border-gray-200/60">
+              <span className="font-bold text-gray-900 block mb-0.5">🔒 Salvedad SRI</span>
+              <span className="text-gray-600">Facturación fiscal por 7 años.</span>
+            </div>
+          </div>
+        </section>
+
+        {/* Estado: Éxito con Ticket o Formulario */}
+        {ticketResult ? (
+          <section className="bg-white rounded-3xl p-6 border border-gray-200/80 shadow-sm text-center">
+            <div className="w-14 h-14 bg-rose-50 border border-rose-200 text-rose-600 rounded-full flex items-center justify-center mx-auto mb-3 shadow-inner">
+              <CheckCircle2 className="w-8 h-8 text-rose-600" />
+            </div>
+            <span className="inline-block bg-rose-100 text-rose-800 text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full mb-2">
+              Solicitud Registrada
+            </span>
+            <h2 className="text-lg font-bold text-gray-950">Trámite de Baja en Proceso</h2>
+            <p className="text-xs text-gray-600 max-w-md mx-auto mt-1 leading-relaxed">
+              Hemos registrado la petición para el número <strong>{ticketResult.phone}</strong>. Tus
+              datos serán eliminados en un plazo máximo de <strong>48 horas hábiles</strong>.
             </p>
+
+            {/* Código de Ticket */}
+            <div className="mt-4 p-3.5 bg-[#0E0E12] rounded-2xl text-left border border-white/10">
+              <div className="flex items-center justify-between text-[11px] text-white/60 mb-1">
+                <span>Código de Trámite Oficial (Ecuador)</span>
+                <span className="text-[#FF6A00] font-mono font-semibold">SLA: 48h</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-base font-bold text-white tracking-wider">
+                  {ticketResult.ticketId}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleCopyTicket(ticketResult.ticketId)}
+                  className="px-2.5 py-1 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-medium flex items-center gap-1 transition-colors"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-[#FF6A00]" />
+                      <span className="text-[#FF6A00]">Copiado</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5 text-white/80" />
+                      <span>Copiar</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Resumen */}
+            <div className="mt-4 bg-[#F7F7FA] rounded-2xl p-3 text-left border border-gray-200/60 space-y-1.5 text-xs">
+              <div className="flex justify-between text-gray-700">
+                <span className="text-gray-500">Titular:</span>
+                <span className="font-semibold">{ticketResult.fullName}</span>
+              </div>
+              <div className="flex justify-between text-gray-700">
+                <span className="text-gray-500">Rol:</span>
+                <span className="capitalize font-medium">
+                  {ticketResult.role === "customer"
+                    ? "Cliente consumidor"
+                    : ticketResult.role === "driver"
+                    ? "Repartidor asociado"
+                    : "Comercio aliado"}
+                </span>
+              </div>
+              <div className="flex justify-between text-gray-700">
+                <span className="text-gray-500">Fundamento:</span>
+                <span className="font-semibold text-gray-900">LOPDP Ecuador & SRI</span>
+              </div>
+            </div>
+
             <button
+              type="button"
               onClick={() => navigate("/home")}
-              className="px-6 py-2.5 bg-[#2E7D32] hover:bg-[#1B5E20] text-white text-xs font-semibold rounded-xl transition-all"
+              className="mt-5 w-full h-11 bg-[#0E0E12] hover:bg-black text-white text-xs font-semibold rounded-2xl transition-all shadow-xs"
             >
               Volver a la App
             </button>
-          </div>
+          </section>
         ) : (
-          <div className="bg-white rounded-2xl card-shadow p-5">
-            <form onSubmit={handleSubmit} className="space-y-3.5">
+          <section className="bg-white rounded-3xl p-5 border border-gray-200/80 shadow-xs">
+            <div className="border-b border-gray-100 pb-3 mb-4">
+              <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                <Lock className="w-4 h-4 text-[#FF6A00]" />
+                Formulario de Solicitud de Supresión
+              </h3>
+              <p className="text-[11px] text-gray-500 mt-0.5">
+                Datos vinculados a tu cuenta registrada en Rapidy Ecuador.
+              </p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Rol */}
               <div>
-                <label className="text-[11px] font-semibold text-gray-700 block mb-1">
-                  Rol de tu cuenta *
+                <label className="text-xs font-bold text-gray-800 block mb-1">
+                  Rol de la cuenta *
                 </label>
-                <select
-                  value={form.role}
-                  onChange={(e) => setForm({ ...form, role: e.target.value })}
-                  className="w-full h-10 px-3 border border-gray-200 rounded-xl text-xs focus:border-[#2E7D32] focus:ring-1 focus:ring-[#2E7D32] outline-none bg-white"
-                >
-                  <option value="customer">Cliente / Comprador</option>
-                  <option value="driver">Repartidor (Driver)</option>
-                  <option value="merchant">Comercio Aliado</option>
-                </select>
+                <div className="relative">
+                  <select
+                    value={form.role}
+                    onChange={(e) => setForm({ ...form, role: e.target.value })}
+                    className="w-full h-11 px-3.5 pr-8 bg-white border border-gray-200 rounded-2xl text-xs text-gray-900 focus:border-[#FF6A00] focus:ring-1 focus:ring-[#FF6A00] outline-none appearance-none cursor-pointer"
+                  >
+                    <option value="customer">Cliente Consumidor (Comprador)</option>
+                    <option value="driver">Repartidor Asociado (Driver / Courier)</option>
+                    <option value="merchant">Comercio Aliado (Restaurante o Tienda)</option>
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-gray-400 absolute right-3 top-3.5 pointer-events-none" />
+                </div>
               </div>
 
+              {/* Nombre completo */}
               <div>
-                <label className="text-[11px] font-semibold text-gray-700 block mb-1">
-                  Nombre completo registrado *
+                <label className="text-xs font-bold text-gray-800 block mb-1">
+                  Nombre y Apellidos completos *
                 </label>
-                <input
-                  type="text"
-                  required
-                  value={form.fullName}
-                  onChange={(e) => setForm({ ...form, fullName: e.target.value })}
-                  placeholder="Tu nombre completo"
-                  className="w-full h-10 px-3 border border-gray-200 rounded-xl text-xs focus:border-[#2E7D32] focus:ring-1 focus:ring-[#2E7D32] outline-none"
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    required
+                    value={form.fullName}
+                    onChange={(e) => setForm({ ...form, fullName: e.target.value })}
+                    placeholder="Ej. Carlos Patricio Mendoza Vera"
+                    className="w-full h-11 pl-10 pr-3.5 border border-gray-200 rounded-2xl text-xs text-gray-900 focus:border-[#FF6A00] focus:ring-1 focus:ring-[#FF6A00] outline-none"
+                  />
+                  <User className="w-4 h-4 text-gray-400 absolute left-3.5 top-3.5" />
+                </div>
               </div>
 
+              {/* Teléfono ecuatoriano */}
               <div>
-                <label className="text-[11px] font-semibold text-gray-700 block mb-1">
-                  Número de Celular / Teléfono registrado *
-                </label>
-                <input
-                  type="tel"
-                  required
-                  value={form.phone}
-                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                  placeholder="099... o +54 9..."
-                  className="w-full h-10 px-3 border border-gray-200 rounded-xl text-xs focus:border-[#2E7D32] focus:ring-1 focus:ring-[#2E7D32] outline-none"
-                />
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-bold text-gray-800 block">
+                    Celular registrado en Ecuador *
+                  </label>
+                  <span className="text-[10px] text-gray-500 font-mono">
+                    +593 o 09XXXXXXXX
+                  </span>
+                </div>
+                <div className="relative">
+                  <input
+                    type="tel"
+                    required
+                    value={form.phone}
+                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                    placeholder="0991234567 o +593991234567"
+                    className="w-full h-11 pl-10 pr-3.5 border border-gray-200 rounded-2xl text-xs text-gray-900 focus:border-[#FF6A00] focus:ring-1 focus:ring-[#FF6A00] outline-none font-mono"
+                  />
+                  <Phone className="w-4 h-4 text-gray-400 absolute left-3.5 top-3.5" />
+                </div>
+                {form.phone && !isValidEcPhone(form.phone) && (
+                  <p className="text-[11px] text-amber-600 mt-1 flex items-center gap-1">
+                    <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                    Ingresa un número celular válido de Ecuador (ej: 0991234567).
+                  </p>
+                )}
               </div>
 
+              {/* Motivo de la baja */}
               <div>
-                <label className="text-[11px] font-semibold text-gray-700 block mb-1">
-                  Motivo de la solicitud (opcional)
+                <label className="text-xs font-bold text-gray-800 block mb-1">
+                  Motivo de la solicitud *
                 </label>
+                <div className="relative mb-2">
+                  <select
+                    value={form.reasonCategory}
+                    onChange={(e) => setForm({ ...form, reasonCategory: e.target.value })}
+                    className="w-full h-11 px-3.5 pr-8 bg-white border border-gray-200 rounded-2xl text-xs text-gray-900 focus:border-[#FF6A00] focus:ring-1 focus:ring-[#FF6A00] outline-none appearance-none cursor-pointer"
+                  >
+                    <option value="privacy">Privacidad y supresión de datos (LOPDP)</option>
+                    <option value="inactive">Ya no utilizo la aplicación</option>
+                    <option value="service">Experiencia con entregas o pedidos</option>
+                    <option value="device">Cambio de número o dispositivo</option>
+                    <option value="other">Otro motivo particular</option>
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-gray-400 absolute right-3 top-3.5 pointer-events-none" />
+                </div>
                 <textarea
                   rows={2}
-                  value={form.reason}
-                  onChange={(e) => setForm({ ...form, reason: e.target.value })}
-                  placeholder="Cuéntanos brevemente..."
-                  className="w-full p-2.5 border border-gray-200 rounded-xl text-xs focus:border-[#2E7D32] focus:ring-1 focus:ring-[#2E7D32] outline-none resize-none"
+                  value={form.reasonDetails}
+                  onChange={(e) => setForm({ ...form, reasonDetails: e.target.value })}
+                  placeholder="Detalles adicionales (opcional)..."
+                  className="w-full p-3 border border-gray-200 rounded-2xl text-xs text-gray-900 focus:border-[#FF6A00] focus:ring-1 focus:ring-[#FF6A00] outline-none resize-none"
                 />
               </div>
 
-              <div className="flex items-start gap-2 pt-1">
-                <input
-                  type="checkbox"
-                  id="confirmCheck"
-                  required
-                  checked={form.confirmCheck}
-                  onChange={(e) => setForm({ ...form, confirmCheck: e.target.checked })}
-                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
-                />
-                <label htmlFor="confirmCheck" className="text-[11px] text-gray-600 leading-tight">
-                  Confirmo que deseo solicitar la supresión definitiva de mi cuenta y registros en la plataforma.
+              {/* Confirmación expresa */}
+              <div className="p-3.5 bg-rose-50/70 rounded-2xl border border-rose-200/80">
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    id="confirmCheck"
+                    required
+                    checked={form.confirmCheck}
+                    onChange={(e) => setForm({ ...form, confirmCheck: e.target.checked })}
+                    className="mt-0.5 h-4 w-4 rounded border-gray-300 text-rose-600 focus:ring-rose-500 cursor-pointer"
+                  />
+                  <span className="text-[11px] text-gray-800 leading-relaxed">
+                    <strong>Confirmación Expresa e Irreversible:</strong> Declaro ser titular de la cuenta
+                    y solicito la supresión definitiva de mi perfil, credenciales, domicilios e historial
+                    en Rapidy Ecuador conforme al Art. 15 de la LOPDP, entendiendo que esta acción es irreversible.
+                  </span>
                 </label>
               </div>
 
+              {/* Botón de Eliminación */}
               <button
                 type="submit"
-                disabled={loading}
-                className="w-full h-11 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl text-xs shadow-xs transition-all active:scale-[0.99] disabled:opacity-50 flex items-center justify-center gap-2 mt-2"
+                disabled={loading || !form.confirmCheck}
+                className="w-full h-12 bg-rose-600 hover:bg-rose-700 active:scale-[0.99] text-white font-bold rounded-2xl text-xs shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                <Lock className="w-4 h-4" />
-                {loading ? "Registrando solicitud..." : "Confirmar Solicitud de Eliminación"}
+                <Trash2 className="w-4 h-4" />
+                {loading ? "Generando ticket legal..." : "Solicitar Eliminación Definitiva de Cuenta"}
               </button>
             </form>
-          </div>
+          </section>
         )}
 
-        {/* Footer */}
-        <div className="text-center pt-4 pb-6">
-          <div className="flex items-center justify-center gap-1.5 text-xs text-gray-400">
-            <ShieldCheck className="w-4 h-4 text-[#2E7D32]" />
-            <span>Privacidad y soberanía de datos del usuario • Rapidy</span>
+        {/* Políticas de Transparencia de Datos Google Play y SRI */}
+        <section className="bg-white rounded-3xl p-4 border border-gray-200/80 shadow-xs space-y-2">
+          <div className="flex items-center gap-2 mb-2 px-1">
+            <HelpCircle className="w-4 h-4 text-[#FF6A00]" />
+            <h3 className="text-xs font-bold text-gray-900">
+              Política de Transparencia de Datos • Ecuador
+            </h3>
           </div>
-        </div>
 
-      </div>
+          {/* Item 1 */}
+          <div className="border border-gray-200/70 rounded-2xl overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setShowFaq(showFaq === "deleted" ? null : "deleted")}
+              className="w-full p-3 bg-gray-50/80 hover:bg-gray-100/80 flex items-center justify-between text-left transition-colors"
+            >
+              <span className="text-xs font-semibold text-gray-800 flex items-center gap-2">
+                <Layers className="w-3.5 h-3.5 text-[#FF6A00]" />
+                ¿Qué datos se eliminan de inmediato?
+              </span>
+              {showFaq === "deleted" ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
+            </button>
+            {showFaq === "deleted" && (
+              <div className="p-3 bg-white text-xs text-gray-600 leading-relaxed border-t border-gray-100 space-y-1">
+                <p>• <strong>Perfil y Acceso:</strong> Nombre, celular (+593), credenciales cifradas y token de sesión.</p>
+                <p>• <strong>Ubicación:</strong> Coordenadas GPS guardadas, referencias de entrega y pines en mapa de Ecuador.</p>
+                <p>• <strong>Actividad:</strong> Historial de pedidos en app, favoritos y registros de chat con soporte.</p>
+              </div>
+            )}
+          </div>
+
+          {/* Item 2 */}
+          <div className="border border-gray-200/70 rounded-2xl overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setShowFaq(showFaq === "sri" ? null : "sri")}
+              className="w-full p-3 bg-gray-50/80 hover:bg-gray-100/80 flex items-center justify-between text-left transition-colors"
+            >
+              <span className="text-xs font-semibold text-gray-800 flex items-center gap-2">
+                <FileSpreadsheet className="w-3.5 h-3.5 text-[#FF6A00]" />
+                Salvedad Tributaria Obligatoria (SRI Ecuador - 7 Años)
+              </span>
+              {showFaq === "sri" ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
+            </button>
+            {showFaq === "sri" && (
+              <div className="p-3 bg-white text-xs text-gray-600 leading-relaxed border-t border-gray-100">
+                <p>
+                  Conforme al <strong>Código Tributario del Ecuador</strong> y resoluciones del{" "}
+                  <strong>Servicio de Rentas Internas (SRI)</strong>, las facturas electrónicas y
+                  comprobantes de retención deben conservarse durante <strong>7 años</strong>.
+                </p>
+                <p className="mt-1.5 text-gray-500 bg-gray-50 p-2 rounded-xl text-[11px]">
+                  * Estos registros se mantienen en estado bloqueado y disociado, sin uso operativo,
+                  exclusivos para auditoría tributaria oficial.
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Item 3 */}
+          <div className="border border-gray-200/70 rounded-2xl overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setShowFaq(showFaq === "sla" ? null : "sla")}
+              className="w-full p-3 bg-gray-50/80 hover:bg-gray-100/80 flex items-center justify-between text-left transition-colors"
+            >
+              <span className="text-xs font-semibold text-gray-800 flex items-center gap-2">
+                <Clock className="w-3.5 h-3.5 text-[#FF6A00]" />
+                Plazos de Tramitación y Revocatoria (LOPDP)
+              </span>
+              {showFaq === "sla" ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
+            </button>
+            {showFaq === "sla" && (
+              <div className="p-3 bg-white text-xs text-gray-600 leading-relaxed border-t border-gray-100">
+                <p>
+                  El trámite se ejecuta en un plazo máximo de <strong>48 horas hábiles</strong>.
+                  Para cualquier consulta o desistimiento formal, puedes escribir a{" "}
+                  <a href="mailto:privacidad@rapidy.ec" className="text-[#FF6A00] font-semibold underline">
+                    privacidad@rapidy.ec
+                  </a>{" "}
+                  indicando tu número de ticket.
+                </p>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Footer Google Play Policy */}
+        <footer className="text-center pt-2 pb-6">
+          <div className="inline-flex items-center gap-2 text-xs text-gray-500 bg-white/80 border border-gray-200/80 px-3.5 py-1.5 rounded-full shadow-xs">
+            <ShieldCheck className="w-4 h-4 text-[#FF6A00]" />
+            <span>URL pública de eliminación conforme a Google Play Data Safety • Rapidy Ecuador</span>
+          </div>
+        </footer>
+      </main>
     </div>
   );
 }
