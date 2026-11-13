@@ -60,10 +60,15 @@ const QUICK_ACTIONS = [
 export default function CommerceDashboard() {
   const navigate = useNavigate();
   const [commerceName, setCommerceName] = useState("Mi comercio");
-  const { commerceId } = useMerchantCommerceId();
+  const {
+    commerceId,
+    loading: commerceLoading,
+    error: commerceError,
+  } = useMerchantCommerceId();
   const { data: products = [] } = useProductsByCommerce(commerceId || 0);
   const { data: stats } = useCommerceStats(commerceId || 0);
-  const { data: commerce } = useCommerce(commerceId || 0);
+  const { data: commerce, loading: commerceDataLoading, error: commerceDataError } =
+    useCommerce(commerceId || 0);
   const { data: orders = [] } = useCommerceOrders(commerceId || 0);
   const toggleCommerceStatus = useToggleCommerceStatus(commerceId || 0);
   const [togglingStatus, setTogglingStatus] = useState(false);
@@ -122,6 +127,48 @@ export default function CommerceDashboard() {
           imageUrl: p.imageUrl || p.image,
           category: p.category || "Menú",
         }));
+
+  if (commerceLoading || commerceDataLoading) {
+    return (
+      <CommerceLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="w-8 h-8 border-4 border-[#FF6A00] border-t-transparent rounded-full animate-spin" />
+        </div>
+      </CommerceLayout>
+    );
+  }
+
+  if (commerceError || commerceDataError) {
+    return (
+      <CommerceLayout>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6">
+          <div className="w-12 h-12 rounded-2xl bg-red-50 dark:bg-red-950/40 text-red-500 flex items-center justify-center mb-3">
+            <Store className="w-6 h-6" />
+          </div>
+          <h2 className="text-sm font-bold text-zinc-800 dark:text-white">No se pudo cargar tu comercio</h2>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 max-w-xs">
+            {(commerceError || commerceDataError)?.message || "Revisa tu conexión e inténtalo de nuevo."}
+          </p>
+        </div>
+      </CommerceLayout>
+    );
+  }
+
+  if (!commerceId) {
+    return (
+      <CommerceLayout>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6">
+          <div className="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 flex items-center justify-center mb-3">
+            <Store className="w-6 h-6" />
+          </div>
+          <h2 className="text-sm font-bold text-zinc-800 dark:text-white">Comercio sin asignar</h2>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 max-w-xs">
+            Tu usuario no tiene un comercio vinculado. Contacta a soporte para completar la configuración.
+          </p>
+        </div>
+      </CommerceLayout>
+    );
+  }
 
   return (
     <CommerceLayout>

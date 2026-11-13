@@ -38,6 +38,8 @@ import { useCart } from "@/hooks/useCart";
 import { CustomerBottomNav } from "@/components/CustomerBottomNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { safeImage } from "@/lib/imageUtils";
+import { trpc } from "@/providers/trpc";
+import { useProductEvents } from "@/hooks/useOrderEvents";
 
 export default function CustomerSearch() {
   const navigate = useNavigate();
@@ -46,6 +48,8 @@ export default function CustomerSearch() {
   const categoryParam = searchParams.get("category");
   const selectedCategory = categoryParam ? Number(categoryParam) : null;
   const deferredQuery = useDeferredValue(query);
+  const utils = trpc.useUtils();
+  useProductEvents(utils);
 
   const { data: categories, loading: categoriesLoading } = useCategories();
   const { data: commerces, loading: commercesLoading } = useCommerces();

@@ -32,15 +32,48 @@ import CommerceLayout from "@/components/CommerceLayout";
 
 export default function CommerceStats() {
   const navigate = useNavigate();
-  const { commerceId } = useMerchantCommerceId();
-  const { data: stats, loading } = useCommerceStats(commerceId || 0);
+  const {
+    commerceId,
+    loading: commerceLoading,
+    error: commerceError,
+    refresh: refreshCommerce,
+  } = useMerchantCommerceId();
+  const { data: stats, loading, error, refresh } = useCommerceStats(commerceId || 0);
+  const isLoading = commerceLoading || loading;
+  const loadError = commerceError || error;
 
-  if (loading) {
+  if (isLoading) {
     return (
       <CommerceLayout>
         <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
           <div className="w-10 h-10 border-4 border-[#FF6A00] border-t-transparent rounded-full animate-spin" />
           <p className="text-xs font-semibold text-zinc-400">Cargando métricas financieras...</p>
+        </div>
+      </CommerceLayout>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <CommerceLayout>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6">
+          <div className="w-12 h-12 rounded-2xl bg-red-50 dark:bg-red-950/40 flex items-center justify-center text-red-500 mb-3">
+            <BarChart2 className="w-6 h-6" />
+          </div>
+          <h2 className="text-sm font-bold text-zinc-800 dark:text-white mb-1">No se pudieron cargar las métricas</h2>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-xs">
+            {loadError.message || "Revisa tu conexión e inténtalo de nuevo."}
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              refreshCommerce();
+              refresh();
+            }}
+            className="mt-4 px-4 py-2 rounded-xl bg-[#FF6A00] hover:bg-[#e65f00] text-white text-xs font-bold"
+          >
+            Reintentar
+          </button>
         </div>
       </CommerceLayout>
     );

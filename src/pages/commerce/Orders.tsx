@@ -43,14 +43,19 @@ export default function CommerceOrders() {
   const [search, setSearch] = useState("");
   const [expandedOrder, setExpandedOrder] = useState<number | null>(null);
 
-  const { commerceId } = useMerchantCommerceId();
+  const {
+    commerceId,
+    loading: commerceLoading,
+    error: commerceError,
+    refresh: refreshCommerce,
+  } = useMerchantCommerceId();
   const updateOrderStatus = useUpdateOrderStatus(commerceId || undefined);
   const markCommerceReady = useMarkCommerceReady(commerceId || undefined);
-  const { data: rawOrders = [], loading } = useCommerceOrders(commerceId || 0);
+  const { data: rawOrders = [], loading, error, refresh } = useCommerceOrders(commerceId || 0);
+  const isLoading = commerceLoading || loading;
+  const loadError = commerceError || error;
 
   const orders = rawOrders;
-
-  
 
   const handleMarkReady = async (orderId: number) => {
     try {
@@ -204,8 +209,28 @@ export default function CommerceOrders() {
           })}
         </div>
 
+        {/* Error de carga */}
+        {!isLoading && loadError && (
+          <div className="bg-white dark:bg-[#16161B] rounded-3xl border border-red-200 dark:border-red-900/50 p-8 text-center shadow-xs">
+            <h3 className="text-sm font-extrabold text-red-700 dark:text-red-400">No se pudieron cargar los pedidos</h3>
+            <p className="text-xs text-red-600/80 dark:text-red-300/80 mt-1">
+              {loadError.message || "Revisa tu conexión e inténtalo de nuevo."}
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                refreshCommerce();
+                refresh();
+              }}
+              className="mt-4 px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold"
+            >
+              Reintentar
+            </button>
+          </div>
+        )}
+
         {/* Indicador de Carga */}
-        {loading && (
+        {isLoading && (
           <div className="flex flex-col items-center justify-center py-16 gap-3">
             <div className="w-10 h-10 border-4 border-[#FF6A00] border-t-transparent rounded-full animate-spin" />
             <p className="text-xs font-semibold text-zinc-400">Sincronizando pedidos en tiempo real...</p>
@@ -213,7 +238,7 @@ export default function CommerceOrders() {
         )}
 
         {/* Estado Vacío */}
-        {!loading && filteredOrders.length === 0 && (
+        {!isLoading && !loadError && filteredOrders.length === 0 && (
           <div className="bg-white dark:bg-[#16161B] rounded-3xl border border-zinc-200/80 dark:border-white/10 p-10 text-center shadow-xs">
             <div className="w-16 h-16 rounded-full bg-[#FF6A00]/10 text-[#FF6A00] flex items-center justify-center mx-auto mb-3">
               <ShoppingBag className="w-8 h-8" />
@@ -239,7 +264,7 @@ export default function CommerceOrders() {
         )}
 
         {/* Lista de Tarjetas de Pedidos en Tiempo Real */}
-        {!loading && (
+        {!isLoading && !loadError && (
           <div className="space-y-3.5">
             {filteredOrders.map((order: any) => {
               const currentStatus = visibleStatus(order);

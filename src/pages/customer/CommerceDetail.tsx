@@ -32,7 +32,7 @@ import { useParams, useNavigate } from "react-router";
 import { ArrowLeft, Star, Clock, Phone, MapPin, Plus, Minus, ShoppingCart, Store } from "lucide-react";
 import { useCommerce, useProductsByCommerce } from "@/hooks/useDeliveryData";
 import { useCart } from "@/hooks/useCart";
-import { useCommerceEvents } from "@/hooks/useOrderEvents";
+import { useProductEvents } from "@/hooks/useOrderEvents";
 import { trpc } from "@/providers/trpc";
 import { safeImage } from "@/lib/imageUtils";
 import { CustomerBottomNav } from "@/components/CustomerBottomNav";
@@ -84,7 +84,7 @@ export default function CommerceDetail() {
 
   // Escuchar eventos en tiempo real
   const commerceUtils = trpc.useUtils();
-  useCommerceEvents(Number(id), commerceUtils);
+  useProductEvents(commerceUtils);
 
   const products = (allProducts || []).filter((p: any) => p.isAvailable === "yes");
   const isStoreOpen = commerce.isOpen === "open";

@@ -58,9 +58,17 @@ export default function CommerceProducts() {
   const [confirmingDelete, setConfirmingDelete] = useState<any>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
-  const { commerceId } = useMerchantCommerceId();
-  const { data: products = [], loading } = useProductsByCommerce(commerceId || 0);
+  const {
+    commerceId,
+    loading: commerceLoading,
+    error: commerceError,
+    refresh: refreshCommerce,
+  } = useMerchantCommerceId();
+  const { data: products = [], loading, error, refresh } = useProductsByCommerce(commerceId || 0);
+  const isLoading = commerceLoading || loading;
+  const loadError = commerceError || error;
   const createProduct = useCreateProduct(commerceId || 0);
   const updateProduct = useUpdateProduct(commerceId || 0);
   const deleteProductMutation = useDeleteProduct(commerceId || 0);
@@ -88,16 +96,20 @@ export default function CommerceProducts() {
 
   const openAdd = () => {
     setEditing(null);
+    setSaveError(null);
     setShowModal(true);
   };
 
   const openEdit = (p: any) => {
     setEditing(p);
+    setSaveError(null);
     setShowModal(true);
   };
 
   const handleSaveProduct = async (formData: any) => {
+    if (saving) return;
     setSaving(true);
+    setSaveError(null);
     try {
       if (editing) {
         await updateProduct.mutateAsync({ id: editing.id, ...formData });
@@ -107,7 +119,7 @@ export default function CommerceProducts() {
       setShowModal(false);
       setEditing(null);
     } catch (err: any) {
-      alert(err?.message || "Error al guardar producto");
+      setSaveError(err?.message || "Error al guardar producto");
     } finally {
       setSaving(false);
     }
@@ -231,15 +243,35 @@ export default function CommerceProducts() {
           )}
         </div>
 
+        {/* Error de carga */}
+        {!isLoading && loadError && (
+          <div className="bg-white dark:bg-[#16161B] rounded-3xl border border-red-200 dark:border-red-900/50 p-6 text-center shadow-2xs">
+            <h3 className="text-sm font-bold text-red-700 dark:text-red-400">No se pudo cargar tu catálogo</h3>
+            <p className="text-xs text-red-600/80 dark:text-red-300/80 mt-1">
+              {loadError.message || "Revisa tu conexión e inténtalo de nuevo."}
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                refreshCommerce();
+                refresh();
+              }}
+              className="mt-4 px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold"
+            >
+              Reintentar
+            </button>
+          </div>
+        )}
+
         {/* Indicador de Carga */}
-        {loading && (
+        {isLoading && (
           <div className="flex items-center justify-center py-14">
             <div className="w-8 h-8 border-4 border-[#FF6A00] border-t-transparent rounded-full animate-spin" />
           </div>
         )}
 
         {/* Estado Vacío */}
-        {!loading && filtered.length === 0 && (
+        {!isLoading && !loadError && filtered.length === 0 && (
           <div className="bg-white dark:bg-[#16161B] rounded-3xl border border-slate-200/80 dark:border-white/10 p-8 sm:p-12 text-center shadow-2xs">
             <div className="w-14 h-14 rounded-3xl bg-orange-50 dark:bg-orange-950/40 text-[#FF6A00] flex items-center justify-center mx-auto mb-3">
               <Package className="w-7 h-7" />
@@ -264,7 +296,7 @@ export default function CommerceProducts() {
         )}
 
         {/* Grilla Responsiva de Productos */}
-        {!loading && (
+        {!isLoading && !loadError && (
           <div className="grid grid-cols-1 min-[540px]:grid-cols-2 lg:grid-cols-3 gap-3 min-[360px]:gap-3.5">
             {filtered.map((p: any) => {
               const isAvail = p.isAvailable === "yes";
@@ -389,6 +421,7 @@ export default function CommerceProducts() {
           onSave={handleSaveProduct}
           initialData={editing}
           saving={saving}
+          error={saveError}
         />
 
         {/* Modal de Confirmación de Eliminación */}
