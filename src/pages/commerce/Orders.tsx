@@ -102,6 +102,7 @@ export default function CommerceOrders() {
   const filteredOrders = useMemo(() => {
     const q = search.trim().toLowerCase();
     const normalizedQuery = q.replace(/^#/, "");
+    const phoneQuery = q.replace(/\D/g, "");
     return orders.filter((o: any) => {
       const currentStatus = visibleStatus(o);
       const matchesFilter =
@@ -114,7 +115,10 @@ export default function CommerceOrders() {
         !q ||
         String(o.id).includes(normalizedQuery) ||
         (o.customerName && o.customerName.toLowerCase().includes(q)) ||
-        (o.customerPhone && o.customerPhone.includes(q));
+        (o.customerPhone && o.customerPhone.includes(q)) ||
+        (phoneQuery.length >= 3 &&
+          o.customerPhone &&
+          o.customerPhone.replace(/\D/g, "").includes(phoneQuery));
       return matchesFilter && matchesSearch;
     });
   }, [orders, filter, search]);

@@ -145,7 +145,13 @@ async function main() {
     ];
     for (const [route, expected] of routes) {
       await page.goto(`${BASE_URL}${route}`, { waitUntil: "domcontentloaded" });
-      await page.waitForTimeout(1200);
+      await page
+        .waitForFunction(
+          (text) => document.body.innerText.toLowerCase().includes(text),
+          expected,
+          { timeout: 15000 },
+        )
+        .catch(() => {});
       const body = (await page.locator("body").innerText()).toLowerCase();
       const ok = page.url().endsWith(route) && body.includes(expected);
       record(`Ruta ${route}`, ok, page.url());

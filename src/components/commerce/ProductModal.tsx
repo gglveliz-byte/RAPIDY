@@ -130,14 +130,19 @@ export default function ProductModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4 overflow-hidden">
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-0 sm:p-4 overflow-hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="product-modal-title"
+    >
       {/* Contenedor adaptativo: Pantalla completa en móviles pequeños, ventana centrada en tablets y desktops */}
       <div className="w-full h-full sm:h-auto sm:max-h-[90vh] sm:max-w-md bg-white dark:bg-[#16161B] sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom duration-200 border border-slate-100 dark:border-white/10">
         
         {/* Cabecera Fija Dark Velvet */}
         <div className="flex items-center justify-between px-4 min-[360px]:px-5 py-3 min-[360px]:py-3.5 bg-[#0E0E12] border-b border-white/10 flex-shrink-0 text-white">
           <div className="min-w-0 pr-2">
-            <h2 className="text-sm min-[360px]:text-base font-bold text-white truncate">
+            <h2 id="product-modal-title" className="text-sm min-[360px]:text-base font-bold text-white truncate">
               {initialData ? "Editar producto" : "Nuevo producto"}
             </h2>
             <p className="text-[10px] min-[360px]:text-xs text-white/60 truncate">

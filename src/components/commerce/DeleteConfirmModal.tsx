@@ -42,13 +42,18 @@ export default function DeleteConfirmModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-3">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-3"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="delete-product-title"
+    >
       <div className="w-full max-w-xs bg-white dark:bg-[#16161B] rounded-3xl shadow-2xl p-4 min-[360px]:p-5 text-center animate-in fade-in zoom-in-95 duration-150 border border-slate-100 dark:border-white/10">
         <div className="w-11 h-11 min-[360px]:w-12 min-[360px]:h-12 bg-red-50 dark:bg-red-950/40 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-3 border border-red-100 dark:border-red-900/50 shadow-2xs">
           <AlertTriangle className="w-5 h-5 min-[360px]:w-6 min-[360px]:h-6" />
         </div>
         
-        <h3 className="text-sm min-[360px]:text-base font-extrabold text-slate-800 dark:text-white mb-1">
+        <h3 id="delete-product-title" className="text-sm min-[360px]:text-base font-extrabold text-slate-800 dark:text-white mb-1">
           ¿Eliminar producto?
         </h3>
         

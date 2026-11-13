@@ -88,8 +88,13 @@ export default function Login() {
       } else {
         setError(result?.message || "Credenciales incorrectas. Verifica tus datos.");
       }
-    } catch {
-      setError("Error de conexión al servidor");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "";
+      setError(
+        message && !/^HTTP \d+$/i.test(message)
+          ? message
+          : "Error de conexión al servidor",
+      );
     } finally {
       setLoading(false);
     }

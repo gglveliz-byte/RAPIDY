@@ -145,7 +145,12 @@ export const loginRouter = createRouter({
             user: { id: user.id, name: user.name, email: user.email, role: user.role },
           };
           if (user.role === "merchant") {
-            const commerceResult = await db.select().from(commerces).where(eq(commerces.merchantUserId, user.id));
+            const commerceResult = await db
+              .select()
+              .from(commerces)
+              .where(eq(commerces.merchantUserId, user.id))
+              .orderBy(commerces.id)
+              .limit(1);
             if (commerceResult.length > 0) {
               result.commerceId = commerceResult[0].id;
               result.user.commerceId = commerceResult[0].id;

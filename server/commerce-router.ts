@@ -58,7 +58,12 @@ export const commerceRouter = createRouter({
   // Returns the commerce owned by the currently authenticated merchant
   me: merchantQuery.query(async ({ ctx }) => {
     const db = getDb();
-    const rows = await db.select().from(commerces).where(eq(commerces.merchantUserId, ctx.merchant.id));
+    const rows = await db
+      .select()
+      .from(commerces)
+      .where(eq(commerces.merchantUserId, ctx.merchant.id))
+      .orderBy(commerces.id)
+      .limit(1);
     return rows[0] || null;
   }),
 
