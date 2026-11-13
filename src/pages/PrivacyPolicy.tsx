@@ -12,24 +12,24 @@ export default function PrivacyPolicy() {
   return (
     <div className="mobile-container max-w-2xl mx-auto bg-gray-50 min-h-screen pb-12">
       {/* Header oficial estilo Rapidy */}
-      <div className="bg-[#2E7D32] px-4 pt-4 pb-8">
+      <div className="bg-[#0E0E12] px-4 pt-4 pb-8 border-b border-white/10">
         <button
           onClick={() => navigate(-1)}
-          className="text-white/90 hover:text-white mb-3 touch-target flex items-center gap-1.5 transition-colors"
+          className="text-white/90 hover:text-white mb-3 touch-target flex items-center gap-1.5 transition-colors cursor-pointer"
         >
-          <ArrowLeft className="w-6 h-6" />
-          <span className="text-sm font-medium">Volver</span>
+          <ArrowLeft className="w-5 h-5" />
+          <span className="text-sm font-semibold">Volver</span>
         </button>
         <div className="flex items-center gap-2">
-          <span className="text-[11px] font-bold uppercase tracking-wider bg-white/20 text-white px-2.5 py-0.5 rounded-full">
+          <span className="text-[11px] font-bold uppercase tracking-wider bg-[#FF6A00]/20 text-[#FF6A00] border border-[#FF6A00]/30 px-2.5 py-0.5 rounded-full">
             Seguridad & Datos
           </span>
-          <span className="text-[11px] text-white/80">Google Play Safe</span>
+          <span className="text-[11px] text-zinc-400">Google Play Safe</span>
         </div>
-        <h1 className="text-2xl font-bold text-white tracking-tight mt-1">
+        <h1 className="text-2xl font-black text-white tracking-tight mt-1">
           Política de Privacidad
         </h1>
-        <p className="text-white/80 text-xs mt-0.5">
+        <p className="text-zinc-400 text-xs mt-0.5">
           Protección de Datos Personales • Ecuador y Argentina
         </p>
       </div>
@@ -38,16 +38,16 @@ export default function PrivacyPolicy() {
       <div className="px-4 -mt-4 space-y-3">
         
         {/* Selector de país estilo chips */}
-        <div className="bg-white rounded-2xl card-shadow p-3.5">
+        <div className="bg-white rounded-2xl card-shadow p-3.5 border border-zinc-100 shadow-sm">
           <span className="text-xs font-semibold text-gray-700 flex items-center gap-1.5 mb-2">
-            <Globe className="w-3.5 h-3.5 text-[#2E7D32]" /> Régimen de Privacidad:
+            <Globe className="w-3.5 h-3.5 text-[#FF6A00]" /> Régimen de Privacidad:
           </span>
           <div className="grid grid-cols-3 gap-1.5">
             <button
               onClick={() => setSelectedCountry("all")}
-              className={`h-9 px-2 rounded-xl text-xs font-semibold transition-all flex items-center justify-center text-center ${
+              className={`h-9 px-2 rounded-xl text-xs font-semibold transition-all flex items-center justify-center text-center cursor-pointer ${
                 selectedCountry === "all"
-                  ? "bg-[#2E7D32] text-white shadow-xs"
+                  ? "bg-[#FF6A00] text-white shadow-xs"
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }`}
             >
@@ -55,9 +55,9 @@ export default function PrivacyPolicy() {
             </button>
             <button
               onClick={() => setSelectedCountry("ec")}
-              className={`h-9 px-2 rounded-xl text-xs font-semibold transition-all flex items-center justify-center text-center ${
+              className={`h-9 px-2 rounded-xl text-xs font-semibold transition-all flex items-center justify-center text-center cursor-pointer ${
                 selectedCountry === "ec"
-                  ? "bg-[#2E7D32] text-white shadow-xs"
+                  ? "bg-[#FF6A00] text-white shadow-xs"
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }`}
             >
@@ -65,9 +65,9 @@ export default function PrivacyPolicy() {
             </button>
             <button
               onClick={() => setSelectedCountry("ar")}
-              className={`h-9 px-2 rounded-xl text-xs font-semibold transition-all flex items-center justify-center text-center ${
+              className={`h-9 px-2 rounded-xl text-xs font-semibold transition-all flex items-center justify-center text-center cursor-pointer ${
                 selectedCountry === "ar"
-                  ? "bg-[#2E7D32] text-white shadow-xs"
+                  ? "bg-[#FF6A00] text-white shadow-xs"
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }`}
             >
@@ -77,14 +77,14 @@ export default function PrivacyPolicy() {
         </div>
 
         {/* Datos recopilados */}
-        <div className="bg-white rounded-2xl card-shadow p-4 border-l-4 border-[#2E7D32]">
+        <div className="bg-white rounded-2xl card-shadow p-4 border-l-4 border-[#FF6A00] shadow-sm">
           <h2 className="text-sm font-bold text-gray-900 mb-2">
             1. Datos que Recopilamos y Finalidad
           </h2>
           <div className="space-y-2">
             <div className="p-3 bg-gray-50 rounded-xl">
               <div className="flex items-center gap-2 text-xs font-bold text-gray-900 mb-1">
-                <Eye className="w-3.5 h-3.5 text-[#2E7D32]" />
+                <Eye className="w-3.5 h-3.5 text-[#FF6A00]" />
                 <span>Identificación y Contacto</span>
               </div>
               <p className="text-xs text-gray-600 leading-relaxed">
@@ -94,7 +94,7 @@ export default function PrivacyPolicy() {
 
             <div className="p-3 bg-gray-50 rounded-xl">
               <div className="flex items-center gap-2 text-xs font-bold text-gray-900 mb-1">
-                <MapPin className="w-3.5 h-3.5 text-[#2E7D32]" />
+                <MapPin className="w-3.5 h-3.5 text-[#FF6A00]" />
                 <span>Geolocalización en Tiempo Real</span>
               </div>
               <p className="text-xs text-gray-600 leading-relaxed">
@@ -191,7 +191,7 @@ export default function PrivacyPolicy() {
         {/* Footer */}
         <div className="text-center pt-4 pb-6">
           <div className="flex items-center justify-center gap-1.5 text-xs text-gray-400">
-            <ShieldCheck className="w-4 h-4 text-[#2E7D32]" />
+            <ShieldCheck className="w-4 h-4 text-[#FF6A00]" />
             <span>Tus datos están protegidos en Rapidy</span>
           </div>
         </div>

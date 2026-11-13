@@ -59,7 +59,7 @@ export function PWAInstallBanner() {
     <div className="fixed bottom-20 left-4 right-4 z-50 max-w-md mx-auto">
       <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-4">
         <div className="flex items-start gap-3">
-          <div className={`w-10 h-10 ${isBackoffice ? "bg-gray-900" : "bg-[#2E7D32]"} rounded-lg flex items-center justify-center flex-shrink-0`}>
+          <div className={`w-10 h-10 ${isBackoffice ? "bg-gray-900" : "bg-[#FF6A00] shadow-md shadow-[#FF6A00]/30"} rounded-xl flex items-center justify-center flex-shrink-0`}>
             {isBackoffice ? <Store className="w-5 h-5 text-white" /> : <Download className="w-5 h-5 text-white" />}
           </div>
           <div className="flex-1 min-w-0">
@@ -72,7 +72,7 @@ export function PWAInstallBanner() {
             <div className="flex gap-2">
               <button
                 onClick={handleInstall}
-                className={`flex-1 h-9 ${isBackoffice ? "bg-gray-900 hover:bg-gray-800" : "bg-[#2E7D32] hover:bg-[#1B5E20]"} text-white text-sm font-medium rounded-lg transition-colors`}
+                className={`flex-1 h-9 ${isBackoffice ? "bg-gray-900 hover:bg-gray-800" : "bg-[#FF6A00] hover:bg-[#e65f00] shadow-sm shadow-[#FF6A00]/30"} text-white text-sm font-bold rounded-xl transition-all active:scale-95`}
               >
                 Instalar
               </button>

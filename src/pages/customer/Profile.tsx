@@ -371,8 +371,8 @@ export default function CustomerProfile() {
         orders={ordersList}
       />
 
-      {/* Navegación Inferior Flotante en Tema Oscuro */}
-      <CustomerBottomNav active="profile" />
+      {/* Navegación Inferior Flotante en Tema Oscuro (oculta cuando el modal de pedidos está abierto) */}
+      {!showAllOrdersModal && <CustomerBottomNav active="profile" />}
     </div>
   );
 }

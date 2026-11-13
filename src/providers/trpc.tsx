@@ -2,7 +2,7 @@ import { createTRPCReact } from "@trpc/react-query";
 import { httpLink, TRPCClientError } from "@trpc/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import superjson from "superjson";
-import type { AppRouter } from "../../api/router";
+import type { AppRouter } from "../../server/router";
 import type { ReactNode } from "react";
 
 export const trpc = createTRPCReact<AppRouter>();
@@ -24,6 +24,10 @@ function handleAuthError() {
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
+      staleTime: 1000 * 30, // 30 segundos de datos frescos: navegación instantánea sin refetch constante
+      gcTime: 1000 * 60 * 10, // 10 minutos en memoria caché
+      refetchOnWindowFocus: false, // Elimina recargas continuas agresivas al alternar ventanas o tocar la pantalla
+      refetchOnReconnect: true,
       retry(_failureCount, error) {
         if (error instanceof TRPCClientError && error.data?.code === "UNAUTHORIZED") {
           handleAuthError()

@@ -226,8 +226,14 @@ export function useOrder(id: number) {
     queryKey: ["order.getById", id],
     queryFn: () => trpcCall<any>("order.getById", { id }),
     enabled: Boolean(id),
-    refetchInterval: 3000,
-    refetchIntervalInBackground: true,
+    refetchInterval: (q) => {
+      const status = q.state.data?.status;
+      if (status === "delivered" || status === "cancelled") {
+        return false;
+      }
+      return 4000;
+    },
+    refetchIntervalInBackground: false,
   });
   return { data: query.data ?? null, loading: query.isLoading, refresh: query.refetch };
 }

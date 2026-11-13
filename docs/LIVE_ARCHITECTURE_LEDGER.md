@@ -193,6 +193,32 @@
   - `src/pages/customer/Profile.tsx` (314 líneas).
   - `docs/LIVE_ARCHITECTURE_LEDGER.md` (Actualizado).
 
+### [2026-11-13 19:25 UTC] - Rediseño Oficial Rapidy de OrderTracking, Chat, Optimización 0ms y Flujo de Checkout
+- **Resumen Técnico:**
+  1. **Rediseño Integral de Seguimiento (`/order/:id`):** Erradicación total de todos los remanentes de verde legado (`#2E7D32`, `#1B5E20`) en mapas, polilíneas, pines animados, barras de estado, desgloses y pantallas de entrega.
+  2. **Modularización Arquitectónica (< 500 líneas):** Se descompuso `OrderTracking.tsx` (anteriormente 588 líneas, violando el límite) en un orquestador limpio de 253 líneas y 3 submódulos independientes en `src/pages/customer/components/`:
+     - `OrderTrackingMap.tsx` (295 líneas): Mapa CartoDB interactivo con pines animados de repartidor, comercios y destino en Flame Orange (`#FF6A00`), polilínea discontinua y botón de centrado.
+     - `OrderTrackingTimeline.tsx` (189 líneas): Línea de tiempo con barra de progreso luminosa, nodos numerados con checkmarks, estados traducidos, desglose por local y alerta de pago rechazado con reenvío de foto.
+     - `OrderTrackingDetails.tsx` (148 líneas): Lista de artículos en USD, desglose (subtotal, envío $2.50, total en Flame Orange), dirección con pin y pantalla de celebración al entregar el pedido.
+  3. **Canal de Chat con Repartidor (`Chat.tsx` & `ChatBubble.tsx`):** Transformación desde el verde WhatsApp a la estética oficial Rapidy (burbujas en Flame Orange y blanco nieve, cabecera Dark Velvet fija `#0E0E12`, fondo luminoso `#F7F7FA`).
+  4. **Optimización de Carga y Rendimiento (Cero Refetching Continuo):** Se solucionó la recarga constante de páginas configurando en `QueryClient` (`src/providers/trpc.tsx`) `staleTime: 30000`, `gcTime: 600000` y `refetchOnWindowFocus: false`. Las transiciones entre páginas ahora son instantáneas (0ms) desde la memoria caché sin disparar peticiones repetitivas ni pantallas de carga continuas.
+  5. **Flujo de Pago y Modales Sin Oclusión:** En `Cart.tsx` y `Profile.tsx`, la barra flotante de navegación (`CustomerBottomNav`) se oculta automáticamente mientras el modal de checkout (`CartAddressModal`) o el historial (`ProfileOrdersModal`) están abiertos, impidiendo que el botón de confirmación quede tapado en dispositivos móviles.
+- **Archivos Creados:**
+  - `src/pages/customer/components/OrderTrackingMap.tsx` (295 líneas).
+  - `src/pages/customer/components/OrderTrackingTimeline.tsx` (189 líneas).
+  - `src/pages/customer/components/OrderTrackingDetails.tsx` (148 líneas).
+- **Archivos Modificados:**
+  - `src/pages/customer/OrderTracking.tsx` (253 líneas - Refactorizado y modularizado).
+  - `src/pages/customer/Chat.tsx` (241 líneas).
+  - `src/components/ChatBubble.tsx` (40 líneas).
+  - `src/pages/customer/Cart.tsx` (420 líneas).
+  - `src/pages/customer/Profile.tsx` (378 líneas).
+  - `src/providers/trpc.tsx` (72 líneas).
+  - `src/hooks/useDeliveryData.ts` (589 líneas).
+  - `src/pages/PrivacyPolicy.tsx` (202 líneas).
+  - `src/components/PWAInstallBanner.tsx` (97 líneas).
+  - `docs/LIVE_ARCHITECTURE_LEDGER.md` (Actualizado).
+
 ### [2026-11-13 17:48 UTC] - Rediseño Concurrente Multi-Agente de Search, Cart y Profile (Estilo Rapidy)
 - **Resumen Técnico:**
   1. Se ejecutó el rediseño coordinado en paralelo de las 3 páginas restantes del portal de cliente mediante subagentes especializados, aplicando con rigor la política de **CERO invención de lógica o campos**.

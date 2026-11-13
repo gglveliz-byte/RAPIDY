@@ -413,8 +413,8 @@ export default function Cart() {
         onConfirmOrder={confirmOrder}
       />
 
-      {/* 4. Barra de Navegación Inferior Flotante en Tema Oscuro */}
-      <CustomerBottomNav active="cart" />
+      {/* 4. Barra de Navegación Inferior Flotante en Tema Oscuro (oculta durante checkout para máxima limpieza) */}
+      {!showAddressModal && <CustomerBottomNav active="cart" />}
     </div>
   );
 }
