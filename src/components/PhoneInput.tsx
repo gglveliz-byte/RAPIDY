@@ -1,3 +1,27 @@
+/**
+ * @archivo src/components/PhoneInput.tsx
+ * @modulo 00-ui-kernel (Componentes Atómicos de Entrada y Selección)
+ * @proposito
+ *   Componente de entrada telefónica internacional adaptativo (modo claro y oscuro).
+ *   Soporta selector de países latinoamericanos y globales con prefijo telefónico,
+ *   código ISO visible, sanitización de caracteres numéricos y enfoque accesible.
+ *
+ * @resumen_contenido
+ *   - Componente `PhoneInput`: Menú desplegable flotante de países y entrada de texto numérico.
+ *   - Constante `countries`: Matriz de países soportados con código, nombre y código de marcado.
+ *   - Manejador de clic exterior: Cierra el menú desplegable al hacer clic fuera del componente.
+ *
+ * @dependencias_internas
+ *   - Ninguna
+ *
+ * @dependencias_externas
+ *   - `lucide-react` (`ChevronDown`, `Phone`)
+ *   - `react` (`useState`, `useRef`, `useEffect`)
+ *
+ * @tablas_bd_o_redis
+ *   - Ninguna (UI pura reutilizable en todos los portales de autenticación)
+ */
+
 import { useState, useRef, useEffect } from "react";
 import { ChevronDown, Phone } from "lucide-react";
 

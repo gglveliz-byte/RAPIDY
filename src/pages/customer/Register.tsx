@@ -1,24 +1,41 @@
+/**
+ * @archivo src/pages/customer/Register.tsx
+ * @modulo 01-identity-and-auth (Registro y Onboarding de Clientes)
+ * @proposito
+ *   Pantalla de registro de nuevos clientes en la plataforma Rapidy.
+ *   Provee captura de datos de contacto (nombre, apellido, celular) y
+ *   geolocalización en un solo toque mediante OpenStreetMap Nominatim
+ *   con persistencia en PostgreSQL (Neon) y sesión automática.
+ *
+ * @resumen_contenido
+ *   - Componente `Register`: Formulario interactivo con tarjeta de cristal esmerilado,
+ *     motor de constelaciones `RapidyCanvas` a 60 FPS, autocompletado GPS y validaciones.
+ *   - Manejador `handleGetLocation`: Invoca la API Geolocation del navegador y traduce a dirección física.
+ *   - Manejador `handleSubmit`: Envía los datos sanitizados al endpoint tRPC `customer.register`.
+ *
+ * @dependencias_internas
+ *   - `RapidyCanvas` (@/components/RapidyCanvas)
+ *   - `PhoneInput` (@/components/PhoneInput)
+ *   - `getAddressFromCoords` (@/lib/locationUtils)
+ *   - `useCustomerSession` (@/hooks/useCustomerSession)
+ *   - `registerCustomer` (@/hooks/useDeliveryData)
+ *
+ * @dependencias_externas
+ *   - `lucide-react` (iconografía de usuario, navegación y mapa)
+ *   - `react-router` (navegación declarativa)
+ *
+ * @tablas_bd_o_redis
+ *   - PostgreSQL (Neon): `customers` (Inserción y autenticación de nuevo cliente)
+ */
+
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { ArrowLeft, User, MapPin, Navigation, Sparkles, ArrowRight } from "lucide-react";
 import { useCustomerSession } from "@/hooks/useCustomerSession";
 import { registerCustomer } from "@/hooks/useDeliveryData";
+import { getAddressFromCoords } from "@/lib/locationUtils";
 import PhoneInput from "@/components/PhoneInput";
 import RapidyCanvas from "@/components/RapidyCanvas";
-
-async function getAddressFromCoords(lat: number, lng: number): Promise<string> {
-  try {
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1&accept-language=es`,
-      { headers: { "User-Agent": "Rapidy-App/1.0" } }
-    );
-    const data = await res.json();
-    if (data?.display_name) return data.display_name;
-    return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-  } catch {
-    return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-  }
-}
 
 export default function Register() {
   const navigate = useNavigate();

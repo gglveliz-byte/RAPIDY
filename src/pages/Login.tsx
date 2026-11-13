@@ -1,3 +1,30 @@
+/**
+ * @archivo src/pages/Login.tsx
+ * @modulo 01-identity-and-auth (Portal Profesional de Socios, Comercios y Repartidores)
+ * @proposito
+ *   Punto de acceso único y unificado para el personal operativo de Rapidy:
+ *   Administradores generales, Comercios afiliados y Repartidores de última milla.
+ *   Permite autenticación por Correo Electrónico (Admin/Merchant) y Celular (Driver).
+ *
+ * @resumen_contenido
+ *   - Componente `Login`: Selector de pestaña interactivo entre modo Email y Celular,
+ *     motor visual `RapidyCanvas` a 60 FPS, visor seguro de contraseña y despacho de sesión.
+ *   - Manejador `handleLogin`: Valida las credenciales contra `login.login` y redirige
+ *     al panel respectivo (`/admin`, `/commerce` o `/driver`).
+ *
+ * @dependencias_internas
+ *   - `RapidyCanvas` (@/components/RapidyCanvas)
+ *   - `PhoneInput` (@/components/PhoneInput)
+ *   - `trpcMutate` (@/hooks/useDeliveryData)
+ *
+ * @dependencias_externas
+ *   - `lucide-react` (iconografía de seguridad, correo y visibilidad)
+ *   - `react-router` (redirección protegida por roles)
+ *
+ * @tablas_bd_o_redis
+ *   - PostgreSQL (Neon): `users` (Admin/Merchant) y `drivers` (Repartidores)
+ */
+
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { Mail, Lock, ArrowLeft, Shield, Briefcase, Eye, EyeOff } from "lucide-react";

@@ -1,3 +1,26 @@
+/**
+ * @archivo src/components/RapidyCanvas.tsx
+ * @modulo 00-ui-kernel (Efectos Visuales e Identidad Dinámica de Marca)
+ * @proposito
+ *   Lienzo Canvas HTML5 de alto rendimiento a 60 FPS para fondos interactivos de Rapidy.
+ *   Genera constelaciones reactivas con nodos que respiran, trazos de velocidad
+ *   subtle delivery y elasticidad física ante movimientos del cursor o eventos táctiles.
+ *
+ * @resumen_contenido
+ *   - Componente `RapidyCanvas`: Inicializa el contexto 2D, calcula densidad de píxeles (DPR)
+ *     para pantallas Retina/4K, gestiona el bucle `requestAnimationFrame` y eventos de puntero.
+ *   - Interfaces `Particle` y `SpeedStreak`: Modelado físico y cinemático de los nodos y vectores.
+ *
+ * @dependencias_internas
+ *   - Ninguna (Puro Canvas 2D sin bibliotecas externas pesadas).
+ *
+ * @dependencias_externas
+ *   - `react` (`useEffect`, `useRef`)
+ *
+ * @tablas_bd_o_redis
+ *   - Ninguna (Renderizado cliente 100% en GPU/Browser)
+ */
+
 import { useEffect, useRef } from "react";
 
 interface Particle {

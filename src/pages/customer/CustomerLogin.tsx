@@ -1,3 +1,30 @@
+/**
+ * @archivo src/pages/customer/CustomerLogin.tsx
+ * @modulo 01-identity-and-auth (Acceso Directo de Clientes)
+ * @proposito
+ *   Pantalla de inicio de sesión simplificada para clientes finales de Rapidy.
+ *   Permite el acceso rápido mediante número telefónico internacional,
+ *   recupera la sesión persistente y redirige al catálogo principal (`/home`).
+ *
+ * @resumen_contenido
+ *   - Componente `CustomerLogin`: Tarjeta de cristal flotante con efecto *Glassmorphism*,
+ *     fondo interactivo `RapidyCanvas`, selector de código de país y entrada de celular.
+ *   - Manejador `handleLogin`: Valida y envía el teléfono al procedimiento `customer.login`.
+ *
+ * @dependencias_internas
+ *   - `RapidyCanvas` (@/components/RapidyCanvas)
+ *   - `PhoneInput` (@/components/PhoneInput)
+ *   - `useCustomerSession` (@/hooks/useCustomerSession)
+ *   - `trpcMutate` (@/hooks/useDeliveryData)
+ *
+ * @dependencias_externas
+ *   - `lucide-react` (iconografía de interfaz y navegación)
+ *   - `react-router` (enrutamiento cliente)
+ *
+ * @tablas_bd_o_redis
+ *   - PostgreSQL (Neon): `customers` (Búsqueda por teléfono o coincidencia difusa)
+ */
+
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { ArrowLeft, ArrowRight, Sparkles } from "lucide-react";
