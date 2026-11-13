@@ -87,6 +87,23 @@
 
 ## 5. Bitácora Cronológica de Integraciones (Changelog Técnico Live)
 
+### [2026-11-13 18:31 UTC] - Precios Realistas en Dólares ($ USD) y Semilla Oficial de Base de Datos
+- **Resumen Técnico:**
+  1. **Actualización de Moneda a Dólares ($ USD):** Se normalizaron todos los precios del catálogo a valores de mercado en USD (entre $1.00 y $14.00 USD), eliminando cifras heredadas en miles de pesos argentinos.
+  2. **Comercios y Configuración:**
+     - Montos mínimos de pedido (`minOrder`) fijados entre $3.00 y $6.00 USD.
+     - Tarifa de entrega (`delivery_fee`) configurada en $2.50 USD y monto mínimo global en $5.00 USD.
+  3. **Banner Promocional Dinámico (`HomePromoBanner.tsx`):**
+     - Se actualizaron los precios de respaldo (`fallbackProducts`) en coherencia con la moneda USD ($6.50, $7.50, $2.50, $4.50).
+  4. **Semillero de Datos Oficial (`db/seed.ts`):**
+     - Se insertaron órdenes y detalles de prueba para el cliente principal (Lautaro Ezequiel) para alimentar el ranking dinámico en tiempo real y el historial de pedidos de perfil.
+     - Ejecución de `npx tsx db/seed.ts` exitosa con código 0 sobre la base de datos Neon PostgreSQL.
+  5. **Verificación:** `npm run build` compilado con código de salida 0 sin advertencias de tipos ni desbordamiento de límites.
+- **Archivos Modificados:**
+  - `db/seed.ts` (260 líneas).
+  - `src/pages/customer/components/HomePromoBanner.tsx` (209 líneas).
+  - `docs/LIVE_ARCHITECTURE_LEDGER.md` (Actualizado).
+
 ### [2026-11-13 18:24 UTC] - Eliminación de Tarjeta Duplicada en Perfil y Banner Dinámico de Tops Más Pedidos
 - **Resumen Técnico:**
   1. **Erradicación de Duplicación en Perfil (`Profile.tsx`):** Se eliminó la tarjeta central redundante señalada por el usuario, unificando los datos del cliente (nombre, avatar con halo, teléfono y botón *"Salir"*) exclusivamente en la cabecera fija Dark Velvet. El contenido inicia de inmediato con la tarjeta de dirección de entrega.
