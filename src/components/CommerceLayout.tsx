@@ -72,6 +72,9 @@ export default function CommerceLayout({ children }: { children: ReactNode }) {
 
   const handleLogout = async () => {
     try {
+      await trpcMutate("commerce.unregisterDeviceToken", {});
+    } catch { /* el logout debe continuar */ }
+    try {
       await trpcMutate("login.logout", { scope: "merchant" });
     } catch {
       // Si falla la red, igual limpiamos la UI local y salimos del panel.

@@ -987,7 +987,9 @@ export const orderRouter = createRouter({
             driverId: order.driverId,
             items: orderItemsForOrder,
             customerName: customer ? `${customer.firstName} ${customer.lastName}` : "",
-            myCommerceStatus: myStatus?.status ?? fallbackStatus,
+            myCommerceStatus: ["pending_payment", "payment_rejected"].includes(order.status)
+              ? order.status
+              : myStatus?.status ?? fallbackStatus,
             commerceCommission: (
               commerceTotal *
               (commissionRate / 100)

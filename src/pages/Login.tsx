@@ -46,6 +46,10 @@ export default function Login() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    if (!password.trim()) {
+      setError("La contraseña es obligatoria");
+      return;
+    }
     setLoading(true);
     try {
       const input: any = { password };
@@ -69,6 +73,10 @@ export default function Login() {
 
       if (result?.success) {
         const role = result.role as AppRole;
+        if (!["admin", "driver", "merchant", "customer"].includes(role)) {
+          setError("Este tipo de cuenta no tiene acceso al panel profesional.");
+          return;
+        }
         if (result.user) {
           setRoleUser(role, result.user);
           setSession(role, result.user.id);
@@ -188,6 +196,9 @@ export default function Login() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="tu-correo@empresa.com"
+                    autoComplete="username"
+                    maxLength={320}
+                    required
                     className="w-full h-12 sm:h-13 pl-11 pr-4 bg-transparent text-white placeholder-zinc-500 text-sm font-medium outline-none rounded-2xl"
                   />
                 </div>
@@ -212,6 +223,9 @@ export default function Login() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
+                  autoComplete="current-password"
+                  maxLength={200}
+                  required
                   className="w-full h-12 sm:h-13 pl-11 pr-11 bg-transparent text-white placeholder-zinc-500 text-sm font-medium outline-none rounded-2xl"
                 />
                 <button

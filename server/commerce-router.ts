@@ -401,11 +401,17 @@ export const commerceRouter = createRouter({
     }),
 
   registerDeviceToken: merchantQuery
-    .input(z.object({ token: z.string() }))
+    .input(z.object({ token: z.string().max(4096) }))
     .mutation(async ({ input, ctx }) => {
       const db = getDb();
       if (!ctx.merchant?.id) return { success: false };
       await db.update(users).set({ fcmToken: input.token }).where(eq(users.id, ctx.merchant.id));
       return { success: true };
     }),
+
+  unregisterDeviceToken: merchantQuery.mutation(async ({ ctx }) => {
+    const db = getDb();
+    await db.update(users).set({ fcmToken: null }).where(eq(users.id, ctx.merchant.id));
+    return { success: true };
+  }),
 });

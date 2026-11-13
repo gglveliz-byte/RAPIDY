@@ -231,6 +231,9 @@ export default function CommerceProfile() {
 
   const handleLogout = async () => {
     try {
+      await trpcMutate("commerce.unregisterDeviceToken", {});
+    } catch { /* el logout debe continuar */ }
+    try {
       await trpcMutate("login.logout", { scope: "merchant" });
     } catch {
       // La cookie se limpia igual en el servidor cuando vuelva la conexión.
