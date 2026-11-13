@@ -19,7 +19,7 @@
  *   - `lucide-react` (`LayoutDashboard`, `ShoppingBag`, `Package`, `BarChart3`, `LogOut`, `User`, `Store`, `Sparkles`)
  */
 
-import { useState, useEffect, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import { useNavigate, useLocation } from "react-router";
 import {
   LayoutDashboard,
@@ -31,6 +31,16 @@ import {
   Store,
 } from "lucide-react";
 import { trpcMutate, useMerchantCommerceId, useCommerceOrders } from "@/hooks/useDeliveryData";
+import { useCommerceEvents } from "@/hooks/useOrderEvents";
+import { queryClient, trpc } from "@/providers/trpc";
+import {
+  clearRoleUser,
+  clearSession,
+  dispatchLogout,
+  getRoleUser,
+} from "@/hooks/useSessionSync";
+import { getCommerceOrderStatus } from "@contracts/orderStatus";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Inicio", path: "/commerce" },
@@ -43,41 +53,38 @@ const navItems = [
 export default function CommerceLayout({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const [storeName, setStoreName] = useState("Mi Comercio");
+  const merchantUser = getRoleUser<{ name?: string }>("merchant");
 
-  const { commerceId } = useMerchantCommerceId();
+  const { commerceId, commerce } = useMerchantCommerceId();
   const { data: rawOrders } = useCommerceOrders(commerceId || 0);
+  const utils = trpc.useUtils();
+  useCommerceEvents(commerceId || undefined, utils);
 
-  // Contador dinámico de pedidos pendientes (recibidos o en preparación)
-  const pendingCount = (rawOrders || []).filter(
-    (o) => o.status === "received" || o.status === "preparing"
+  const storeName = commerce?.name || merchantUser?.name || "Mi Comercio";
+  const isSelling = commerce?.status === "active" && commerce?.isOpen === "open";
+
+  // Contador dinámico de pedidos que requieren acción de cocina.
+  const pendingCount = (rawOrders || []).filter((order: any) =>
+    ["received", "accepted", "preparing"].includes(
+      getCommerceOrderStatus(order.status, order.myCommerceStatus),
+    ),
   ).length;
-
-  useEffect(() => {
-    try {
-      const storedUser = localStorage.getItem("merchant_user");
-      if (storedUser) {
-        const user = JSON.parse(storedUser);
-        if (user?.name) setStoreName(user.name);
-      }
-    } catch {
-      // fallback
-    }
-  }, []);
 
   const handleLogout = async () => {
     try {
-      await trpcMutate("login.logout", {});
+      await trpcMutate("login.logout", { scope: "merchant" });
     } catch {
-      // ignore
+      // Si falla la red, igual limpiamos la UI local y salimos del panel.
     }
-    localStorage.removeItem("merchant_user");
-    localStorage.removeItem("qs_session");
+    clearRoleUser("merchant");
+    clearSession("merchant");
+    dispatchLogout("merchant");
+    queryClient.clear();
     navigate("/login");
   };
 
   return (
-    <div className="min-h-screen bg-[#F7F7FA] flex flex-col md:flex-row text-zinc-900 antialiased overflow-x-hidden selection:bg-[#FF6A00]/20">
+    <div className="min-h-screen bg-[#F7F7FA] dark:bg-[#0A0A0D] flex flex-col md:flex-row text-zinc-900 dark:text-zinc-100 antialiased overflow-x-hidden selection:bg-[#FF6A00]/20">
       {/* 1. SIDEBAR DESKTOP (Dark Velvet #0E0E12) */}
       <aside className="hidden md:flex w-64 bg-[#0E0E12] border-r border-white/10 flex-col fixed inset-y-0 left-0 z-30 shadow-2xl">
         {/* Cabecera de Marca */}
@@ -107,9 +114,9 @@ export default function CommerceLayout({ children }: { children: ReactNode }) {
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-xs font-bold text-white truncate leading-snug">{storeName}</p>
-            <span className="inline-flex items-center gap-1.5 text-[10px] text-[#FF6A00] font-black">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#FF6A00] animate-ping" />
-              Operando en Vivo
+            <span className={`inline-flex items-center gap-1.5 text-[10px] font-black ${isSelling ? "text-[#FF6A00]" : "text-amber-300"}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${isSelling ? "bg-[#FF6A00] animate-ping" : "bg-amber-400"}`} />
+              {isSelling ? "Operando en Vivo" : commerce?.status !== "active" ? "No activo" : "Local pausado"}
             </span>
           </div>
         </div>
@@ -150,12 +157,16 @@ export default function CommerceLayout({ children }: { children: ReactNode }) {
           })}
         </nav>
 
-        {/* Botón de Cerrar Sesión */}
-        <div className="p-3 border-t border-white/10">
+        {/* Botón de Conmutador de Tema y Cerrar Sesión */}
+        <div className="p-3 border-t border-white/10 space-y-1.5">
+          <div className="flex items-center justify-between px-3.5 py-1.5 bg-white/5 rounded-2xl border border-white/5">
+            <span className="text-xs font-bold text-zinc-400">Tema</span>
+            <ThemeToggle size="sm" />
+          </div>
           <button
             type="button"
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-3.5 py-2.5 text-xs font-bold text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-2xl transition-all cursor-pointer group"
+            className="w-full flex items-center gap-3 px-3.5 py-2 text-xs font-bold text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-2xl transition-all cursor-pointer group"
           >
             <LogOut className="w-4 h-4 text-rose-500 group-hover:scale-110 transition-transform" />
             <span>Cerrar sesión</span>
@@ -179,32 +190,32 @@ export default function CommerceLayout({ children }: { children: ReactNode }) {
             <h1 className="text-xs min-[380px]:text-sm font-black text-white truncate leading-tight">
               {storeName}
             </h1>
-            <p className="text-[10px] min-[380px]:text-[11px] text-[#FF6A00] font-black flex items-center gap-1.5 mt-0.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#FF6A00] animate-ping" />
-              Panel de Negocio
+            <p className={`text-[10px] min-[380px]:text-[11px] font-black flex items-center gap-1.5 mt-0.5 ${isSelling ? "text-[#FF6A00]" : "text-amber-300"}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${isSelling ? "bg-[#FF6A00] animate-ping" : "bg-amber-400"}`} />
+              {isSelling ? "Panel de Negocio" : commerce?.status !== "active" ? "Comercio no activo" : "Local pausado"}
             </p>
           </div>
         </div>
 
-        {/* Botón Salir Móvil */}
-        <button
-          type="button"
-          onClick={handleLogout}
-          title="Cerrar sesión"
-          aria-label="Cerrar sesión de mi comercio"
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 border border-rose-500/20 active:scale-95 transition-all text-xs font-bold shrink-0 cursor-pointer"
-        >
-          <LogOut className="w-3.5 h-3.5 text-rose-400" />
-          <span>Salir</span>
-        </button>
+        {/* Botones de Cabecera Móvil: ThemeToggle + Salir */}
+        <div className="flex items-center gap-2 shrink-0">
+          <ThemeToggle size="sm" className="!bg-white/10 !border-white/15 !text-white" />
+          <button
+            type="button"
+            onClick={handleLogout}
+            title="Cerrar sesión"
+            aria-label="Cerrar sesión de mi comercio"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 border border-rose-500/20 active:scale-95 transition-all text-xs font-bold shrink-0 cursor-pointer"
+          >
+            <LogOut className="w-3.5 h-3.5 text-rose-400" />
+            <span>Salir</span>
+          </button>
+        </div>
       </header>
 
       {/* 3. ÁREA PRINCIPAL DE CONTENIDO */}
       <main
-        className="flex-1 md:ml-64 pt-28 md:pt-0 pb-24 md:pb-8 overflow-x-hidden min-h-screen"
-        style={{
-          paddingTop: "calc(max(48px, env(safe-area-inset-top, 48px)) + 56px)",
-        }}
+        className="flex-1 md:ml-64 pt-[calc(max(48px,env(safe-area-inset-top,48px))+56px)] md:pt-0 pb-24 md:pb-8 overflow-x-hidden min-h-screen"
       >
         {children}
       </main>

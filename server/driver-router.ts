@@ -351,6 +351,11 @@ export const driverRouter = createRouter({
           emit(`order:${input.orderId}`, { type: "commerce_pickup", commerceId: input.commerceId, pickedUpCommerceIds: newPicked });
         }
         emit(`driver:${driverId}`, { type: "commerce_pickup", orderId: input.orderId, commerceId: input.commerceId, pickedUpCommerceIds: newPicked });
+        emit(`commerce:${input.commerceId}`, {
+          type: "order_status",
+          orderId: input.orderId,
+          status: "picked_up",
+        });
         emit("admin:dashboard", { type: "dashboard_update" });
 
         const updated = await tx.select().from(orders).where(eq(orders.id, input.orderId));

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { and, desc, eq, inArray, isNull, lt, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, lt } from "drizzle-orm";
 import {
   createRouter,
   customerQuery,
@@ -28,6 +28,11 @@ import {
   assertOrderAccess,
   safeDriver,
 } from "./lib/order-access";
+import { markCommerceReadyForOrder } from "./lib/order-ready";
+import {
+  syncAllCommerceStatuses,
+  syncCommerceStatuses,
+} from "./lib/order-status-sync";
 import {
   canTransition,
   getOrderStatusMeta,
@@ -143,7 +148,19 @@ async function buildQuote(items: Array<z.infer<typeof quoteItemSchema>>) {
     }
 
     const unitPrice = Number(product.price);
+    if (!Number.isFinite(unitPrice) || unitPrice <= 0) {
+      issues.push(`"${product.name}" tiene un precio inválido.`);
+      continue;
+    }
+    if (unitPrice > 99_999_999.99) {
+      issues.push(`"${product.name}" supera el precio máximo permitido.`);
+      continue;
+    }
     const total = Number((unitPrice * item.quantity).toFixed(2));
+    if (!Number.isFinite(total)) {
+      issues.push(`"${product.name}" genera un total inválido.`);
+      continue;
+    }
     lines.push({
       productId: product.id,
       name: product.name,
@@ -216,63 +233,177 @@ async function notifyReadyDrivers(orderId: number) {
   }
 }
 
-async function markCommerceReadyForOrder(orderId: number, commerceId: number) {
+
+
+interface MerchantStatusInput {
+  id: number;
+  status: "accepted" | "preparing" | "cancelled";
+  notes?: string;
+  cancellationReason?: string;
+}
+
+/**
+ * Camino específico del comercio. No permite cambiar el pedido global a
+ * ready_for_pickup (para eso existe commerce.markReady) ni cancelar pedidos
+ * multi-comercio de otros locales.
+ */
+async function updateMerchantOrderStatus(
+  ctx: Parameters<typeof assertOrderAccess>[0],
+  access: Awaited<ReturnType<typeof assertOrderAccess>>,
+  input: MerchantStatusInput,
+) {
   const db = getDb();
-  const items = await db
-    .select({ id: orderItems.id })
-    .from(orderItems)
-    .where(and(eq(orderItems.orderId, orderId), eq(orderItems.commerceId, commerceId)))
-    .limit(1);
-  if (items.length === 0) {
-    throw new TRPCError({
-      code: "FORBIDDEN",
-      message: "Este comercio no tiene productos en el pedido.",
-    });
+  const merchantId = ctx.merchant!.id;
+  const commerceIdsInOrder = [...new Set(access.items.map((item) => item.commerceId))];
+
+  const ownedRows = await db
+    .select({ id: commerces.id })
+    .from(commerces)
+    .where(
+      and(
+        inArray(commerces.id, commerceIdsInOrder),
+        eq(commerces.merchantUserId, merchantId),
+      ),
+    );
+  const ownedIds = ownedRows.map((row) => row.id);
+  if (ownedIds.length === 0) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "No participas en este pedido." });
   }
 
   const result = await db.transaction(async (tx) => {
-    await tx
-      .update(orderCommerceStatus)
-      .set({ status: "ready_for_pickup", updatedAt: new Date() })
+    const orderRows = await tx
+      .select()
+      .from(orders)
+      .where(eq(orders.id, input.id))
+      .for("update")
+      .limit(1);
+    const order = orderRows[0];
+    if (!order) {
+      throw new TRPCError({ code: "NOT_FOUND", message: "Pedido no encontrado" });
+    }
+
+    if (isTerminalStatus(order.status)) {
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: "El pedido ya está cerrado y no se puede modificar.",
+      });
+    }
+
+    if (input.status === "cancelled") {
+      if (["picked_up", "on_the_way"].includes(order.status)) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "El pedido ya fue retirado por el repartidor; contacta a soporte.",
+        });
+      }
+      if (ownedIds.length !== commerceIdsInOrder.length) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message:
+            "Este pedido incluye otros comercios. No puedes cancelarlo completo; contacta a soporte.",
+        });
+      }
+
+      const reason = input.cancellationReason?.trim() || input.notes?.trim() || "Cancelado por el comercio";
+      await tx
+        .update(orders)
+        .set({
+          status: "cancelled",
+          cancellationReason: reason,
+          cancelledBy: "merchant",
+          updatedAt: new Date(),
+        })
+        .where(eq(orders.id, order.id));
+      await tx.insert(orderStatusHistory).values({
+        orderId: order.id,
+        status: "cancelled",
+        notes: `Cancelado por el comercio: ${reason}`,
+      });
+      await syncAllCommerceStatuses(tx, order.id, "cancelled");
+
+      const rows = await tx.select().from(orders).where(eq(orders.id, order.id));
+      return { order: rows[0], globalChanged: true };
+    }
+
+    if (!["received", "accepted", "preparing"].includes(order.status)) {
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: "El pedido no está en un estado que permita prepararlo.",
+      });
+    }
+
+    const currentRows = await tx
+      .select()
+      .from(orderCommerceStatus)
       .where(
         and(
-          eq(orderCommerceStatus.orderId, orderId),
-          eq(orderCommerceStatus.commerceId, commerceId),
+          eq(orderCommerceStatus.orderId, order.id),
+          inArray(orderCommerceStatus.commerceId, ownedIds),
         ),
       );
 
-    const statuses = await tx
-      .select()
-      .from(orderCommerceStatus)
-      .where(eq(orderCommerceStatus.orderId, orderId));
-    const allReady = statuses.length > 0 && statuses.every((s) => s.status === "ready_for_pickup");
-
-    if (allReady) {
-      const current = await tx.select().from(orders).where(eq(orders.id, orderId)).limit(1);
-      if (current[0] && current[0].status !== "ready_for_pickup") {
-        await tx
-          .update(orders)
-          .set({ status: "ready_for_pickup", updatedAt: new Date() })
-          .where(eq(orders.id, orderId));
-        await tx.insert(orderStatusHistory).values({
-          orderId,
-          status: "ready_for_pickup",
-          notes: "Todos los comercios listos para retirar",
+    if (input.status === "accepted") {
+      const canAccept = currentRows.every((row) =>
+        ["received", "accepted"].includes(row.status),
+      );
+      if (!canAccept) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "Tu comercio ya avanzó este pedido.",
         });
       }
     }
 
-    return { allReady };
+    if (input.status === "preparing") {
+      const blocked = currentRows.some((row) =>
+        ["ready_for_pickup", "picked_up", "cancelled"].includes(row.status),
+      );
+      if (blocked) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "Tu comercio ya marcó este pedido como listo o cancelado.",
+        });
+      }
+    }
+
+    await syncCommerceStatuses(tx, order.id, ownedIds, input.status);
+
+    let globalChanged = false;
+    if (
+      order.status !== input.status &&
+      canTransition(order.status, input.status, "merchant")
+    ) {
+      await tx
+        .update(orders)
+        .set({ status: input.status, updatedAt: new Date() })
+        .where(eq(orders.id, order.id));
+      await tx.insert(orderStatusHistory).values({
+        orderId: order.id,
+        status: input.status,
+        notes:
+          input.notes ??
+          `Estado actualizado a ${getOrderStatusMeta(input.status).shortLabel} por el comercio`,
+      });
+      globalChanged = true;
+    }
+
+    const rows = await tx.select().from(orders).where(eq(orders.id, order.id));
+    return { order: rows[0], globalChanged };
   });
 
-  emit(`commerce:${commerceId}`, { type: "commerce_ready", orderId });
-  emit(`order:${orderId}`, { type: "commerce_ready", commerceId });
-  if (result.allReady) {
-    emit(`order:${orderId}`, { type: "status_update", status: "ready_for_pickup" });
-    await notifyReadyDrivers(orderId);
+  if (result.globalChanged) {
+    emit(`order:${input.id}`, { type: "status_update", status: input.status });
     emit("admin:dashboard", { type: "dashboard_update" });
   }
-  return result;
+  for (const commerceId of ownedIds) {
+    emit(`commerce:${commerceId}`, {
+      type: "order_status",
+      orderId: input.id,
+      status: input.status,
+    });
+  }
+
+  return sanitizeOrder(result.order);
 }
 
 export const orderRouter = createRouter({
@@ -367,11 +498,27 @@ export const orderRouter = createRouter({
           });
 
           const commerceIds = [...new Set(quote.lines.map((line) => line.commerceId))];
+          const commerceRateRows = await tx
+            .select({ id: commerces.id, commissionRate: commerces.commissionRate })
+            .from(commerces)
+            .where(inArray(commerces.id, commerceIds));
+          const commerceRateMap = new Map(
+            commerceRateRows.map((row) => [
+              row.id,
+              Number(row.commissionRate ?? "10"),
+            ]),
+          );
+
           for (const commerceId of commerceIds) {
+            const commerceTotal = quote.lines
+              .filter((line) => line.commerceId === commerceId)
+              .reduce((sum, line) => sum + line.total, 0);
+            const rate = commerceRateMap.get(commerceId) ?? 10;
             await tx.insert(orderCommerceStatus).values({
               orderId: order.id,
               commerceId,
-              status: "preparing",
+              status: initialStatus,
+              commissionAmount: (commerceTotal * (rate / 100)).toFixed(2),
             });
           }
 
@@ -445,7 +592,7 @@ export const orderRouter = createRouter({
         .where(eq(orderCommerceStatus.orderId, order.id));
       const commerceStatuses = commerceRows.map((commerce) => ({
         ...commerce,
-        status: statuses.find((s) => s.commerceId === commerce.id)?.status ?? "preparing",
+        status: statuses.find((s) => s.commerceId === commerce.id)?.status ?? order.status,
       }));
 
       const history = await db
@@ -584,6 +731,22 @@ export const orderRouter = createRouter({
       const access = await assertOrderAccess(ctx, input.id);
       const { order, viewer } = access;
 
+      if (viewer.role === "merchant") {
+        if (!["accepted", "preparing", "cancelled"].includes(input.status)) {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message:
+              "El comercio debe usar 'Marcar listo' para preparar el retiro del pedido.",
+          });
+        }
+        return updateMerchantOrderStatus(ctx, access, {
+          id: input.id,
+          status: input.status as "accepted" | "preparing" | "cancelled",
+          notes: input.notes,
+          cancellationReason: input.cancellationReason,
+        });
+      }
+
       if (order.status === input.status) {
         return sanitizeOrder(order);
       }
@@ -657,6 +820,7 @@ export const orderRouter = createRouter({
           status: input.status,
           updatedAt: new Date(),
         };
+        if (input.status === "delivered") patch.deliveredAt = new Date();
         if (assignedDriverId) patch.driverId = assignedDriverId;
         if (input.status === "cancelled") {
           patch.cancellationReason = input.cancellationReason ?? input.notes ?? "Cancelado";
@@ -664,6 +828,7 @@ export const orderRouter = createRouter({
         }
 
         await tx.update(orders).set(patch).where(eq(orders.id, order.id));
+        await syncAllCommerceStatuses(tx, order.id, input.status);
         await tx.insert(orderStatusHistory).values({
           orderId: order.id,
           status: input.status,
@@ -685,14 +850,17 @@ export const orderRouter = createRouter({
       });
       emit("admin:dashboard", { type: "dashboard_update" });
 
-      if (input.status === "received") {
-        const commerceRows = await db
-          .select({ commerceId: orderItems.commerceId })
-          .from(orderItems)
-          .where(eq(orderItems.orderId, order.id));
-        for (const commerceId of new Set(commerceRows.map((row) => row.commerceId))) {
-          emit(`commerce:${commerceId}`, { type: "new_order", orderId: order.id });
-        }
+      const commerceRows = await db
+        .select({ commerceId: orderItems.commerceId })
+        .from(orderItems)
+        .where(eq(orderItems.orderId, order.id));
+      const commerceIds = [...new Set(commerceRows.map((row) => row.commerceId))];
+      for (const commerceId of commerceIds) {
+        emit(`commerce:${commerceId}`, {
+          type: input.status === "received" ? "new_order" : "order_status",
+          orderId: order.id,
+          status: input.status,
+        });
       }
       if (input.status === "ready_for_pickup") {
         await notifyReadyDrivers(order.id);
@@ -709,17 +877,27 @@ export const orderRouter = createRouter({
     }),
 
   getCommerceOrders: merchantQuery
-    .input(z.object({ commerceId: z.number().int().positive() }))
+    .input(
+      z.object({
+        commerceId: z.number().int().positive(),
+        limit: z.number().int().min(1).max(200).default(100),
+      }),
+    )
     .query(async ({ input, ctx }) => {
       await assertCommerceOwnership(ctx, input.commerceId);
       const db = getDb();
 
-      const items = await db
-        .select()
-        .from(orderItems)
+      // Primero se acota la página de pedidos; nunca se cargan todos los
+      // históricos ni todos los clientes.
+      const orderIdRows = await db
+        .select({ id: orders.id })
+        .from(orders)
+        .innerJoin(orderItems, eq(orderItems.orderId, orders.id))
         .where(eq(orderItems.commerceId, input.commerceId))
-        .orderBy(desc(orderItems.id));
-      const orderIds = [...new Set(items.map((item) => item.orderId))];
+        .groupBy(orders.id)
+        .orderBy(desc(orders.createdAt))
+        .limit(input.limit);
+      const orderIds = orderIdRows.map((row) => row.id);
       if (orderIds.length === 0) return [];
 
       const [commerceRow] = await db
@@ -728,11 +906,17 @@ export const orderRouter = createRouter({
         .where(eq(commerces.id, input.commerceId));
       const commissionRate = Number(commerceRow?.commissionRate ?? "10");
 
-      const [orderRows, statuses, customerRows] = await Promise.all([
+      const [orderRows, items, statuses] = await Promise.all([
+        db.select().from(orders).where(inArray(orders.id, orderIds)),
         db
           .select()
-          .from(orders)
-          .where(and(inArray(orders.id, orderIds), sql`${orders.status} <> 'pending_payment'`)),
+          .from(orderItems)
+          .where(
+            and(
+              eq(orderItems.commerceId, input.commerceId),
+              inArray(orderItems.orderId, orderIds),
+            ),
+          ),
         db
           .select()
           .from(orderCommerceStatus)
@@ -742,30 +926,74 @@ export const orderRouter = createRouter({
               inArray(orderCommerceStatus.orderId, orderIds),
             ),
           ),
-        db.select().from(customers),
       ]);
-      const customerMap = new Map(customerRows.map((customer) => [customer.id, customer]));
 
-      return orderRows.map((order) => {
-        const orderItemsForOrder = items.filter((item) => item.orderId === order.id);
-        const commerceTotal = orderItemsForOrder.reduce(
-          (sum, item) => sum + Number(item.total),
-          0,
-        );
-        const customer = customerMap.get(order.customerId);
-        const myStatus = statuses.find(
-          (status) => status.orderId === order.id && status.commerceId === input.commerceId,
-        );
-        return {
-          ...sanitizeOrder(order),
-          items: orderItemsForOrder,
-          customerName: customer ? `${customer.firstName} ${customer.lastName}` : "",
-          customerPhone: customer?.phone ?? order.customerPhone,
-          myCommerceStatus: myStatus?.status ?? "preparing",
-          total: commerceTotal.toFixed(2),
-          commerceCommission: (commerceTotal * (commissionRate / 100)).toFixed(2),
-        };
-      });
+      const customerIds = [...new Set(orderRows.map((order) => order.customerId))];
+      const customerRows = customerIds.length
+        ? await db
+            .select({
+              id: customers.id,
+              firstName: customers.firstName,
+              lastName: customers.lastName,
+              phone: customers.phone,
+            })
+            .from(customers)
+            .where(inArray(customers.id, customerIds))
+        : [];
+      const customerMap = new Map(customerRows.map((customer) => [customer.id, customer]));
+      const orderMap = new Map(orderRows.map((order) => [order.id, order]));
+
+      return orderIds
+        .map((orderId) => orderMap.get(orderId))
+        .filter((order): order is (typeof orderRows)[number] => Boolean(order))
+        .map((order) => {
+          const orderItemsForOrder = items.filter((item) => item.orderId === order.id);
+          const commerceTotal = orderItemsForOrder.reduce(
+            (sum, item) => sum + Number(item.total),
+            0,
+          );
+          const customer = customerMap.get(order.customerId);
+          const myStatus = statuses.find(
+            (status) => status.orderId === order.id && status.commerceId === input.commerceId,
+          );
+          const fallbackStatus = [
+            "pending_payment",
+            "payment_rejected",
+            "received",
+            "accepted",
+            "cancelled",
+            "delivered",
+          ].includes(order.status)
+            ? order.status
+            : "preparing";
+
+          // Proyección explícita: sin comprobante, sin idempotencyKey, sin
+          // flags de liquidación y sin dirección completa.
+          return {
+            id: order.id,
+            status: order.status,
+            paymentMethod: order.paymentMethod,
+            subtotal: order.subtotal,
+            deliveryFee: order.deliveryFee,
+            commission: order.commission,
+            orderTotal: order.total,
+            total: commerceTotal.toFixed(2),
+            customerPhone: customer?.phone ?? order.customerPhone,
+            notes: order.notes,
+            createdAt: order.createdAt,
+            updatedAt: order.updatedAt,
+            cancellationReason: order.cancellationReason,
+            cancelledBy: order.cancelledBy,
+            driverId: order.driverId,
+            items: orderItemsForOrder,
+            customerName: customer ? `${customer.firstName} ${customer.lastName}` : "",
+            myCommerceStatus: myStatus?.status ?? fallbackStatus,
+            commerceCommission: (
+              commerceTotal *
+              (commissionRate / 100)
+            ).toFixed(2),
+          };
+        });
     }),
 
   updatePaymentReceipt: customerQuery

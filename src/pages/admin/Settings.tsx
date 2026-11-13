@@ -12,7 +12,8 @@ import {
   LogOut,
 } from "lucide-react";
 import { useGetAdminReports, useUpdateSetting, trpcMutate } from "@/hooks/useDeliveryData";
-import { trpc } from "@/providers/trpc";
+import { queryClient, trpc } from "@/providers/trpc";
+import { clearRoleUser, clearSession, dispatchLogout } from "@/hooks/useSessionSync";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
@@ -131,8 +132,11 @@ export default function AdminSettings() {
   };
 
   const handleLogout = async () => {
-    await trpcMutate("login.logout", {}).catch(() => {});
-    localStorage.removeItem("qs_session");
+    await trpcMutate("login.logout", { scope: "admin" }).catch(() => {});
+    clearRoleUser("admin");
+    clearSession("admin");
+    dispatchLogout("admin");
+    queryClient.clear();
     navigate("/login");
   };
 

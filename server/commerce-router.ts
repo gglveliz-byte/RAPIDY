@@ -1,10 +1,11 @@
 import { z } from "zod";
 import { createRouter, publicQuery, merchantQuery } from "./middleware";
 import { getDb } from "./queries/connection";
-import { commerces, products, orderItems, orders, orderCommerceStatus, drivers, orderStatusHistory, users } from "@db/schema";
+import { commerces, products, orderItems, orders, orderCommerceStatus, users } from "@db/schema";
 import { eq, and, ilike } from "drizzle-orm";
 import { emit } from "./events";
 import { assertCommerceOwnership, merchantOwnsCommerce } from "./lib/order-access";
+import { markCommerceReadyForOrder } from "./lib/order-ready";
 
 const publicCommerceColumns = {
   id: commerces.id,
@@ -24,6 +25,26 @@ const publicCommerceColumns = {
   lat: commerces.lat,
   lng: commerces.lng,
 };
+
+const GUAYAQUIL_TZ = "America/Guayaquil";
+
+function guayaquilDateKey(date: Date): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: GUAYAQUIL_TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
+function guayaquilWeekday(date: Date): string {
+  const label = new Intl.DateTimeFormat("es-EC", {
+    timeZone: GUAYAQUIL_TZ,
+    weekday: "short",
+  }).format(date);
+  const clean = label.replace(/\.$/, "");
+  return clean.charAt(0).toUpperCase() + clean.slice(1);
+}
 
 export const commerceRouter = createRouter({
   list: publicQuery.query(async () => {
@@ -52,6 +73,7 @@ export const commerceRouter = createRouter({
       if (commerce.length === 0) return null;
       const isOwner =
         !!ctx.admin || (ctx.merchant ? await merchantOwnsCommerce(ctx, input.id) : false);
+      if (!isOwner && commerce[0].status !== "active") return null;
       const prods = await db.select().from(products).where(eq(products.commerceId, input.id));
       return {
         ...commerce[0],
@@ -96,7 +118,6 @@ export const commerceRouter = createRouter({
         coverImage: z.string().optional(),
         minOrder: z.string().optional(),
         deliveryTime: z.string().optional(),
-        status: z.enum(["active", "inactive", "suspended", "pending"]).optional(),
         isOpen: z.enum(["open", "closed"]).optional(),
         openHours: z.string().optional(),
         lat: z.string().optional(),
@@ -122,6 +143,9 @@ export const commerceRouter = createRouter({
       }
       const result = await db.select().from(commerces).where(eq(commerces.id, id));
       emit("admin:dashboard", { type: "dashboard_update" });
+      emit("commerces:global", { type: "commerce_update", commerceId: id });
+      emit(`commerce:${id}`, { type: "commerce_update", commerceId: id });
+      emit("products:global", { type: "products_update", action: "commerce_update", commerceId: id });
       return result[0];
     }),
 
@@ -140,6 +164,9 @@ export const commerceRouter = createRouter({
       const newStatus = commerce[0].isOpen === "open" ? "closed" : "open";
       await db.update(commerces).set({ isOpen: newStatus }).where(eq(commerces.id, input.id));
       emit("admin:dashboard", { type: "dashboard_update" });
+      emit("commerces:global", { type: "commerce_update", commerceId: input.id });
+      emit(`commerce:${input.id}`, { type: "commerce_update", commerceId: input.id });
+      emit("products:global", { type: "products_update", action: "commerce_update", commerceId: input.id });
       return { ...commerce[0], isOpen: newStatus };
     }),
 
@@ -148,64 +175,153 @@ export const commerceRouter = createRouter({
     .query(async ({ input, ctx }) => {
       await assertCommerceOwnership(ctx, input.id);
       const db = getDb();
-      const [commerce] = await db.select().from(commerces).where(eq(commerces.id, input.id));
-      const prods = await db.select().from(products).where(eq(products.commerceId, input.id));
+      const [commerce] = await db
+        .select({ commissionRate: commerces.commissionRate })
+        .from(commerces)
+        .where(eq(commerces.id, input.id));
 
-      const orderItemsForCommerce = await db
-        .select()
+      const prods = await db
+        .select({
+          id: products.id,
+          name: products.name,
+          price: products.price,
+          image: products.image,
+          category: products.category,
+          unitType: products.unitType,
+          isAvailable: products.isAvailable,
+          isFeatured: products.isFeatured,
+        })
+        .from(products)
+        .where(eq(products.commerceId, input.id));
+      const productMap = new Map(prods.map((product) => [product.id, product]));
+
+      // Una sola consulta agregada; sin N+1 por pedido.
+      const rows = await db
+        .select({
+          orderId: orders.id,
+          deliveredAt: orders.deliveredAt,
+          createdAt: orders.createdAt,
+          productId: orderItems.productId,
+          productName: orderItems.productName,
+          quantity: orderItems.quantity,
+          unitPrice: orderItems.unitPrice,
+          total: orderItems.total,
+          commissionAmount: orderCommerceStatus.commissionAmount,
+        })
         .from(orderItems)
-        .where(eq(orderItems.commerceId, input.id));
+        .innerJoin(orders, eq(orderItems.orderId, orders.id))
+        .leftJoin(
+          orderCommerceStatus,
+          and(
+            eq(orderCommerceStatus.orderId, orders.id),
+            eq(orderCommerceStatus.commerceId, input.id),
+          ),
+        )
+        .where(
+          and(
+            eq(orderItems.commerceId, input.id),
+            eq(orders.status, "delivered"),
+          ),
+        );
 
-      const orderIds = [...new Set(orderItemsForCommerce.map(i => i.orderId))];
+      const orderTotals = new Map<
+        number,
+        { total: number; deliveredAt: Date | null; commission: number | null }
+      >();
+      const productSales = new Map<
+        number,
+        { name: string; qty: number; revenue: number; unitPrice: number; unitType: string }
+      >();
 
-      let totalSales = 0;
-      let totalOrders = 0;
-      const productSales: Record<number, { name: string; qty: number; revenue: number }> = {};
+      for (const row of rows) {
+        const quantity = Number(row.quantity);
+        const total = Number(row.total);
+        if (!Number.isFinite(quantity) || !Number.isFinite(total)) continue;
 
-      const dailyMap: Record<string, number> = {};
-
-      for (const oid of orderIds) {
-        const [order] = await db.select().from(orders).where(eq(orders.id, oid));
-        if (!order) continue;
-
-        const dayKey = new Date(order.createdAt).toLocaleDateString("es-ES", { weekday: "short" });
-
-        if (order.status === "delivered") {
-          const items = orderItemsForCommerce.filter(i => i.orderId === oid);
-          let orderCommerceTotal = 0;
-          for (const item of items) {
-            orderCommerceTotal += parseFloat(item.total);
-            if (!productSales[item.productId]) {
-              productSales[item.productId] = { name: item.productName, qty: 0, revenue: 0 };
-            }
-            productSales[item.productId].qty += parseFloat(item.quantity);
-            productSales[item.productId].revenue += parseFloat(item.total);
-          }
-          totalSales += orderCommerceTotal;
-          totalOrders++;
-          if (!dailyMap[dayKey]) dailyMap[dayKey] = 0;
-          dailyMap[dayKey] += orderCommerceTotal;
+        const orderEntry = orderTotals.get(row.orderId) ?? {
+          total: 0,
+          deliveredAt: row.deliveredAt ?? row.createdAt,
+          commission:
+            row.commissionAmount !== null && row.commissionAmount !== undefined
+              ? Number(row.commissionAmount)
+              : null,
+        };
+        orderEntry.total += total;
+        if (
+          orderEntry.commission === null &&
+          row.commissionAmount !== null &&
+          row.commissionAmount !== undefined
+        ) {
+          orderEntry.commission = Number(row.commissionAmount);
         }
+        orderTotals.set(row.orderId, orderEntry);
+
+        const productEntry = productSales.get(row.productId) ?? {
+          name: row.productName,
+          qty: 0,
+          revenue: 0,
+          unitPrice: Number(row.unitPrice),
+          unitType: productMap.get(row.productId)?.unitType ?? "unit",
+        };
+        productEntry.qty += quantity;
+        productEntry.revenue += total;
+        productSales.set(row.productId, productEntry);
       }
 
-      const dayNames = ["lun", "mar", "mié", "jue", "vie", "sáb", "dom"];
-      const dailySales = dayNames.map((day) => ({
-        day: day.charAt(0).toUpperCase() + day.slice(1),
-        sales: Math.round(dailyMap[day] || 0),
-      }));
+      const commissionRate = Number(commerce?.commissionRate ?? "10");
+      let totalSales = 0;
+      let totalCommission = 0;
+      const dailyMap = new Map<string, number>();
 
-      const topProducts = Object.entries(productSales)
-        .map(([, v]) => ({ name: v.name, sales: v.qty, revenue: v.revenue.toFixed(2) }))
+      for (const order of orderTotals.values()) {
+        totalSales += order.total;
+        totalCommission +=
+          order.commission !== null
+            ? order.commission
+            : order.total * (commissionRate / 100);
+
+        const key = guayaquilDateKey(order.deliveredAt ?? new Date());
+        dailyMap.set(key, (dailyMap.get(key) ?? 0) + order.total);
+      }
+
+      const totalOrders = orderTotals.size;
+      const avgTicket = totalOrders > 0 ? totalSales / totalOrders : 0;
+
+      const today = new Date();
+      const dailySales = Array.from({ length: 7 }, (_, index) => {
+        const date = new Date(today.getTime() - (6 - index) * 86_400_000);
+        const key = guayaquilDateKey(date);
+        return {
+          date: key,
+          day: guayaquilWeekday(date),
+          sales: Number((dailyMap.get(key) ?? 0).toFixed(2)),
+        };
+      });
+
+      const topProducts = [...productSales.entries()]
+        .map(([productId, value]) => {
+          const product = productMap.get(productId);
+          return {
+            id: productId,
+            productId,
+            name: product?.name ?? value.name,
+            sales: value.qty,
+            salesCount: value.qty,
+            revenue: Number(value.revenue.toFixed(2)),
+            unitPrice: product?.price ?? value.unitPrice.toFixed(2),
+            unitType: product?.unitType ?? value.unitType,
+            category: product?.category ?? null,
+          };
+        })
         .sort((a, b) => b.sales - a.sales)
         .slice(0, 10);
 
-      const avgTicket = totalOrders > 0 ? totalSales / totalOrders : 0;
-      const commissionRate = parseFloat(commerce?.commissionRate || "10");
-      const totalCommission = totalSales * (commissionRate / 100);
-
       return {
         totalProducts: prods.length,
-        featuredProducts: prods.filter(p => p.isFeatured === "yes").length,
+        availableProducts: prods.filter((product) => product.isAvailable === "yes").length,
+        featuredProducts: prods.filter(
+          (product) => product.isFeatured === "yes" && product.isAvailable === "yes",
+        ).length,
         totalSales: Number(totalSales.toFixed(2)),
         totalOrders,
         avgTicket: Number(avgTicket.toFixed(2)),
@@ -219,67 +335,7 @@ export const commerceRouter = createRouter({
     .input(z.object({ orderId: z.number().int().positive(), commerceId: z.number().int().positive() }))
     .mutation(async ({ input, ctx }) => {
       await assertCommerceOwnership(ctx, input.commerceId);
-      const db = getDb();
-
-      const orderItemsResult = await db
-        .select({ id: orderItems.id })
-        .from(orderItems)
-        .where(and(eq(orderItems.orderId, input.orderId), eq(orderItems.commerceId, input.commerceId)))
-        .limit(1);
-
-      if (orderItemsResult.length === 0) {
-        throw new Error("Este comercio no tiene items en este pedido");
-      }
-
-      const result = await db.transaction(async (tx) => {
-        await tx
-          .update(orderCommerceStatus)
-          .set({ status: "ready_for_pickup", updatedAt: new Date() })
-          .where(and(eq(orderCommerceStatus.orderId, input.orderId), eq(orderCommerceStatus.commerceId, input.commerceId)));
-
-        const allStatuses = await tx
-          .select()
-          .from(orderCommerceStatus)
-          .where(eq(orderCommerceStatus.orderId, input.orderId));
-
-        const allReady = allStatuses.length > 0 && allStatuses.every(s => s.status === "ready_for_pickup");
-
-        if (allReady) {
-          const current = await tx.select().from(orders).where(eq(orders.id, input.orderId)).limit(1);
-          if (current[0] && current[0].status !== "ready_for_pickup") {
-            await tx
-              .update(orders)
-              .set({ status: "ready_for_pickup", updatedAt: new Date() })
-              .where(eq(orders.id, input.orderId));
-
-            await tx.insert(orderStatusHistory).values({
-              orderId: input.orderId,
-              status: "ready_for_pickup",
-              notes: "Todos los comercios listos para retirar",
-            });
-          }
-        }
-
-        return { allReady };
-      });
-
-      // Eventos fuera de la transacción: nunca emitir estados que puedan revertirse.
-      emit(`commerce:${input.commerceId}`, { type: "commerce_ready", orderId: input.orderId });
-      emit(`order:${input.orderId}`, { type: "commerce_ready", commerceId: input.commerceId });
-      emit("admin:dashboard", { type: "dashboard_update" });
-
-      if (result.allReady) {
-        const onlineDrivers = await db
-          .select({ id: drivers.id })
-          .from(drivers)
-          .where(eq(drivers.status, "online"));
-        onlineDrivers.forEach((driver) => {
-          emit(`driver:${driver.id}`, { type: "new_available", orderId: input.orderId });
-        });
-        emit(`order:${input.orderId}`, { type: "status_update", status: "ready_for_pickup" });
-      }
-
-      return result;
+      return markCommerceReadyForOrder(input.orderId, input.commerceId);
     }),
 
   registerDeviceToken: merchantQuery

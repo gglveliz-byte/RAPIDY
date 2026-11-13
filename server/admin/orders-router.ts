@@ -27,6 +27,7 @@ import {
 } from "@db/schema";
 import { adminQuery } from "../middleware";
 import { emit } from "../events";
+import { syncAllCommerceStatuses } from "../lib/order-status-sync";
 
 export const adminOrdersProcedures = {
   // Listado enriquecido de pedidos con desglose financiero multi-comercio
@@ -225,15 +226,18 @@ export const adminOrdersProcedures = {
           status: input.status,
           updatedAt: new Date(),
         };
+        if (input.status === "delivered") updateData.deliveredAt = new Date();
         if (input.driverId !== undefined) updateData.driverId = input.driverId;
 
         await tx.update(orders).set(updateData).where(eq(orders.id, input.id));
 
-        // Sincronizar estados de comercio
-        if (["preparing", "ready_for_pickup", "picked_up"].includes(input.status)) {
+        // Sincronizar estados de comercio. `picked_up` se mantiene porque el
+        // admin puede forzar el retiro; el resto lo resuelve el helper.
+        await syncAllCommerceStatuses(tx, input.id, input.status);
+        if (input.status === "picked_up") {
           await tx
             .update(orderCommerceStatus)
-            .set({ status: input.status as any, updatedAt: new Date() })
+            .set({ status: "picked_up", updatedAt: new Date() })
             .where(eq(orderCommerceStatus.orderId, input.id));
         }
 
@@ -285,13 +289,18 @@ export const adminOrdersProcedures = {
       });
 
       // Notificaciones reactivas en tiempo real (SSE)
-      if (input.status === "received") {
-        const orderItemsList = await db.select().from(orderItems).where(eq(orderItems.orderId, input.id));
-        const cIds = [...new Set(orderItemsList.map((i) => i.commerceId))];
-        cIds.forEach((cId) => {
-          emit(`commerce:${cId}`, { type: "new_order", orderId: input.id });
+      const orderItemsList = await db
+        .select({ commerceId: orderItems.commerceId })
+        .from(orderItems)
+        .where(eq(orderItems.orderId, input.id));
+      const cIds = [...new Set(orderItemsList.map((item) => item.commerceId))];
+      cIds.forEach((commerceId) => {
+        emit(`commerce:${commerceId}`, {
+          type: input.status === "received" ? "new_order" : "order_status",
+          orderId: input.id,
+          status: input.status,
         });
-      }
+      });
 
       emit(`order:${input.id}`, { type: "status_update", status: input.status, driverId: input.driverId });
       if (result.driverId) {

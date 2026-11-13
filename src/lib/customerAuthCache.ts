@@ -35,14 +35,22 @@ export async function checkCustomerAuth(force = false): Promise<CachedCustomer |
     `/api/trpc/customer.checkAuth?input=${encodeURIComponent(JSON.stringify(serialized))}`,
     { method: "GET", credentials: "include" },
   )
-    .then((response) => response.json())
+    .then((response) => {
+      if (!response.ok) throw new Error(`No se pudo verificar la sesión (${response.status})`);
+      return response.json();
+    })
     .then((data) => {
       const deserialized = superjson.deserialize<{ customer: CachedCustomer | null } | undefined>(
         data?.result?.data,
       );
       return deserialized?.customer ?? null;
     })
-    .catch(() => cached?.customer ?? null)
+    .catch((error) => {
+      // Si ya había una sesión confirmada, un fallo transitorio no debe
+      // convertirla en “sin sesión”. Sin caché, el guard muestra reintento.
+      if (cached?.customer) return cached.customer;
+      throw error;
+    })
     .finally(() => {
       inFlight = null;
     });

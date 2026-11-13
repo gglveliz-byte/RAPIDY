@@ -184,7 +184,7 @@ export function OrderTrackingTimeline({
       )}
 
       {/* Recogida en Comercios (en caso de múltiples locales) */}
-      {!terminal && hasDriver && order.commerces?.some((c: any) => c.status !== "preparing") && (
+      {!terminal && hasDriver && (order.commerces?.length ?? 0) > 1 && (
         <div className="bg-white dark:bg-[#1A1A1E] rounded-3xl p-5 border border-zinc-100 dark:border-white/10 shadow-[0_4px_20px_rgba(0,0,0,0.03)] dark:shadow-none">
           <div className="flex items-center gap-2 mb-3">
             <Store className="w-4 h-4 text-brand" />
@@ -192,15 +192,16 @@ export function OrderTrackingTimeline({
           </div>
           <div className="space-y-2.5">
             {order.commerces?.map((c: any) => {
-              const cStatus = c?.status || "preparing";
+              const cStatus = c?.status || order.status || "received";
+              const meta = getOrderStatusMeta(cStatus);
               const isReady = cStatus === "ready_for_pickup";
-              const isPreparing = cStatus === "preparing";
-              const statusLabel = isPreparing ? "Preparando" : isReady ? "Listo para recoger" : "Recogido";
-              const statusBadgeStyle = isPreparing
-                ? "text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800/80 border-zinc-200 dark:border-white/10"
-                : isReady
-                  ? "text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/15 border-amber-200 dark:border-amber-500/30"
-                  : "text-brand bg-orange-50 dark:bg-brand/15 border-orange-200 dark:border-brand/30";
+              const isPickedUp = cStatus === "picked_up";
+              const statusLabel = meta.shortLabel;
+              const statusBadgeStyle = isReady
+                ? "text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/15 border-amber-200 dark:border-amber-500/30"
+                : isPickedUp
+                  ? "text-brand bg-orange-50 dark:bg-brand/15 border-orange-200 dark:border-brand/30"
+                  : "text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800/80 border-zinc-200 dark:border-white/10";
 
               return (
                 <div key={c.id} className="flex items-center justify-between py-1.5 border-b border-zinc-50 dark:border-white/5 last:border-0">

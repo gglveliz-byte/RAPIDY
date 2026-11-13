@@ -529,10 +529,11 @@ de polling de 30 s (`useDeliveryData.ts:305-313`) o de una carga única. Los
 badges “En Vivo” de `Stats.tsx:91-94` no corresponden.
 
 **F-18. Etiquetas de métricas no coinciden con el cálculo.**  
-“Pedidos Totales” en Dashboard usa `stats.totalOrders`
-(`Dashboard.tsx:229`), pero el backend solo cuenta pedidos `delivered`
-(`commerce-router.ts:173-188`). “Catálogo Activo” usa `prods.length`, que incluye
-productos pausados (`:207-208`).
+“Pedidos Totales” en Dashboard y “Pedidos Despachados” en Stats usan
+`stats.totalOrders` (`Dashboard.tsx:229`; `Stats.tsx:133-137`), pero el backend
+solo cuenta pedidos `delivered` (`commerce-router.ts:173-188`). En Stats,
+“Catálogo Activo” usa `prods.length`, que incluye productos pausados
+(`:207-208`); el Dashboard ya usa `availableCount` y esa parte está correcta.
 
 **F-19. Hay dos endpoints para lo mismo.**  
 `commerce.markReady` y `order.markCommerceReady` implementan la misma operación

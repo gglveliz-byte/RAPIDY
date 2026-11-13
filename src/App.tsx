@@ -3,7 +3,7 @@ import { lazy, Suspense, useEffect } from 'react'
 import { Loader2 } from 'lucide-react'
 import SessionGuard from '@/components/SessionGuard'
 import { trpcMutate } from '@/hooks/useDeliveryData'
-import { getSession } from '@/hooks/useSessionSync'
+import { getRoleUser } from '@/hooks/useSessionSync'
 
 // Core customer pages (Carga inmediata para navegación instantánea sin pantallas de carga)
 import CustomerHome from './pages/customer/Home'
@@ -66,9 +66,13 @@ function LoadingFallback() {
 function SessionRefresh() {
   useEffect(() => {
     const interval = setInterval(async () => {
-      const session = getSession()
       // El cliente tiene su propio refresh deslizante en useCustomerSession.
-      if (!session || session.role === "customer") return
+      // Solo refrescamos si hay una sesión profesional realmente cacheada.
+      const hasProfessionalSession =
+        Boolean(getRoleUser("merchant")) ||
+        Boolean(getRoleUser("driver")) ||
+        Boolean(getRoleUser("admin"))
+      if (!hasProfessionalSession) return
       try {
         await trpcMutate("login.refresh", {})
       } catch { /* sin acción */ }

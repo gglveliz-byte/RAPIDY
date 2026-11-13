@@ -3,6 +3,14 @@ import superjson from "superjson";
 import { useState, useEffect } from "react";
 import { useDebouncedValue } from "./useDebouncedValue";
 import { invalidateCustomerAuthCache } from "@/lib/customerAuthCache";
+import {
+  getRoleUser,
+  setRoleUser,
+  roleForPath,
+  clearRoleUser,
+  clearSession,
+  dispatchLogout,
+} from "@/hooks/useSessionSync";
 
 const API_URL = "/api/trpc";
 
@@ -12,30 +20,28 @@ function isAuthError(data: any): boolean {
 
 function handleAuthError() {
   invalidateCustomerAuthCache()
-  if (window.location.pathname === "/login" || window.location.pathname === "/customer-login") return
+  const path = window.location.pathname
+  const role = roleForPath(path)
+  if (!role) return
+
+  // Logout role-scoped: un 401 del negocio no debe cerrar la sesión del
+  // cliente ni vaciar su carrito.
   fetch("/api/trpc/login.logout", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({}),
+    body: JSON.stringify({ json: { scope: role } }),
     credentials: "include",
   }).catch(() => {})
-  try {
-    localStorage.removeItem("qs_session")
-    localStorage.removeItem("customer_session")
-    localStorage.removeItem("merchant_user")
-    localStorage.removeItem("driver_user")
-    localStorage.removeItem("cart")
-  } catch { /* sin acción */ }
-  window.dispatchEvent(new Event("rapidy:logout"))
-  const path = window.location.pathname;
-  const isBackoffice = path.startsWith("/admin") || 
-                       path.startsWith("/driver") || 
-                       path === "/commerce" || 
-                       path.startsWith("/commerce/orders") || 
-                       path.startsWith("/commerce/products") || 
-                       path.startsWith("/commerce/stats") || 
-                       path.startsWith("/commerce/profile");
-  window.location.href = isBackoffice ? "/login" : "/customer-login"
+
+  clearRoleUser(role)
+  clearSession(role)
+  if (role === "customer") {
+    try {
+      localStorage.removeItem("cart")
+    } catch { /* sin acción */ }
+  }
+  dispatchLogout(role)
+  window.location.href = role === "customer" ? "/customer-login" : "/login"
 }
 
 function extractTrpcError(data: any, status: number): Error {
@@ -119,53 +125,41 @@ export function useCommerce(id: number) {
 }
 
 export function useMerchantCommerceId() {
-  const storedUser = localStorage.getItem("merchant_user");
-  const merchantUser = storedUser ? JSON.parse(storedUser) : null;
-  const cachedId: number | null =
-    typeof merchantUser?.commerceId === "number" && merchantUser.commerceId > 0
-      ? merchantUser.commerceId
-      : null;
-  const [commerceId, setCommerceId] = useState<number | null>(cachedId);
+  const [commerceId, setCommerceId] = useState<number | null>(null);
 
-  // Primary lookup: ask the server which commerce belongs to this merchant (by merchantUserId)
+  // El servidor es la única fuente de verdad. Nunca se infiere el comercio
+  // por nombre ni se confía en un id cacheado sin revalidar.
   const meQuery = useQuery({
     queryKey: ["commerce.me"],
     queryFn: () => trpcCall<any>("commerce.me"),
-    enabled: !commerceId && Boolean(merchantUser),
-  });
-
-  // Fallback: name-search (keeps legacy commerces that don't yet have merchantUserId set)
-  const searchQuery = useQuery({
-    queryKey: ["commerce.search", merchantUser?.name],
-    queryFn: () => trpcCall<any[]>("commerce.search", { query: merchantUser?.name || "" }),
-    enabled: !commerceId && !meQuery.data && Boolean(merchantUser?.name),
+    staleTime: 30_000,
   });
 
   useEffect(() => {
-    if (commerceId) return;
-    const fromMe = meQuery.data;
-    if (fromMe?.id) {
-      setCommerceId(fromMe.id);
-      if (merchantUser) {
-        const updatedUser = { ...merchantUser, commerceId: fromMe.id };
-        localStorage.setItem("merchant_user", JSON.stringify(updatedUser));
-      }
-      return;
-    }
-    const results = searchQuery.data ?? [];
-    if (results.length > 0) {
-      const id = results[0].id;
-      setCommerceId(id);
-      if (merchantUser) {
-        const updatedUser = { ...merchantUser, commerceId: id };
-        localStorage.setItem("merchant_user", JSON.stringify(updatedUser));
+    if (!meQuery.isSuccess) return;
+    const nextId =
+      typeof meQuery.data?.id === "number" && meQuery.data.id > 0
+        ? meQuery.data.id
+        : null;
+    setCommerceId((current) => (current === nextId ? current : nextId));
+
+    const stored = getRoleUser<Record<string, unknown>>("merchant");
+    if (stored) {
+      if (nextId) {
+        setRoleUser("merchant", { ...stored, commerceId: nextId });
+      } else {
+        const { commerceId: _ignored, ...rest } = stored;
+        setRoleUser("merchant", rest);
       }
     }
-  }, [meQuery.data, searchQuery.data, commerceId, merchantUser]);
+  }, [meQuery.isSuccess, meQuery.data]);
 
   return {
     commerceId,
-    loading: meQuery.isLoading || searchQuery.isLoading,
+    commerce: meQuery.data ?? null,
+    loading: meQuery.isLoading,
+    error: meQuery.error as Error | null,
+    refresh: meQuery.refetch,
   };
 }
 
@@ -305,11 +299,16 @@ export function useCustomerOrders(customerId: number) {
 export function useCommerceOrders(commerceId: number) {
   const query = useQuery({
     queryKey: ["order.getCommerceOrders", commerceId],
-    queryFn: () => trpcCall<any[]>("order.getCommerceOrders", { commerceId }),
+    queryFn: () => trpcCall<any[]>("order.getCommerceOrders", { commerceId, limit: 100 }),
     enabled: Boolean(commerceId),
     refetchInterval: 30_000,
   });
-  return { data: query.data ?? [], loading: query.isLoading };
+  return {
+    data: query.data ?? [],
+    loading: query.isLoading,
+    error: query.error as Error | null,
+    refresh: query.refetch,
+  };
 }
 
 export function useCreateOrder() {

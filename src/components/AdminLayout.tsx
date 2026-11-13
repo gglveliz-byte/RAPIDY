@@ -4,6 +4,8 @@ import {
   LayoutDashboard, ShoppingBag, Store, Truck, Package, Settings, LogOut,
 } from "lucide-react";
 import { trpcMutate } from "@/hooks/useDeliveryData";
+import { queryClient } from "@/providers/trpc";
+import { clearRoleUser, clearSession, dispatchLogout } from "@/hooks/useSessionSync";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/admin" },
@@ -19,8 +21,11 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const location = useLocation();
 
   const handleLogout = async () => {
-    await trpcMutate("login.logout", {}).catch(() => {});
-    localStorage.removeItem("qs_session");
+    await trpcMutate("login.logout", { scope: "admin" }).catch(() => {});
+    clearRoleUser("admin");
+    clearSession("admin");
+    dispatchLogout("admin");
+    queryClient.clear();
     navigate("/login");
   };
 

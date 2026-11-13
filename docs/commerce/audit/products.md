@@ -1,0 +1,192 @@
+# Auditoría `/commerce/products` — Negocio
+
+## 1. Alcance y archivos
+
+**Fecha:** 2026-11-13  
+**Commit de referencia:** `aa8a818` (`git status --porcelain` limpio al iniciar).  
+**Ruta auditada:** `/commerce/products` (catálogo del negocio), incluyendo listado, búsqueda, filtros, alta, edición, borrado, pausa/activación, destacado, imagen por archivo/URL, unidad/kg, precios y estados.  
+**Método:** revisión estática de código, contratos y esquema. No se ejecutaron migraciones, mutaciones, build, tests ni reinicios. El servidor de `localhost:3000` no se tocó.
+
+Archivos leídos completos o en las secciones relevantes:
+
+| Archivo | Uso en la auditoría |
+|---|---|
+| `docs/commerce/ROUTES_MAP.md` | Mapa del negocio y hallazgos F-01 a F-20 |
+| `docs/customer/home.md`, `search.md`, `cart.md` | Contrato de integración con el cliente |
+| `contracts/orderStatus.ts` | Estados y transiciones del pedido |
+| `db/schema.ts` | Columnas, FKs e índices de `products`, `order_items` |
+| `src/pages/commerce/Products.tsx` | Pantalla, filtros, tarjetas y handlers |
+| `src/components/commerce/ProductModal.tsx` | Formulario, imagen, switches y submit |
+| `src/components/commerce/DeleteConfirmModal.tsx` | Confirmación y error de borrado |
+| `src/hooks/useDeliveryData.ts` | Hooks de catálogo, mutaciones y caché |
+| `server/product-router.ts` | CRUD, filtros públicos y ownership |
+| `server/order-router.ts` | `quote`/`buildQuote`, `create` y snapshot de ítems |
+| `server/commerce-router.ts` | `getById`, `toggleStatus` y `getStats` |
+| `server/lib/order-access.ts` | `assertCommerceOwnership` y acceso a pedidos |
+| `src/lib/imageUtils.ts` | Fallbacks de imagen |
+| `src/pages/customer/CommerceDetail.tsx`, `Home.tsx`, `Search.tsx`, `Cart.tsx` | Consumo del catálogo y carrito |
+| `src/hooks/useOrderEvents.ts`, `server/boot.ts` | SSE y autorización de canales |
+| `server/admin/products-router.ts` | Moderación admin de productos |
+| `tailwind.config.js`, `package.json` | Utilidades visuales y versiones |
+| `node_modules/drizzle-orm/errors.js`, `pg-core/session.js` | Forma real de los errores de Drizzle 0.45.1 |
+
+**Límite:** no se probó el comportamiento en navegador, la base local ni un dispositivo de 320 px. Las afirmaciones marcadas como estáticas se indican en la sección 6.
+
+## 2. Flujo end-to-end (UI → hook → tRPC → DB)
+
+```text
+/commerce/products  (App.tsx:114, SessionGuard role="merchant")
+  └─ CommerceProducts (Products.tsx:51)
+      ├─ useMerchantCommerceId()                       useDeliveryData.ts:121-170
+      │   ├─ localStorage.merchant_user.commerceId     (ID cacheado, sin verificar)
+      │   ├─ commerce.me                               (merchantQuery)
+      │   └─ commerce.search(nombre) → results[0]      (fallback legacy)
+      ├─ useProductsByCommerce(commerceId || 0)        useDeliveryData.ts:210-217
+      │   └─ GET product.getByCommerce { commerceId }
+      │       └─ publicQuery + merchantOwnsCommerce(ctx)
+      │           ├─ dueño/admin: todas las filas
+      │           └─ público: solo isAvailable = "yes"
+      ├─ filtro local: name/description + chip de categoría
+      ├─ ProductModal
+      │   ├─ crear:  product.create  { commerceId, ...form }
+      │   │           └─ assertCommerceOwnership → INSERT products
+      │   │              → emit commerce:{id} + products:global
+      │   └─ editar: product.update  { id, ...form }
+      │               └─ SELECT producto → ownership por su commerceId
+      │                  → UPDATE products → emit commerce:{id} + products:global
+      ├─ toggleAvailable → product.update { id, isAvailable }
+      └─ DeleteConfirmModal → product.delete { id }
+          └─ SELECT producto → ownership → DELETE
+              └─ FK order_items.product_id (sin ON DELETE) bloquea si hay historial
+```
+
+| Acción UI | Hook | Procedimiento | Query key / invalidación | Tabla |
+|---|---|---|---|---|
+| Listar | `useProductsByCommerce` | `product.getByCommerce` | `["product.getByCommerce", commerceId]` | `products` + `commerces` (ownership) |
+| Crear | `useCreateProduct` | `product.create` | invalida `product.getByCommerce` y `product.getFeatured` | `products` |
+| Editar | `useUpdateProduct` | `product.update` | ídem | `products` |
+| Pausar/activar | `useUpdateProduct` | `product.update` | ídem, refetch completo del catálogo | `products` |
+| Eliminar | `useDeleteProduct` | `product.delete` | solo `product.getByCommerce` | `products` |
+| Resolver comercio | `useMerchantCommerceId` | `commerce.me` / `commerce.search` | `["commerce.me"]`, `["commerce.search", nombre]` | `commerces`, `users` |
+
+**Datos que devuelve el listado:** `product.getByCommerce` usa `select()` completo (`product-router.ts:70-71`), no una proyección. Para el dueño devuelve productos pausados y el campo `image` tal como esté guardado (URL o base64). El catálogo se filtra en memoria (`Products.tsx:80-87`); no hay paginación ni búsqueda server-side en esta pantalla.
+
+## 3. Hallazgos
+
+| ID | Severidad (P0/P1/P2) | Área | Archivo:línea | Hallazgo | Impacto | Corrección propuesta |
+|---|---|---|---|---|---|---|
+| PROD-01 | P0 | Dinero / validación | `server/product-router.ts:159,199`<br>`server/order-router.ts:145-146`<br>`src/components/commerce/ProductModal.tsx:157-166` | `price` se acepta como `z.string()` sin regex, sin finito, sin positivo y sin máximo. Acepta `-5`, `0`, `NaN`, `1e309` y strings no numéricos. El `min="0"` del input solo protege la UI; `buildQuote` hace `Number(product.price)` y multiplica sin validar. **Confirma F-03.** | Totales y comisión negativos o `NaN`; pedidos, estadísticas y precios de vitrina corruptos; un comercio puede alterar la comisión de la plataforma con ítems negativos. Un precio enorme desborda `numeric(10,2)` en el producto o en el total del pedido. | Validar en servidor con decimal string (`^\d{1,8}(\.\d{1,2})?$`), mayor que 0 y máximo acorde a `numeric(10,2)`; rechazar `NaN`, vacío, espacios, negativos y exponenciales. Repetir la validación en `quote`/`create` como defensa en profundidad. Mostrar error inline en el modal. |
+| PROD-02 | P1 | Estado / formulario | `src/components/commerce/ProductModal.tsx:74-86`<br>`src/pages/commerce/Products.tsx:383-392` | El estado se inicializa una sola vez con `useState(initialData...)`; el componente sigue montado al cerrar porque retorna `null`. No hay `key`, `useEffect` ni reset al cambiar `initialData`. La primera edición abre el formulario vacío; tras editar A y luego B, el formulario muestra A, pero `handleSaveProduct` guarda con el `id` de B. **Confirma F-07.** | Corrupción de datos: nombre, precio, imagen, categoría y unidad de A pueden sobrescribir B. También se repiten datos del último producto al crear uno nuevo. | Montar el modal con `key={editing?.id ?? "new"}` o sincronizar el estado con `useEffect` al abrir/cambiar `initialData`; resetear también `activeImageTab`. Añadir prueba de flujo crear → editar A → editar B. |
+| PROD-03 | P1 | Imágenes / payload | `src/components/commerce/ProductModal.tsx:55-62,94-104,285-290`<br>`server/product-router.ts:160,200`<br>`server/boot.ts:41`<br>`db/schema.ts:156` | `FileReader` convierte cualquier archivo a base64 sin validar tamaño, tipo real ni MIME; `accept="image/*"` es solo una pista. El servidor acepta `image: z.string()` sin máximo, el body global permite 50 MB y la columna es `text`. El listado devuelve la imagen completa en cada producto. **Confirma F-10.** | Fotos de decenas de MB congelan el móvil, inflan la BD y multiplican el payload del catálogo; un comercio autenticado puede enviar 50 MB por request. Archivos no imagen se guardan y terminan como imagen rota. | Limitar tipo MIME real y tamaño en cliente y servidor; redimensionar/comprimir antes de base64; rechazar `data:` que no sea `image/jpeg`, `image/png` o `image/webp`; imponer `max()` por campo; idealmente almacenar URL/objeto y servir miniaturas. Añadir paginación o proyección sin imagen para el listado. |
+| PROD-04 | P1 | Sesión / datos | `src/hooks/useDeliveryData.ts:121-164`<br>`src/pages/commerce/Products.tsx:62-66`<br>`server/lib/order-access.ts:47-57` | `useMerchantCommerceId` hace `JSON.parse` sin `try/catch` sobre `merchant_user` y, si no hay `commerceId`, busca por nombre y toma `results[0].id` sin verificar ownership. El ID cacheado se usa sin comprobación. Si `commerceId` queda nulo, los hooks usan `0`, la query se desactiva y la UI muestra catálogo vacío. **Relacionado con F-08.** | Un JSON corrupto tumba la página; un comercio legacy o con nombre duplicado puede quedar vinculado al comercio equivocado, ver otro catálogo y recibir 403 al editar. No hay mensaje “sin comercio”. El servidor bloquea escrituras, pero la experiencia es indistinguible de un catálogo vacío. | Envolver el parse en `try/catch`; usar solo `commerce.me` como fuente de identidad; si no hay comercio, mostrar estado explícito y deshabilitar “Nuevo producto”; nunca inferir por nombre. Validar `commerceId` entero positivo antes de `assertCommerceOwnership` (`product-router.ts:168-171`). |
+| PROD-05 | P1 | Estados UI | `src/hooks/useDeliveryData.ts:210-217`<br>`src/pages/commerce/Products.tsx:63,235-264` | `useProductsByCommerce` descarta `query.error` y solo expone `data`/`loading`. Si la consulta falla (red, 403, 500), React Query devuelve `[]`, `loading` pasa a `false` y la pantalla muestra “Sin productos disponibles” o “Aún no tienes productos”. Además, `Products.tsx` ignora el `loading` de `useMerchantCommerceId`, así que también puede mostrar el empty state mientras el `commerceId` aún es null. No hay botón de reintento ni distinción de error. | El comercio cree que su catálogo está vacío o que perdió los productos; puede recrearlos. No hay diagnóstico ni recuperación sin recargar. | Exponer `error`, `isError` y `refetch`; renderizar un panel de error distinto del estado vacío, con “Reintentar”. Mantener el estado vacío solo para respuestas exitosas con 0 filas. Aplicar el mismo criterio a la resolución de comercio. |
+| PROD-06 | P1 | Seguridad / integración | `server/commerce-router.ts:44-59`<br>`server/product-router.ts:64-75`<br>`src/pages/customer/CommerceDetail.tsx:64-65,147-162,312-319` | `commerce.getById` es público y devuelve el comercio sin filtrar `status` ni `isOpen`; `product.getByCommerce` público devuelve productos disponibles de cualquier comercio, también suspendido/inactivo/cerrado. `CommerceDetail` solo comprueba `!commerce`, no el estado, y el botón “Agregar” no se deshabilita por local cerrado. **Confirma F-15.** | Un cliente con URL directa puede abrir un comercio suspendido/inactivo/cerrado, ver el catálogo y agregar ítems; el checkout recién bloquea en `quote`. La vitrina contradice a `/home` y `/search`, que sí filtran. | Filtrar `status = "active"` y `isOpen = "open"` en las consultas públicas, manteniendo la excepción owner/admin; devolver `null`/404 o flag `closed` y deshabilitar “Agregar” en la UI. Mantener la validación de `quote` como última defensa. |
+| PROD-07 | P1 | Integración / dinero | `src/pages/customer/Cart.tsx:67-73,315-319,330-332`<br>`server/order-router.ts:145-146,348-357`<br>`src/pages/commerce/Products.tsx:99-114` | El carrito guarda `price` y `unitType` como snapshot local; la línea muestra `parseFloat(item.price) * quantity`, mientras que `quote` usa el precio y la unidad actuales del producto. Si el negocio edita precio o unidad, la línea no se actualiza. Si cambia `unit` a `kg`, una cantidad “2” pasa a significar 2 kg. | El cliente ve un total de línea distinto al total del checkout; puede pagar más o menos sin aviso. El cambio de unidad puede alterar la cantidad vendida y el total sin confirmación. | Renderizar las líneas del carrito desde `quote.data.lines` (`unitPrice`, `unitType`, `total`) o refrescar el snapshot al recibir el quote; mostrar aviso de cambio de precio/unidad y pedir confirmación si cambia la unidad. Mantener `order.create` recalculando en servidor. |
+| PROD-08 | P2 | Errores / borrado | `server/product-router.ts:258-267`<br>`server/order-router.ts:391-392`<br>`src/components/commerce/DeleteConfirmModal.tsx:59-63` | La rama de FK revisa solo `err.code === "23503"` y `err.message` con “foreign key constraint”. En Drizzle 0.45.1 el error de PostgreSQL queda en `err.cause.code` (`node_modules/drizzle-orm/errors.js:10-18`, `pg-core/session.js:95-99`); el mensaje del wrapper es “Failed query…”, sin el texto de la FK. La rama no se ejecuta y se devuelve 500 genérico. | El comercio con historial de pedidos ve “No se pudo eliminar el producto” en vez de la explicación para marcarlo pausado; reintenta y no entiende el bloqueo. El mensaje esperado del `ROUTES_MAP` no llega. | Revisar `err.cause?.code` y cadenas anidadas; mapear `23503` a `CONFLICT` con el texto de “pausado/inactivo”; añadir prueba de integración. Verificar en runtime antes de cerrar el hallazgo. |
+| PROD-09 | P2 | UI / feedback | `src/pages/commerce/Products.tsx:116-123,356-371`<br>`src/hooks/useDeliveryData.ts:235-249` | El toggle de disponibilidad no tiene estado pendiente, no deshabilita el botón y no actualiza la caché de forma optimista. Si falla, solo hace `console.error`; el usuario no ve error ni rollback. En éxito invalida todo `product.getByCommerce` y `product.getFeatured`, redescargando el catálogo completo (incluidas imágenes base64). | En redes lentas el comercio no sabe si la pausa se aplicó; puede creer que el producto está pausado cuando sigue comprable, o viceversa. Cada clic provoca un refetch pesado. | Añadir estado pending por fila, deshabilitar durante la mutación y mostrar toast/error inline. Actualizar `setQueryData` de forma optimista con rollback; invalidar solo la lista afectada y evitar el payload de imágenes. |
+| PROD-10 | P2 | Integración / SSE | `src/hooks/useOrderEvents.ts:152-168,197-212`<br>`src/pages/customer/CommerceDetail.tsx:85-86`<br>`server/boot.ts:168-188,215-219`<br>`src/pages/customer/Search.tsx:30-40`<br>`server/admin/products-router.ts:120,135` | `CommerceDetail` abre como cliente el canal `commerce:{id}`, pero `canAccessCommerce` solo autoriza admin o merchant dueño; el cliente recibe 401 y el cliente SSE reintenta hasta 10 veces. `useProductEvents` invalida `getFeatured`, `list` y `getByCommerce`, pero no `product.search`, `getTopOrdered` ni `commerce.getById`. `Search` no se suscribe a productos. La moderación admin emite solo `commerce:{id}`, no `products:global`. | Precios, disponibilidad e imágenes quedan obsoletos en `/search` y `/commerce/:id`; bucle de 401 en consola/red; los cambios del admin no llegan a `/home`. Un producto pausado puede agregarse desde una vista vieja; el checkout lo bloquea después. | Usar `products:global` en las pantallas de cliente; invalidar `search`, `topOrdered` y `commerce.getById`; no abrir el canal de comercio para clientes; emitir `products:global` también desde admin; cubrir con prueba de evento. |
+| PROD-11 | P2 | Accesibilidad / modal | `src/components/commerce/ProductModal.tsx:107-132,136-180,219-228,376-400`<br>`src/components/commerce/DeleteConfirmModal.tsx:45-57,59-63` | Los modales no tienen `role="dialog"`, `aria-modal`, `aria-labelledby` ni `aria-describedby`. Los `<label>` no tienen `htmlFor`/`id`, así que no están asociados a los inputs. No hay focus trap, foco inicial, Escape, bloqueo de scroll del fondo ni restauración de foco. El error de borrado no tiene `role="alert"`. | Usuarios de teclado y lectores de pantalla no identifican el diálogo, el foco queda detrás del overlay y el fondo puede desplazarse. El formulario es difícil o imposible de completar sin ratón. | Usar semántica de diálogo, asociar labels/ids, enfocar el primer campo, atrapar el foco, cerrar con Escape, bloquear el scroll y restaurar el foco. Añadir `role="alert"` al error de borrado. |
+| PROD-12 | P2 | Accesibilidad / controles | `src/components/commerce/ProductModal.tsx:317-371`<br>`src/pages/commerce/Products.tsx:146-152,164-172,200-230,319-338,349-371`<br>`src/components/commerce/ProductModal.tsx:389` | Los switches de disponibilidad y destacado son `<div onClick>` sin `role="switch"`, `aria-checked`, `tabIndex` ni manejo de teclado. Editar/eliminar son botones de 28 px con solo `title`; volver es de 36 px; “Nuevo” y chips quedan por debajo de 44 px. El naranja `#FF6A00` sobre blanco ronda 2,87:1 y `text-slate-400` de 10 px ronda 2,56:1. | Un usuario solo teclado no puede pausar ni destacar productos. Los targets pequeños fallan en móvil y los textos de precio/categoría no cumplen contraste AA para texto normal. | Convertir los switches en `<button role="switch" aria-checked>` con teclado; usar targets de al menos 44 px; añadir `aria-label` con el nombre del producto a editar/eliminar; subir contraste o tamaño/peso del texto naranja y gris. Verificar con auditoría axe y teclado. |
+| PROD-13 | P2 | Responsive / visual | `src/pages/commerce/Products.tsx:285`<br>`tailwind.config.js:5-91` | La miniatura usa `w-18 h-18`, pero Tailwind 3.4 no incluye el espaciado 18 por defecto y el config no extiende `spacing`. El tamaño solo se define desde `min-[360px]`; por debajo de 360 px el contenedor queda sin ancho/alto explícitos. `shadow-2xs` tampoco existe en Tailwind 3.4 (el config solo extiende `xs`). | En teléfonos de 320–359 px la imagen puede colapsar o romper la tarjeta; las sombras sutiles de la página no se renderizan. | Reemplazar por `w-16 h-16`/`w-20 h-20` o extender `spacing`; usar `shadow-xs`; verificar a 320 px. |
+| PROD-14 | P2 | Imágenes / visual | `src/pages/commerce/Products.tsx:286-297`<br>`src/components/commerce/ProductModal.tsx:262-274`<br>`src/lib/imageUtils.ts:7-10`<br>`server/boot.ts:35` | El fallback de la tarjeta es una URL fija de Unsplash: `safeImage` siempre devuelve algo truthy, así que el operador lógico de respaldo es código muerto; el `onError` también sustituye por Unsplash. En el modal, el preview cambia a Unsplash ante error pero no limpia ni marca `form.image`, por lo que se guarda una URL inválida. No se valida el esquema: una URL `http://` queda bloqueada por la CSP (`img-src` solo permite `https:` y `data:`). El cliente no tiene `onError` en los `background-image`. | El comercio ve un plato genérico y cree que su imagen funciona; el cliente ve un hueco roto. Se agregan requests a un tercero y se pierde la consistencia con el fallback local. | Usar el fallback local de `imageUtils` en todos los puntos; validar la URL antes de guardar; ante error de preview mostrar “No se pudo cargar” y limpiar/flag el valor; añadir fallback también en el cliente. |
+| PROD-15 | P2 | UX / filtros | `src/pages/commerce/Products.tsx:54,69-87,199-231,242-263`<br>`server/product-router.ts:70-73` | Las categorías se derivan de los productos sin `orderBy`; el conteo compara con `===` (sensible a mayúsculas) mientras la selección usa `toLowerCase()`. `selectedCategory` no se resetea si la categoría desaparece al editar/borrar el último producto. No hay normalización de acentos en la búsqueda local ni botón “Limpiar filtros”. | Chips duplicados (“Bebidas” y “bebidas”), conteos engañosos, orden inestable entre refetch y un filtro obsoleto que puede ocultar todo el catálogo y el CTA de creación. | Normalizar `trim` + `toLowerCase` para chips y conteos; ordenar por nombre; resetear la selección cuando ya no exista; búsqueda accent-insensitive; añadir “Limpiar filtros” y `orderBy` en el servidor. |
+| PROD-16 | P2 | Validación / datos | `server/product-router.ts:153-165,193-205`<br>`db/schema.ts:153-157`<br>`src/components/commerce/ProductModal.tsx:90` | `name` usa `min(1)` sin `trim` ni máximo; `description`, `category` e `image` no tienen máximo. La BD limita `name` a 200 y `category` a 100; un valor más largo termina en error de PostgreSQL y el catch devuelve 500 genérico. Un nombre de solo espacios pasa Zod y deja un producto visualmente vacío. En el cliente, `handleSubmit` retorna en silencio si `name` o `price` quedan vacíos tras `trim`. | Productos en blanco, errores 500 sin campo señalado, datos inconsistentes y payload inflado. | Aplicar `trim().min(1).max(200)` a `name`, `max(100)` a `category`, `max(2000)` a `description` y un máximo razonable a `image`; devolver `BAD_REQUEST` con mensaje por campo; reflejar `maxLength` en el formulario. |
+| PROD-17 | P2 | UX / submit | `src/pages/commerce/Products.tsx:99-114`<br>`src/components/commerce/ProductModal.tsx:88-92,121-128,385-399` | `saving` deshabilita los botones del pie, pero no la X de la cabecera. `handleSaveProduct` no tiene guard de reentrada y el alta no usa clave de idempotencia. Un doble clic, Enter repetido o reintento tras timeout puede duplicar el producto; cerrar durante el guardado deja el `alert` sin contexto. | Productos duplicados o ediciones aplicadas después de cerrar; errores desconcertantes y trabajo perdido. | Guardar con `if (saving) return`; deshabilitar todas las salidas mientras se guarda; mantener el modal abierto hasta resolver; añadir deduplicación/idempotencia en alta y feedback inline. |
+| PROD-18 | P2 | UX / errores | `src/pages/commerce/Products.tsx:109-111`<br>`src/components/commerce/ProductModal.tsx:26-50,88-92` | Los errores de guardado usan `alert(err.message)`; el modal no tiene prop de error ni región inline. El mensaje desaparece al aceptar, no se enfoca el campo culpable y el estilo es inconsistente con el error inline del borrado. | Mala experiencia, especialmente en móvil; el usuario no puede corregir el campo sin perder el mensaje; mensajes técnicos del backend quedan expuestos. | Pasar `error` al modal y renderizar `role="alert"`; mapear errores de precio/nombre/categoría a mensajes claros; mantener el formulario y enfocar el primer campo inválido. |
+| PROD-19 | P2 | Performance | `server/product-router.ts:64-74`<br>`src/pages/commerce/Products.tsx:63,80`<br>`src/pages/customer/CommerceDetail.tsx:64-65`<br>`server/commerce-router.ts:55` | El dueño recibe todas las filas y todas las columnas, sin `limit` ni `orderBy`; la página carga el catálogo completo y filtra en memoria. La vitrina pública descarga el catálogo dos veces: `commerce.getById` ya incluye `products` y además se llama `product.getByCommerce`. Cada toggle invalida el listado completo. | El payload y la memoria crecen con el catálogo; en móvil con imágenes base64 es especialmente costoso. Trabajo de BD y red duplicado; sin paginación no hay control de escala. | Proyección ligera para listados (sin imagen completa o con thumbnail), paginación o búsqueda server-side, `orderBy` estable y una sola fuente de productos en el detalle. Invalidar de forma dirigida tras el toggle. |
+| PROD-20 | P2 | Copy / visual | `src/pages/commerce/Products.tsx:159,247,370`<br>`src/components/commerce/ProductModal.tsx:327`<br>`server/product-router.ts:265` | “1 productos registrados” no pluraliza; un catálogo vacío dice “Sin productos disponibles” (sugiere que hay pausados); el modal usa “Stock Disponible”, la tarjeta “Activo/Pausado” y el cliente “agotado”; el error de borrado dice “inactivo” aunque la UI solo ofrece “Pausado”. | El comercio no tiene un vocabulario único para disponibilidad, pausa y agotado; copys incorrectos y contradictorios entre panel y cliente. | Unificar glosario: “Disponible” / “Pausado”, “Producto destacado”; pluralizar el contador; empty state “Aún no tienes productos”; alinear el mensaje del backend con “Pausado”. |
+| PROD-21 | P2 | Testing | `docs/commerce/ROUTES_MAP.md:542-545`<br>Sin archivos `*product*.test.*` ni smoke de negocio | No hay pruebas unitarias, de contrato ni E2E del catálogo del negocio. Las regresiones de F-03, F-07, F-10 y del borrado con historial no las detecta CI. | Un cambio futuro puede reintroducir corrupción de precios o del formulario sin señal. | Añadir tests de validación de precio, ownership, reset del modal, filtros, borrado con FK y SSE; incluir un smoke E2E de login merchant + CRUD de producto en CI. |
+
+## 4. Integración con el flujo Cliente
+
+### 4.1 Matriz de efecto de una acción del negocio
+
+| Acción del negocio | `/home` | `/search` | `/commerce/:id` | Carrito / checkout | SSE |
+|---|---|---|---|---|---|
+| Crear producto disponible | Aparece en `product.list` y, si se destaca, en `getFeatured`; `products:global` invalida | Aparece al buscar (≥2 caracteres) o en el listado; sin suscripción SSE | Aparece al recargar; el canal de comercio no autoriza al cliente | Se agrega normalmente | `commerce:{id}` + `products:global` (`product-router.ts:178-179`) |
+| Editar precio | El listado se refresca por SSE; el precio mostrado cambia | Puede quedar viejo hasta el próximo fetch (30 s de `staleTime`); no hay SSE | Puede quedar viejo; el SSE del cliente falla con 401 | La línea del carrito conserva el precio viejo; `quote` cobra el nuevo | `products:global` |
+| Editar unidad (`unit`↔`kg`) | Igual que precio | Igual que precio | Igual que precio | La cantidad del snapshot se reinterpreta con la unidad nueva; riesgo de cobro distinto | `products:global` |
+| Pausar producto | Desaparece de `product.list`/`getFeatured` tras invalidar | Puede seguir visible hasta el próximo fetch; el botón se deshabilita si el dato se refresca | Puede seguir visible y agregable desde una vista vieja | `quote` lo bloquea con “está agotado” (`order-router.ts:132-135`) | `products:global` |
+| Eliminar sin historial | Desaparece tras invalidar | Ídem | Ídem; al recargar da “no encontrado” | `quote` dice “ya no existe” | `products:global` |
+| Eliminar con historial | No cambia | No cambia | No cambia | No aplica | El DELETE falla por FK; el mensaje llega mal (PROD-08) |
+| Cerrar el local | `commerce.list` se refresca al montar; el toggle del negocio no emite `commerces:global` | Igual; no hay evento | `CommerceDetail` no valida `isOpen`; el botón agregar sigue activo | `quote` bloquea por “comercio cerrado” (`order-router.ts:128-131`) | `commerce.toggleStatus` solo emite `admin:dashboard` (`commerce-router.ts:140-143`) |
+| Moderación admin de producto | No recibe `products:global`; `admin/products-router.ts:120,135` solo emite `commerce:{id}` | Igual | El cliente no puede escuchar ese canal | `quote` bloquea si se refresca el dato | Incompleto |
+
+### 4.2 Lo verificado a favor del cliente
+
+- **Producto creado visible:** `product.list` (`product-router.ts:30-43`), `product.getFeatured` (`:77-91`) y `product.search` (`:132-151`) incluyen solo productos `isAvailable = "yes"` de comercios `status = "active"` e `isOpen = "open"`. `product.getByCommerce` (`:64-75`) filtra `isAvailable` para el público, pero no valida el estado del comercio (ver PROD-06). Un producto disponible de un comercio activo y abierto sí aparece en `/home`, `/search` y `/commerce/:id`.
+- **Destacado:** el flag `isFeatured = "yes"` se aplica en `getFeatured` (`:83-89`) y en el orden de `search` (`:149`). Es autoservicio del comercio dueño; no se encontró un bypass de ownership, pero si la regla de negocio exige moderación admin exclusiva, eso es una decisión pendiente y no un IDOR.
+- **Pausado/agotado:** las consultas públicas filtran `isAvailable`; `quote` vuelve a validar (`order-router.ts:132-135`) y `create` rechaza si hay issues (`:305-312`). Un producto pausado no se puede comprar aunque se inyecte el `productId` en el carrito. La UI de `/home` y `/search` deshabilita el botón (`Home.tsx:241,263-266`; `Search.tsx:297-300`).
+- **Precio y unidad autoritativos:** `quote` usa `Number(product.price)` y `product.unitType` actuales (`order-router.ts:145-146`) y `order.create` guarda el snapshot en `order_items` (`:348-357`). El servidor no confía en montos del cliente.
+- **Datos públicos:** `product.getByCommerce` no devuelve PII; sus columnas son de producto (`product-router.ts:64-74`). `commerce.getById` devuelve teléfono/dirección del comercio, datos de contacto del negocio previstos para la vitrina, no PII de clientes. No se encontró `dangerouslySetInnerHTML` en la UI de productos; React escapa nombre, descripción y categoría. Tampoco se identificó XSS almacenado: la imagen se usa en `src`/`background-image`, no en HTML crudo.
+- **Ownership:** `create` verifica el comercio con `assertCommerceOwnership`; `update` y `delete` cargan el producto y verifican el comercio real, no un `commerceId` del cliente (`product-router.ts:168,212-215,247-250`; `order-access.ts:47-57`). Un merchant no puede editar ni borrar productos de otro comercio.
+
+### 4.3 Riesgos abiertos de integración
+
+1. **Precio/unidad del carrito vs quote:** es el riesgo más directo de reclamo del cliente. El total de línea usa el snapshot local (`Cart.tsx:330-332`) y el checkout usa el quote actual. Una edición de precio o unidad en `/commerce/products` puede producir una diferencia visible sin aviso.
+2. **SSE del cliente incompleto o mal dirigido:** `/search` no escucha productos; `/commerce/:id` abre un canal que el cliente no puede autorizar; `products:global` no invalida `search`, `topOrdered` ni `commerce.getById` (`useOrderEvents.ts:152-168,197-212`). El resultado es catálogo viejo, no un bypass de compra.
+3. **Comercio cerrado/suspendido:** `commerce.getById` y `product.getByCommerce` no filtran estado (`commerce-router.ts:44-59`, `product-router.ts:64-75`), y `CommerceDetail` no deshabilita “Agregar” por `isOpen` (`CommerceDetail.tsx:312-319`). El checkout bloquea, pero la vitrina permite navegar y agregar.
+4. **Cache entre roles:** `useProductsByCommerce` usa la misma query key para dueño y público; la respuesta es owner-aware. Si se cambia de sesión sin recargar y sin limpiar la caché (logout del panel no la limpia, F-14), el cliente podría renderizar inicialmente filas de la vista owner; `CommerceDetail` filtra `isAvailable` (`CommerceDetail.tsx:88`), por lo que no se observó exposición de productos pausados en la UI, pero la key compartida es frágil.
+
+## 5. Lo que funciona y no se debe romper
+
+- **Ownership server-side en las tres mutaciones.** `product.create` exige comercio propio; `product.update` y `product.delete` derivan el comercio desde el producto en BD. No confiar en `commerceId` del cliente (`server/product-router.ts:168,212-215,247-250`; `server/lib/order-access.ts:47-57`).
+- **Filtros públicos de catálogo.** `list`, `getById`, `getFeatured` y `search` exigen `isAvailable = "yes"`, `commerces.status = "active"` e `isOpen = "open"` (`server/product-router.ts:30-62,77-91,132-151`). No reemplazar por `select()` sin filtros.
+- **`getByCommerce` owner-aware.** El dueño/admin ve pausados; el público solo disponibles (`server/product-router.ts:68-74`). Es la base del catálogo del negocio y de la vitrina.
+- **Quote autoritativo y snapshot de pedido.** `order.quote` y `order.create` recalculan precio, unidad, disponibilidad, mínimos, envío y comisión en servidor (`server/order-router.ts:100-197,305-312,348-357`). El cliente nunca debe enviar totales.
+- **Bloqueo de compra de pausados/agotados.** `buildQuote` agrega issues por producto inexistente, comercio inactivo/cerrado, `isAvailable = "no"` y unidad inválida (`server/order-router.ts:119-143`). `create` rechaza si hay issues (`:305-312`).
+- **Borrado con historial protegido por FK.** `order_items.product_id` no tiene `ON DELETE` (`db/schema.ts:212`); un producto con pedidos no se puede borrar. El problema es solo el mapeo del mensaje (PROD-08), no la integridad.
+- **SSE bien nombrado en el backend.** Los eventos usan `commerce:{id}` y `products:global`, y `boot.ts` los expone en `/api/events/commerce/:commerceId` y `/api/events/products` (`server/product-router.ts:178-179,227-228,254-255`; `server/boot.ts:215-219,307-312`). Mantener el evento nombrado `update` y el listener `addEventListener("update")`.
+- **Mutaciones sin comercio se rechazan.** `useCreateProduct`, `useUpdateProduct` y `useDeleteProduct` rechazan con “Sin comercio asignado” si `commerceId` es 0 (`useDeliveryData.ts:223-225,239-241,255-257`). La deuda es la UX alrededor de ese rechazo (PROD-04).
+- **Confirmación de borrado con error inline.** `DeleteConfirmModal` deshabilita ambos botones mientras borra y muestra el error dentro del diálogo (`DeleteConfirmModal.tsx:59-63,66-88`). Mantener ese patrón y añadir semántica de alerta.
+- **Submit con estado de guardado.** El botón de guardar y “Cancelar” se deshabilitan con `saving` (`ProductModal.tsx:377-399`). Falta cubrir la X y la reentrada (PROD-17).
+- **Sin N+1 en `/commerce/products`.** La pantalla hace una consulta de catálogo y, como máximo, una verificación de ownership en `getByCommerce`; las categorías y el filtro son locales (`Products.tsx:69-87`, `product-router.ts:68-74`). No introducir una consulta por tarjeta.
+- **Índices existentes.** `products_commerce_id_idx`, `products_available_featured_idx`, `products_name_idx` y `products_category_idx` (`db/schema.ts:163-168`) cubren el acceso básico; no eliminarlos al cambiar queries.
+
+## 6. Evidencia y verificación
+
+| Tipo | Evidencia | Resultado |
+|---|---|---|
+| Revisión estática | Lectura completa de los archivos de la sección 1; `git status --porcelain` limpio; commit `aa8a818` | Hallazgos con archivo:línea citados |
+| Contrato de precios | `z.string()` en `product-router.ts:159,199`; `Number(product.price)` en `order-router.ts:145-146`; `min="0"` en `ProductModal.tsx:160` | F-03 confirmado: no hay validación de finito/positivo/máximo |
+| Estado del modal | `useState(initialData...)` y `return null` en `ProductModal.tsx:74-86`; montaje permanente en `Products.tsx:383-392` | F-07 confirmado estáticamente |
+| Imágenes | `FileReader` sin `file.size`/`file.type` (`ProductModal.tsx:55-62,94-104`); `image: z.string()` (`product-router.ts:160,200`); `bodyLimit(50 MB)` (`boot.ts:41`); columna `text` (`schema.ts:156`) | F-10 confirmado estáticamente |
+| Vitrina pública | `commerce.getById` sin filtro de estado (`commerce-router.ts:44-59`); `getByCommerce` público sin filtro de comercio (`product-router.ts:64-75`); `CommerceDetail` no valida estado (`CommerceDetail.tsx:147-162,312-319`) | F-15 confirmado estáticamente; no se probó con una URL real |
+| FK de borrado | `product-router.ts:262` revisa `err.code`; Drizzle 0.45.1 envuelve el error y deja `23503` en `err.cause.code` (`node_modules/drizzle-orm/errors.js:10-18`; `pg-core/session.js:95-99`); `order-router.ts:391-392` sí revisa `err.cause.code` | **Inferido de la librería instalada; no se ejecutó un DELETE real.** Verificar en runtime |
+| Tailwind | `w-18 h-18` en `Products.tsx:285`; `tailwind.config.js:5-91` no extiende `spacing`; Tailwind 3.4 no incluye 18 por defecto; `shadow-2xs` no está en el config | **Inferido de la config; no se renderizó a 320 px.** Verificar en navegador |
+| Contraste | `#FF6A00` sobre blanco ≈ 2,87:1; `#94a3b8` (`slate-400`) sobre blanco ≈ 2,56:1; textos de 10–14 px | Cálculo de contraste, no medición con axe |
+| SSE | `canAccessCommerce` solo admin/merchant (`boot.ts:168-188`); endpoint de comercio (`:215-219`); `CommerceDetail` lo abre como cliente (`:85-86`); `Search` no importa `useProductEvents` (`Search.tsx:30-40`) | 401 y ausencia de invalidación confirmados estáticamente |
+| Runtime | No se ejecutaron `npm test`, `npm run build`, `npx tsc`, migraciones ni E2E; no se consultó la BD; no se modificó `localhost:3000` | Los hallazgos de persistencia/UX en navegador quedan como revisión estática |
+
+**No verificado explícitamente:**
+
+- Que PostgreSQL local acepte un `total` `NaN` o un precio `NaN`; la persistencia exacta depende de la versión y del tipo `numeric`. El fallo de `quote` y de la UI es seguro; la persistencia de `NaN` requiere prueba de integración.
+- El comportamiento visual exacto de `w-18` a 320 px. La ausencia de la utilidad está confirmada; el grado de colapso depende del layout del navegador.
+- El MIME real de archivos seleccionados en distintos sistemas operativos y el límite práctico de base64 antes del `bodyLimit`.
+- El mensaje real que devuelve PostgreSQL al borrar un producto con `order_items`; se dedujo del wrapper de Drizzle.
+
+**Verificación sugerida después de corregir (no ejecutada aquí):**
+
+```bash
+npx tsc -b --force
+npm test
+npm run lint
+npm run build
+node scripts/e2e-smoke.mjs
+```
+
+Añadir pruebas específicas de: precio negativo/cero/NaN/máximo, ownership en `create/update/delete`, reset del modal al cambiar de producto, borrado con historial, filtros de comercio cerrado/suspendido, y evento SSE de producto.
+
+## 7. Resumen para consolidado (top 5)
+
+| # | ID | Severidad | Hallazgo | Archivo:línea |
+|---|---|---|---|---|
+| 1 | PROD-01 | P0 | Precio sin validación de servidor: negativos, cero, `NaN`, exponenciales y fuera de rango llegan a quote/catálogo; confirma F-03 | `server/product-router.ts:159,199`; `server/order-router.ts:145-146` |
+| 2 | PROD-02 | P1 | `ProductModal` conserva el estado anterior: primera edición vacía y ediciones cruzadas que pueden sobrescribir otro producto; confirma F-07 | `src/components/commerce/ProductModal.tsx:74-86`; `src/pages/commerce/Products.tsx:383-392` |
+| 3 | PROD-03 | P1 | Imágenes base64 sin límite de tamaño/MIME, servidas completas en cada listado; confirma F-10 | `src/components/commerce/ProductModal.tsx:55-62,94-104`; `server/product-router.ts:160,200`; `server/boot.ts:41` |
+| 4 | PROD-06 | P1 | Vitrina pública sin filtro de `status`/`isOpen`; cliente puede abrir comercio suspendido/cerrado y agregar productos; confirma F-15 | `server/commerce-router.ts:44-59`; `server/product-router.ts:64-75`; `src/pages/customer/CommerceDetail.tsx:147-162,312-319` |
+| 5 | PROD-07 | P1 | Carrito muestra precio/unidad viejos y el quote cobra los nuevos; cambio de unidad puede reinterpretar la cantidad | `src/pages/customer/Cart.tsx:330-332,315-319`; `server/order-router.ts:145-146` |
+
+**P1 adicionales para el consolidado:** PROD-04 (resolución ambigua de `commerceId`, `useDeliveryData.ts:121-164`) y PROD-05 (fallo de carga disfrazado de catálogo vacío, `useDeliveryData.ts:210-217`).
+
+**Riesgo de integración principal:** el servidor es autoritativo en precio, unidad, disponibilidad y ownership, pero el cliente no recibe todas las invalidaciones SSE y el carrito conserva snapshots. La corrección debe priorizar que el carrito renderice el quote actual y que `/search` y `/commerce/:id` usen `products:global`, sin abrir el canal de comercio a clientes. La vitrina también debe respetar `status`/`isOpen` para que la UI no permita agregar productos que el checkout va a rechazar.

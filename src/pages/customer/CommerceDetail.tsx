@@ -36,8 +36,9 @@ import { useCommerceEvents } from "@/hooks/useOrderEvents";
 import { trpc } from "@/providers/trpc";
 import { safeImage } from "@/lib/imageUtils";
 import { CustomerBottomNav } from "@/components/CustomerBottomNav";
-import { useState } from "react";
 import { CommerceCartBar } from "@/components/CommerceCartBar";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { useState } from "react";
 
 function formatHours(raw: string | null | undefined): string {
   if (!raw) return "";
@@ -86,6 +87,7 @@ export default function CommerceDetail() {
   useCommerceEvents(Number(id), commerceUtils);
 
   const products = (allProducts || []).filter((p: any) => p.isAvailable === "yes");
+  const isStoreOpen = commerce.isOpen === "open";
 
   const groupedProducts = products.reduce((acc: Record<string, any[]>, p: any) => {
     const cat = p.category || "General";
@@ -138,7 +140,7 @@ export default function CommerceDetail() {
 
   if (loadingCommerce) {
     return (
-      <div className="mobile-container bg-surface min-h-screen flex items-center justify-center">
+      <div className="mobile-container bg-surface dark:bg-[#0E0E12] min-h-screen flex items-center justify-center">
         <div className="w-9 h-9 border-3 border-brand border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -146,11 +148,11 @@ export default function CommerceDetail() {
 
   if (!commerce) {
     return (
-      <div className="mobile-container bg-surface min-h-screen flex flex-col items-center justify-center p-6 text-center">
-        <div className="w-16 h-16 rounded-3xl bg-zinc-100 flex items-center justify-center text-zinc-400 mb-3">
+      <div className="mobile-container bg-surface dark:bg-[#0E0E12] min-h-screen flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-16 h-16 rounded-3xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 mb-3">
           <Store className="w-8 h-8 stroke-[1.5]" />
         </div>
-        <p className="text-base font-bold text-zinc-800">Comercio no encontrado</p>
+        <p className="text-base font-bold text-zinc-800 dark:text-zinc-100">Comercio no encontrado</p>
         <button
           onClick={() => navigate("/home")}
           className="mt-4 px-6 py-2.5 bg-brand text-white font-bold text-xs rounded-xl shadow-md cursor-pointer"
@@ -162,7 +164,7 @@ export default function CommerceDetail() {
   }
 
   return (
-    <div className="mobile-container bg-surface min-h-screen pb-32 text-zinc-900 select-none">
+    <div className="mobile-container bg-surface dark:bg-[#0E0E12] min-h-screen pb-32 text-zinc-900 dark:text-zinc-100 select-none">
       {/* Portada Hero con degradado y botón de retroceso */}
       <div className="relative h-52 bg-zinc-900">
         <div
@@ -179,6 +181,11 @@ export default function CommerceDetail() {
         >
           <ArrowLeft className="w-5 h-5 text-white" />
         </button>
+
+        {/* Conmutador de Tema Claro / Oscuro con cristal Dark Velvet */}
+        <div className="absolute top-4 right-4 z-20">
+          <ThemeToggle size="md" className="!bg-black/50 !backdrop-blur-md !border-white/20 !text-white" />
+        </div>
 
         {/* Título y Datos Clave en Portada */}
         <div className="absolute bottom-4 left-4 right-4">
@@ -212,32 +219,32 @@ export default function CommerceDetail() {
 
       {/* Ficha de Información del Comercio */}
       <div className="px-4 -mt-3 relative z-10">
-        <div className="bg-white rounded-2xl border border-zinc-100 shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-4">
-          <p className="text-xs sm:text-sm text-zinc-600 leading-relaxed font-medium">
+        <div className="bg-white dark:bg-[#16161B] rounded-2xl border border-zinc-100 dark:border-white/10 shadow-[0_4px_20px_rgba(0,0,0,0.06)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.3)] p-4">
+          <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed font-medium">
             {commerce.description}
           </p>
 
-          <div className="flex items-center gap-2 mt-3 text-xs text-zinc-600 font-medium">
+          <div className="flex items-center gap-2 mt-3 text-xs text-zinc-600 dark:text-zinc-300 font-medium">
             <MapPin className="w-3.5 h-3.5 text-brand shrink-0" />
             <span className="truncate">{commerce.address}</span>
           </div>
 
-          <div className="flex items-center gap-2 mt-1.5 text-xs text-zinc-600 font-medium">
+          <div className="flex items-center gap-2 mt-1.5 text-xs text-zinc-600 dark:text-zinc-300 font-medium">
             <Phone className="w-3.5 h-3.5 text-brand shrink-0" />
             <span>{commerce.phone}</span>
           </div>
 
           {commerce.openHours && (
-            <div className="mt-2.5 text-xs text-zinc-500 pt-2 border-t border-zinc-100 flex items-center gap-1.5 font-medium">
-              <Clock className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+            <div className="mt-2.5 text-xs text-zinc-500 dark:text-zinc-400 pt-2 border-t border-zinc-100 dark:border-white/5 flex items-center gap-1.5 font-medium">
+              <Clock className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500 shrink-0" />
               <span className="truncate">{formatHours(commerce.openHours)}</span>
             </div>
           )}
 
           {commerce.minOrder && parseFloat(commerce.minOrder) > 0 && (
-            <div className="mt-1.5 text-xs text-zinc-500 font-medium">
+            <div className="mt-1.5 text-xs text-zinc-500 dark:text-zinc-400 font-medium">
               <span>Pedido mínimo: </span>
-              <strong className="text-zinc-900 font-bold">${commerce.minOrder} USD</strong>
+              <strong className="text-zinc-900 dark:text-white font-bold">${commerce.minOrder} USD</strong>
             </div>
           )}
         </div>
@@ -248,13 +255,13 @@ export default function CommerceDetail() {
         {loadingProducts ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-24 bg-white rounded-2xl border border-zinc-100 animate-pulse" />
+              <div key={i} className="h-24 bg-white dark:bg-[#16161B] rounded-2xl border border-zinc-100 dark:border-white/10 animate-pulse" />
             ))}
           </div>
         ) : (
           Object.entries(groupedProducts).map(([category, catItems]) => (
             <div key={category}>
-              <h2 className="text-[11px] font-black uppercase tracking-wider text-zinc-400 mb-2.5 px-1">
+              <h2 className="text-[11px] font-black uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-2.5 px-1">
                 {category}
               </h2>
               <div className="space-y-2.5">
@@ -265,34 +272,34 @@ export default function CommerceDetail() {
                   return (
                     <div
                       key={product.id}
-                      className="bg-white rounded-2xl border border-zinc-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-3.5 flex gap-3.5 hover:border-zinc-200 transition-all group"
+                      className="bg-white dark:bg-[#16161B] rounded-2xl border border-zinc-100 dark:border-white/10 shadow-[0_2px_12px_rgba(0,0,0,0.03)] dark:shadow-[0_2px_12px_rgba(0,0,0,0.2)] p-3.5 flex gap-3.5 hover:border-zinc-200 dark:hover:border-white/20 transition-all group"
                     >
                       <div
-                        className="w-20 h-20 rounded-xl bg-zinc-100 bg-cover bg-center shrink-0 border border-zinc-100"
+                        className="w-20 h-20 rounded-xl bg-zinc-100 dark:bg-zinc-800 bg-cover bg-center shrink-0 border border-zinc-100 dark:border-white/10"
                         style={{ backgroundImage: `url(${safeImage(product.image, "product")})` }}
                       />
                       <div className="flex-1 min-w-0 flex flex-col justify-between">
                         <div>
-                          <h3 className="font-bold text-zinc-900 text-sm leading-snug group-hover:text-brand transition-colors">
+                          <h3 className="font-bold text-zinc-900 dark:text-white text-sm leading-snug group-hover:text-brand transition-colors">
                             {product.name}
                           </h3>
                           {product.description && (
-                            <p className="text-xs text-zinc-500 mt-0.5 line-clamp-2 leading-relaxed">
+                            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 line-clamp-2 leading-relaxed">
                               {product.description}
                             </p>
                           )}
                         </div>
 
-                        <div className="flex items-center justify-between mt-2.5 pt-1.5 border-t border-zinc-50">
+                        <div className="flex items-center justify-between mt-2.5 pt-1.5 border-t border-zinc-50 dark:border-white/5">
                           <span className="text-sm sm:text-base font-black text-brand">
                             ${product.price} {product.unitType === "kg" ? "/ kg" : ""}
                           </span>
 
                           {inCartQty > 0 && product.unitType !== "kg" ? (
-                            <div className="flex items-center gap-2 bg-orange-50/70 border border-orange-100 px-1 py-0.5 rounded-xl">
+                            <div className="flex items-center gap-2 bg-orange-50/70 dark:bg-brand/10 border border-orange-100 dark:border-brand/20 px-1 py-0.5 rounded-xl">
                               <button
                                 onClick={() => updateQuantity(product.id, inCartQty - 1)}
-                                className="w-7 h-7 rounded-lg bg-white flex items-center justify-center text-zinc-700 hover:text-red-600 active:scale-90 transition-transform shadow-xs cursor-pointer"
+                                className="w-7 h-7 rounded-lg bg-white dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-200 hover:text-red-500 active:scale-90 transition-transform shadow-xs cursor-pointer"
                                 aria-label="Disminuir"
                               >
                                 <Minus className="w-3.5 h-3.5" />
@@ -311,8 +318,9 @@ export default function CommerceDetail() {
                           ) : (
                             <button
                               onClick={() => handleAddClick(product)}
-                              className="w-9 h-9 bg-brand hover:bg-brand-strong text-white rounded-xl flex items-center justify-center shadow-md shadow-brand/25 active:scale-90 transition-all cursor-pointer"
-                              aria-label="Agregar al carrito"
+                              disabled={!isStoreOpen}
+                              className="w-9 h-9 bg-brand hover:bg-brand-strong text-white rounded-xl flex items-center justify-center shadow-md shadow-brand/25 active:scale-90 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                              aria-label={isStoreOpen ? "Agregar al carrito" : "Comercio cerrado"}
                             >
                               <Plus className="w-4 h-4 stroke-[2.5]" />
                             </button>
@@ -330,17 +338,17 @@ export default function CommerceDetail() {
 
       {/* Modal para Productos por Kilo / Importe */}
       {purchaseModal.show && purchaseModal.product && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-end sm:items-center justify-center z-[120] p-0 sm:p-4 select-none animate-in fade-in duration-150">
-          <div className="bg-surface rounded-t-3xl sm:rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl animate-in slide-in-from-bottom-6 duration-200 border border-zinc-200">
-            <div className="w-12 h-1 bg-zinc-300 rounded-full mx-auto my-3 sm:hidden" />
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-xs flex items-end sm:items-center justify-center z-[120] p-0 sm:p-4 select-none animate-in fade-in duration-150">
+          <div className="bg-surface dark:bg-[#16161B] rounded-t-3xl sm:rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl animate-in slide-in-from-bottom-6 duration-200 border border-zinc-200 dark:border-white/10">
+            <div className="w-12 h-1 bg-zinc-300 dark:bg-zinc-700 rounded-full mx-auto my-3 sm:hidden" />
             
-            <div className="p-4 bg-white border-b border-zinc-100 flex items-center gap-3">
+            <div className="p-4 bg-white dark:bg-[#1C1C22] border-b border-zinc-100 dark:border-white/10 flex items-center gap-3">
               <div
-                className="w-12 h-12 rounded-xl bg-zinc-100 bg-cover bg-center shrink-0 border border-zinc-100"
+                className="w-12 h-12 rounded-xl bg-zinc-100 dark:bg-zinc-800 bg-cover bg-center shrink-0 border border-zinc-100 dark:border-white/10"
                 style={{ backgroundImage: `url(${safeImage(purchaseModal.product.image, "product")})` }}
               />
               <div className="min-w-0 flex-1">
-                <h3 className="font-bold text-zinc-900 text-sm leading-tight truncate">
+                <h3 className="font-bold text-zinc-900 dark:text-white text-sm leading-tight truncate">
                   {purchaseModal.product.name}
                 </h3>
                 <p className="text-xs text-brand font-black mt-0.5">
@@ -350,11 +358,13 @@ export default function CommerceDetail() {
             </div>
 
             <div className="p-4 space-y-4">
-              <div className="flex p-1 bg-zinc-200/60 rounded-xl">
+              <div className="flex p-1 bg-zinc-200/60 dark:bg-white/10 rounded-xl">
                 <button
                   onClick={() => setPurchaseModal({ ...purchaseModal, tab: "kg", inputValue: "1" })}
                   className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                    purchaseModal.tab === "kg" ? "bg-white text-zinc-900 shadow-xs" : "text-zinc-600"
+                    purchaseModal.tab === "kg"
+                      ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-xs"
+                      : "text-zinc-600 dark:text-zinc-400"
                   }`}
                 >
                   Por Kilos
@@ -362,7 +372,9 @@ export default function CommerceDetail() {
                 <button
                   onClick={() => setPurchaseModal({ ...purchaseModal, tab: "importe", inputValue: purchaseModal.product.price })}
                   className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                    purchaseModal.tab === "importe" ? "bg-white text-zinc-900 shadow-xs" : "text-zinc-600"
+                    purchaseModal.tab === "importe"
+                      ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-xs"
+                      : "text-zinc-600 dark:text-zinc-400"
                   }`}
                 >
                   Por Importe ($ USD)
@@ -376,7 +388,7 @@ export default function CommerceDetail() {
                       <button
                         key={val}
                         onClick={() => setPurchaseModal({ ...purchaseModal, inputValue: val })}
-                        className="px-3 py-1.5 text-xs rounded-xl border border-zinc-200 bg-white text-zinc-700 hover:border-brand active:scale-95 font-bold cursor-pointer"
+                        className="px-3 py-1.5 text-xs rounded-xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 hover:border-brand active:scale-95 font-bold cursor-pointer"
                       >
                         {val} kg
                       </button>
@@ -385,7 +397,7 @@ export default function CommerceDetail() {
                       <button
                         key={val}
                         onClick={() => setPurchaseModal({ ...purchaseModal, inputValue: val })}
-                        className="px-3 py-1.5 text-xs rounded-xl border border-zinc-200 bg-white text-zinc-700 hover:border-brand active:scale-95 font-bold cursor-pointer"
+                        className="px-3 py-1.5 text-xs rounded-xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 hover:border-brand active:scale-95 font-bold cursor-pointer"
                       >
                         ${val} USD
                       </button>
@@ -393,7 +405,7 @@ export default function CommerceDetail() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-zinc-700 mb-1.5">
+                <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">
                   {purchaseModal.tab === "kg" ? "¿Cuántos kilos deseas?" : "¿Cuánto dinero deseas pedir?"}
                 </label>
                 <div className="relative">
@@ -407,7 +419,7 @@ export default function CommerceDetail() {
                     min="0.1"
                     value={purchaseModal.inputValue}
                     onChange={(e) => setPurchaseModal({ ...purchaseModal, inputValue: e.target.value })}
-                    className={`w-full h-11 bg-white border border-zinc-200 rounded-xl font-black text-zinc-900 text-lg focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand ${
+                    className={`w-full h-11 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-xl font-black text-zinc-900 dark:text-white text-lg focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand ${
                       purchaseModal.tab === "importe" ? "pl-8 pr-3" : "px-3.5 pr-10"
                     }`}
                   />
@@ -427,7 +439,7 @@ export default function CommerceDetail() {
                 </button>
                 <button
                   onClick={() => setPurchaseModal({ ...purchaseModal, show: false })}
-                  className="px-4 h-12 bg-zinc-200/70 hover:bg-zinc-200 text-zinc-700 font-bold rounded-xl active:scale-95 transition-all cursor-pointer text-xs"
+                  className="px-4 h-12 bg-zinc-200/70 dark:bg-white/10 hover:bg-zinc-200 dark:hover:bg-white/15 text-zinc-700 dark:text-zinc-300 font-bold rounded-xl active:scale-95 transition-all cursor-pointer text-xs"
                 >
                   Cancelar
                 </button>

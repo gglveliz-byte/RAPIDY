@@ -137,7 +137,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
       if (event.key === CART_KEY) setItems(readStoredCart());
       if (event.key === null) setItems(readStoredCart());
     };
-    const onLogout = () => {
+    const onLogout = (event: Event) => {
+      const detail = (event as CustomEvent<{ role?: string }>).detail;
+      // El carrito pertenece al cliente. Un logout del negocio, admin o driver
+      // no debe vaciarlo.
+      if (detail?.role && detail.role !== "customer") return;
       setItems([]);
       try {
         localStorage.removeItem(CART_KEY);

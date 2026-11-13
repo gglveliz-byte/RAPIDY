@@ -69,9 +69,10 @@ export function CustomerSessionProvider({ children }: { children: ReactNode }) {
     invalidateCustomerAuthCache();
     try {
       localStorage.removeItem(CUSTOMER_STORAGE_KEY);
-      localStorage.removeItem("qs_session");
     } catch { /* sin acción */ }
-    window.dispatchEvent(new Event("rapidy:logout"));
+    // Solo el rol cliente reacciona a este evento. Un logout de cliente no
+    // debe cerrar la sesión del negocio ni vaciar su caché de React Query.
+    window.dispatchEvent(new CustomEvent("rapidy:logout", { detail: { role: "customer" } }));
     queryClient.clear();
   }, [queryClient]);
 
@@ -85,11 +86,9 @@ export function CustomerSessionProvider({ children }: { children: ReactNode }) {
           customerRef.current = customer;
           setCustomer(customer);
           localStorage.setItem(CUSTOMER_STORAGE_KEY, JSON.stringify(customer));
-          localStorage.setItem("qs_session", JSON.stringify({ role: "customer", ts: Date.now() }));
         } else if (!customerRef.current) {
           setCustomer(null);
           localStorage.removeItem(CUSTOMER_STORAGE_KEY);
-          localStorage.removeItem("qs_session");
         }
       })
       .catch(() => { /* sin acción */ });
@@ -104,7 +103,6 @@ export function CustomerSessionProvider({ children }: { children: ReactNode }) {
     setCustomer(customerData);
     try {
       localStorage.setItem(CUSTOMER_STORAGE_KEY, JSON.stringify(customerData));
-      localStorage.setItem("qs_session", JSON.stringify({ role: "customer", ts: Date.now() }));
     } catch { /* sin acción */ }
   }, []);
 
@@ -134,7 +132,6 @@ export function CustomerSessionProvider({ children }: { children: ReactNode }) {
         primeCustomerAuthCache(deserialized.customer);
         setCustomer(deserialized.customer);
         localStorage.setItem(CUSTOMER_STORAGE_KEY, JSON.stringify(deserialized.customer));
-        localStorage.setItem("qs_session", JSON.stringify({ role: "customer", ts: Date.now() }));
         return true;
       }
       clearLocalSession();

@@ -31,6 +31,7 @@ import { Mail, Lock, ArrowLeft, Shield, Briefcase, Eye, EyeOff } from "lucide-re
 import PhoneInput from "@/components/PhoneInput";
 import RapidyCanvas from "@/components/RapidyCanvas";
 import { trpcMutate } from "@/hooks/useDeliveryData";
+import { setRoleUser, setSession, type AppRole } from "@/hooks/useSessionSync";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -67,14 +68,11 @@ export default function Login() {
       const result = await trpcMutate<any>("login.login", input);
 
       if (result?.success) {
-        const role = result.role;
-        if (result.user && role === "merchant") {
-          localStorage.setItem("merchant_user", JSON.stringify(result.user));
+        const role = result.role as AppRole;
+        if (result.user) {
+          setRoleUser(role, result.user);
+          setSession(role, result.user.id);
         }
-        if (result.user && role === "driver") {
-          localStorage.setItem("driver_user", JSON.stringify(result.user));
-        }
-        localStorage.setItem("qs_session", JSON.stringify({ role, ts: Date.now() }));
         if (role === "admin") navigate("/admin");
         else if (role === "driver") navigate("/driver");
         else if (role === "merchant") navigate("/commerce");

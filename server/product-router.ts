@@ -7,6 +7,51 @@ import { TRPCError } from "@trpc/server";
 import { emit } from "./events";
 import { assertCommerceOwnership, merchantOwnsCommerce } from "./lib/order-access";
 
+const priceSchema = z
+  .string()
+  .trim()
+  .regex(/^(?:0|[1-9]\d{0,7})(?:\.\d{1,2})?$/, "El precio debe ser un decimal válido")
+  .refine((value) => Number.isFinite(Number(value)) && Number(value) > 0, {
+    message: "El precio debe ser mayor que cero",
+  })
+  .transform((value) => Number(value).toFixed(2));
+
+const imageSchema = z
+  .string()
+  .trim()
+  .max(2_000_000, "La imagen es demasiado grande")
+  .refine(
+    (value) =>
+      value === "" ||
+      /^https:\/\//i.test(value) ||
+      /^data:image\/(jpeg|jpg|png|webp);base64,/i.test(value),
+    "La imagen debe ser una URL HTTPS o una imagen JPG/PNG/WEBP",
+  );
+
+const productCreateSchema = z.object({
+  commerceId: z.number().int().positive(),
+  name: z.string().trim().min(1, "El nombre es obligatorio").max(200),
+  description: z.string().trim().max(2000).optional(),
+  price: priceSchema,
+  image: imageSchema.optional(),
+  category: z.string().trim().max(100).optional(),
+  isFeatured: z.enum(["yes", "no"]).default("no"),
+  isAvailable: z.enum(["yes", "no"]).default("yes"),
+  unitType: z.enum(["unit", "kg"]).default("unit"),
+});
+
+const productUpdateSchema = z.object({
+  id: z.number().int().positive(),
+  name: z.string().trim().min(1, "El nombre es obligatorio").max(200).optional(),
+  description: z.string().trim().max(2000).optional(),
+  price: priceSchema.optional(),
+  image: imageSchema.optional(),
+  category: z.string().trim().max(100).optional(),
+  isFeatured: z.enum(["yes", "no"]).optional(),
+  isAvailable: z.enum(["yes", "no"]).optional(),
+  unitType: z.enum(["unit", "kg"]).optional(),
+});
+
 const catalogProductColumns = {
   id: products.id,
   commerceId: products.commerceId,
@@ -68,10 +113,17 @@ export const productRouter = createRouter({
       const isOwner =
         !!ctx.admin || (ctx.merchant ? await merchantOwnsCommerce(ctx, input.commerceId) : false);
       const rows = await db
-        .select()
+        .select({ product: products, commerceStatus: commerces.status })
         .from(products)
+        .innerJoin(commerces, eq(products.commerceId, commerces.id))
         .where(eq(products.commerceId, input.commerceId));
-      return isOwner ? rows : rows.filter((product) => product.isAvailable === "yes");
+      if (isOwner) return rows.map((row) => row.product);
+      return rows
+        .filter(
+          (row) =>
+            row.commerceStatus === "active" && row.product.isAvailable === "yes",
+        )
+        .map((row) => row.product);
     }),
 
   getFeatured: publicQuery.query(async () => {
@@ -151,24 +203,9 @@ export const productRouter = createRouter({
     }),
 
   create: merchantQuery
-    .input(
-      z.object({
-        commerceId: z.number(),
-        name: z.string().min(1),
-        description: z.string().optional(),
-        price: z.string(),
-        image: z.string().optional(),
-        category: z.string().optional(),
-        isFeatured: z.enum(["yes", "no"]).default("no"),
-        isAvailable: z.enum(["yes", "no"]).default("yes"),
-        unitType: z.enum(["unit", "kg"]).default("unit"),
-      })
-    )
+    .input(productCreateSchema)
     .mutation(async ({ input, ctx }) => {
       await assertCommerceOwnership(ctx, input.commerceId);
-      if (!Number.isFinite(input.commerceId) || input.commerceId < 1) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "commerceId inválido" });
-      }
       const db = getDb();
       try {
         const commerce = await db.select({ id: commerces.id }).from(commerces).where(eq(commerces.id, input.commerceId));
@@ -191,19 +228,7 @@ export const productRouter = createRouter({
     }),
 
   update: merchantQuery
-    .input(
-      z.object({
-        id: z.number(),
-        name: z.string().optional(),
-        description: z.string().optional(),
-        price: z.string().optional(),
-        image: z.string().optional(),
-        category: z.string().optional(),
-        isFeatured: z.enum(["yes", "no"]).optional(),
-        isAvailable: z.enum(["yes", "no"]).optional(),
-        unitType: z.enum(["unit", "kg"]).optional(),
-      })
-    )
+    .input(productUpdateSchema)
     .mutation(async ({ input, ctx }) => {
       const db = getDb();
       const { id, ...data } = input;
@@ -240,7 +265,7 @@ export const productRouter = createRouter({
     }),
 
   delete: merchantQuery
-    .input(z.object({ id: z.number() }))
+    .input(z.object({ id: z.number().int().positive() }))
     .mutation(async ({ input, ctx }) => {
       const db = getDb();
       try {

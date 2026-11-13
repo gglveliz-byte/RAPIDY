@@ -9,6 +9,8 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recha
 import { trpcCall, trpcMutate } from "@/hooks/useDeliveryData";
 import { useAdminSSE } from "@/hooks/useAdminSSE";
 import AdminLayout from "@/components/AdminLayout";
+import { queryClient } from "@/providers/trpc";
+import { clearRoleUser, clearSession, dispatchLogout } from "@/hooks/useSessionSync";
 
 type Period = "day" | "week" | "month" | "year";
 
@@ -91,8 +93,11 @@ export default function AdminDashboard() {
   }, [period, loadCharts]);
 
   const handleLogout = async () => {
-    await trpcMutate("login.logout", {}).catch(() => {});
-    localStorage.removeItem("qs_session");
+    await trpcMutate("login.logout", { scope: "admin" }).catch(() => {});
+    clearRoleUser("admin");
+    clearSession("admin");
+    dispatchLogout("admin");
+    queryClient.clear();
     navigate("/login");
   };
 

@@ -32,9 +32,14 @@ export const orderStatusEnum = pgEnum("order_status", [
 ]);
 
 export const orderCommerceStatusEnum = pgEnum("order_commerce_status_enum", [
+  "pending_payment",
+  "payment_rejected",
+  "received",
+  "accepted",
   "preparing",
   "ready_for_pickup",
   "picked_up",
+  "cancelled",
 ]);
 export const paymentMethodEnum = pgEnum("payment_method", ["cash", "transfer"]);
 export const senderTypeEnum = pgEnum("sender_type", ["customer", "commerce", "driver"]);
@@ -193,12 +198,14 @@ export const orders = pgTable("orders", {
   cancelledBy: varchar("cancelled_by", { length: 20 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  deliveredAt: timestamp("delivered_at", { withTimezone: true }),
 }, (table) => [
   index("orders_customer_id_idx").on(table.customerId),
   index("orders_driver_id_idx").on(table.driverId),
   index("orders_status_idx").on(table.status),
   index("orders_created_at_idx").on(table.createdAt),
   index("orders_customer_created_idx").on(table.customerId, table.createdAt),
+  index("orders_delivered_at_idx").on(table.deliveredAt),
   uniqueIndex("orders_idempotency_key_idx").on(table.idempotencyKey),
 ]);
 
@@ -219,6 +226,7 @@ export const orderItems = pgTable("order_items", {
 }, (table) => [
   index("order_items_order_id_idx").on(table.orderId),
   index("order_items_commerce_id_idx").on(table.commerceId),
+  index("order_items_commerce_order_idx").on(table.commerceId, table.orderId),
   index("order_items_product_id_idx").on(table.productId),
 ]);
 
@@ -244,7 +252,8 @@ export const orderCommerceStatus = pgTable("order_commerce_status", {
   id: serial("id").primaryKey(),
   orderId: bigint("order_id", { mode: "number" }).notNull().references(() => orders.id, { onDelete: "cascade" }),
   commerceId: bigint("commerce_id", { mode: "number" }).notNull().references(() => commerces.id, { onDelete: "cascade" }),
-  status: orderCommerceStatusEnum("status").default("preparing").notNull(),
+  status: orderCommerceStatusEnum("status").default("received").notNull(),
+  commissionAmount: numeric("commission_amount", { precision: 10, scale: 2 }),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => [
   uniqueIndex("order_commerce_status_order_commerce_idx").on(table.orderId, table.commerceId),

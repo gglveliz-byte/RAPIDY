@@ -29,10 +29,13 @@ import {
   useUpdateOrderStatus,
   useMarkCommerceReady,
 } from "@/hooks/useDeliveryData";
-import { useCommerceEvents } from "@/hooks/useOrderEvents";
-import { trpc } from "@/providers/trpc";
 import CommerceLayout from "@/components/CommerceLayout";
 import CommerceOrderCard from "@/components/commerce/CommerceOrderCard";
+import { getCommerceOrderStatus } from "@contracts/orderStatus";
+
+function visibleStatus(order: any): string {
+  return getCommerceOrderStatus(order.status, order.myCommerceStatus);
+}
 
 export default function CommerceOrders() {
   const navigate = useNavigate();
@@ -45,17 +48,9 @@ export default function CommerceOrders() {
   const markCommerceReady = useMarkCommerceReady(commerceId || undefined);
   const { data: rawOrders = [], loading } = useCommerceOrders(commerceId || 0);
 
-  const orders = useMemo(() => {
-    return (rawOrders || []).map((o: any) => {
-      if (o.status === "delivered" || o.status === "cancelled") {
-        return { ...o, myCommerceStatus: o.status };
-      }
-      return o;
-    });
-  }, [rawOrders]);
+  const orders = rawOrders;
 
-  const commerceUtils = trpc.useUtils();
-  useCommerceEvents(commerceId || undefined, commerceUtils);
+  
 
   const handleMarkReady = async (orderId: number) => {
     try {
@@ -76,41 +71,54 @@ export default function CommerceOrders() {
   // Filtrado reactivo por pestaña de estado y búsqueda por id/nombre/teléfono
   const filteredOrders = useMemo(() => {
     const q = search.trim().toLowerCase();
+    const normalizedQuery = q.replace(/^#/, "");
     return orders.filter((o: any) => {
-      const currentStatus = o.myCommerceStatus || o.status;
-      const matchesFilter = filter === "all" || currentStatus === filter;
+      const currentStatus = visibleStatus(o);
+      const matchesFilter =
+        filter === "all" ||
+        (filter === "preparing" && ["accepted", "preparing"].includes(currentStatus)) ||
+        (filter === "in_transit" &&
+          ["driver_assigned", "picked_up", "on_the_way"].includes(currentStatus)) ||
+        currentStatus === filter;
       const matchesSearch =
         !q ||
-        String(o.id).includes(q) ||
+        String(o.id).includes(normalizedQuery) ||
         (o.customerName && o.customerName.toLowerCase().includes(q)) ||
         (o.customerPhone && o.customerPhone.includes(q));
       return matchesFilter && matchesSearch;
     });
   }, [orders, filter, search]);
 
-  // Contadores agregados por estado de pedido
+  // Contadores agregados por estado visible del comercio.
   const counts = useMemo(() => {
     const res: Record<string, number> = {
       all: orders.length,
+      pending_payment: 0,
+      payment_rejected: 0,
       received: 0,
       preparing: 0,
       ready_for_pickup: 0,
-      on_the_way: 0,
+      in_transit: 0,
       delivered: 0,
       cancelled: 0,
     };
     orders.forEach((o: any) => {
-      const st = o.myCommerceStatus || o.status;
-      if (res[st] !== undefined) res[st]++;
+      const st = visibleStatus(o);
+      if (st === "accepted") res.preparing++;
+      else if (["driver_assigned", "picked_up", "on_the_way"].includes(st)) res.in_transit++;
+      else if (res[st] !== undefined) res[st]++;
     });
     return res;
   }, [orders]);
 
   const statusTabs = [
     { key: "all", label: "Todos", count: counts.all },
+    { key: "pending_payment", label: "Por validar", count: counts.pending_payment },
+    { key: "payment_rejected", label: "Pago rechazado", count: counts.payment_rejected },
     { key: "received", label: "Recibidos", count: counts.received },
     { key: "preparing", label: "En Preparación", count: counts.preparing },
     { key: "ready_for_pickup", label: "Listos para Retiro", count: counts.ready_for_pickup },
+    { key: "in_transit", label: "En Reparto", count: counts.in_transit },
     { key: "delivered", label: "Entregados", count: counts.delivered },
     { key: "cancelled", label: "Cancelados", count: counts.cancelled },
   ];
@@ -120,19 +128,19 @@ export default function CommerceOrders() {
       <div className="px-4 min-[380px]:px-6 py-4 sm:py-6 max-w-5xl mx-auto space-y-4 min-[380px]:space-y-5">
         
         {/* Cabecera Principal */}
-        <div className="flex items-center justify-between gap-3 bg-white rounded-3xl p-4 sm:p-5 border border-zinc-200/80 shadow-xs">
+        <div className="flex items-center justify-between gap-3 bg-white dark:bg-[#16161B] rounded-3xl p-4 sm:p-5 border border-zinc-200/80 dark:border-white/10 shadow-xs">
           <div className="flex items-center gap-3 min-w-0">
             <button
               type="button"
               onClick={() => navigate("/commerce")}
-              className="w-9 h-9 rounded-2xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 flex items-center justify-center transition-colors shrink-0 cursor-pointer"
+              className="w-9 h-9 rounded-2xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 flex items-center justify-center transition-colors shrink-0 cursor-pointer"
               aria-label="Volver al panel"
             >
               <ArrowLeft className="w-4 h-4" />
             </button>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h1 className="text-base sm:text-lg font-black text-zinc-900 truncate">
+                <h1 className="text-base sm:text-lg font-black text-zinc-900 dark:text-white truncate">
                   Monitor de Pedidos y Cocina
                 </h1>
                 <span className="inline-flex items-center gap-1 text-[10px] bg-[#FF6A00]/10 text-[#FF6A00] font-black px-2 py-0.5 rounded-full border border-[#FF6A00]/20">
@@ -140,7 +148,7 @@ export default function CommerceOrders() {
                   En Vivo
                 </span>
               </div>
-              <p className="text-xs text-zinc-400 truncate mt-0.5">
+              <p className="text-xs text-zinc-400 dark:text-zinc-500 truncate mt-0.5">
                 {orders.length} {orders.length === 1 ? "pedido registrado" : "pedidos en total"} · Gestión de preparación en tiempo real
               </p>
             </div>
@@ -149,13 +157,13 @@ export default function CommerceOrders() {
 
         {/* Buscador de Órdenes con Anillo de Enfoque Flame Orange */}
         <div className="relative">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500 pointer-events-none" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar por # de pedido, cliente o teléfono..."
-            className="w-full h-11 pl-10 pr-16 bg-white border border-zinc-200/90 rounded-2xl text-xs sm:text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-[#FF6A00] focus:ring-2 focus:ring-[#FF6A00]/20 shadow-xs transition-all"
+            className="w-full h-11 pl-10 pr-16 bg-white dark:bg-[#16161B] border border-zinc-200/90 dark:border-white/10 rounded-2xl text-xs sm:text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:border-[#FF6A00] focus:ring-2 focus:ring-[#FF6A00]/20 shadow-xs transition-all"
           />
           {search && (
             <button
@@ -180,13 +188,13 @@ export default function CommerceOrders() {
                 className={`px-3.5 py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-2 cursor-pointer ${
                   isSelected
                     ? "bg-[#FF6A00] text-white shadow-md shadow-[#FF6A00]/25"
-                    : "bg-white text-zinc-600 border border-zinc-200/80 hover:bg-zinc-50 hover:border-zinc-300"
+                    : "bg-white dark:bg-[#16161B] text-zinc-600 dark:text-zinc-300 border border-zinc-200/80 dark:border-white/10 hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:border-zinc-300"
                 }`}
               >
                 <span>{tab.label}</span>
                 <span
                   className={`text-[10px] px-2 py-0.5 rounded-full font-black ${
-                    isSelected ? "bg-white/25 text-white" : "bg-zinc-100 text-zinc-600"
+                    isSelected ? "bg-white/25 text-white" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"
                   }`}
                 >
                   {tab.count}
@@ -206,11 +214,11 @@ export default function CommerceOrders() {
 
         {/* Estado Vacío */}
         {!loading && filteredOrders.length === 0 && (
-          <div className="bg-white rounded-3xl border border-zinc-200/80 p-10 text-center shadow-xs">
+          <div className="bg-white dark:bg-[#16161B] rounded-3xl border border-zinc-200/80 dark:border-white/10 p-10 text-center shadow-xs">
             <div className="w-16 h-16 rounded-full bg-[#FF6A00]/10 text-[#FF6A00] flex items-center justify-center mx-auto mb-3">
               <ShoppingBag className="w-8 h-8" />
             </div>
-            <h3 className="text-base font-extrabold text-zinc-800">
+            <h3 className="text-base font-extrabold text-zinc-800 dark:text-zinc-100">
               {search ? "Sin resultados para tu búsqueda" : "No hay pedidos en esta sección"}
             </h3>
             <p className="text-xs text-zinc-400 mt-1 max-w-sm mx-auto">
@@ -234,7 +242,7 @@ export default function CommerceOrders() {
         {!loading && (
           <div className="space-y-3.5">
             {filteredOrders.map((order: any) => {
-              const currentStatus = order.myCommerceStatus || order.status;
+              const currentStatus = visibleStatus(order);
               const isExpanded = expandedOrder === order.id;
 
               return (
@@ -247,6 +255,7 @@ export default function CommerceOrders() {
                   onMarkReady={handleMarkReady}
                   isMarkReadyPending={markCommerceReady.isPending}
                   onStatusUpdate={handleStatusUpdate}
+                  isStatusPending={updateOrderStatus.isPending}
                 />
               );
             })}

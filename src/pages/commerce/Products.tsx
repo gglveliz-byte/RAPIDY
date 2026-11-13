@@ -141,21 +141,21 @@ export default function CommerceProducts() {
       <div className="px-4 min-[380px]:px-6 py-4 sm:py-6 max-w-5xl mx-auto space-y-4 min-[380px]:space-y-5">
         
         {/* Barra Superior de Cabecera */}
-        <div className="flex items-center justify-between gap-2 bg-white rounded-2xl min-[380px]:rounded-3xl p-3 min-[380px]:p-4 border border-slate-200/80 shadow-2xs">
+        <div className="flex items-center justify-between gap-2 bg-white dark:bg-[#16161B] rounded-2xl min-[380px]:rounded-3xl p-3 min-[380px]:p-4 border border-slate-200/80 dark:border-white/10 shadow-2xs">
           <div className="flex items-center gap-2.5 min-w-0">
             <button
               type="button"
               onClick={() => navigate("/commerce")}
-              className="w-9 h-9 rounded-2xl bg-slate-100 hover:bg-slate-200/80 text-slate-600 flex items-center justify-center transition-colors flex-shrink-0 active:scale-95"
+              className="w-9 h-9 rounded-2xl bg-slate-100 dark:bg-white/10 hover:bg-slate-200/80 dark:hover:bg-white/15 text-slate-600 dark:text-zinc-200 flex items-center justify-center transition-colors flex-shrink-0 active:scale-95"
               aria-label="Volver al panel"
             >
               <ArrowLeft className="w-4 h-4" />
             </button>
             <div className="min-w-0">
-              <h1 className="text-sm min-[360px]:text-base font-extrabold text-slate-800 truncate">
+              <h1 className="text-sm min-[360px]:text-base font-extrabold text-slate-800 dark:text-white truncate">
                 Catálogo de Productos
               </h1>
-              <p className="text-[10px] min-[360px]:text-xs text-slate-400 truncate">
+              <p className="text-[10px] min-[360px]:text-xs text-slate-400 dark:text-zinc-400 truncate">
                 {products.length} productos registrados
               </p>
             </div>
@@ -176,19 +176,19 @@ export default function CommerceProducts() {
         <div className="space-y-2.5">
           {/* Barra de Búsqueda */}
           <div className="relative">
-            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-zinc-400" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar por nombre o descripción..."
-              className="w-full h-10 pl-10 pr-16 bg-white border border-slate-200/90 rounded-2xl text-xs min-[360px]:text-sm focus:border-[#FF6A00] focus:ring-2 focus:ring-[#FF6A00]/20 outline-none text-slate-800 shadow-2xs placeholder:text-slate-400 transition-all"
+              className="w-full h-10 pl-10 pr-16 bg-white dark:bg-[#16161B] border border-slate-200/90 dark:border-white/10 rounded-2xl text-xs min-[360px]:text-sm focus:border-[#FF6A00] focus:ring-2 focus:ring-[#FF6A00]/20 outline-none text-slate-800 dark:text-white shadow-2xs placeholder:text-slate-400 dark:placeholder:text-zinc-500 transition-all"
             />
             {search && (
               <button
                 type="button"
                 onClick={() => setSearch("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-400 hover:text-slate-600 bg-slate-100 hover:bg-slate-200 px-2 py-0.5 rounded-lg transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-400 dark:text-zinc-300 hover:text-slate-600 dark:hover:text-white bg-slate-100 dark:bg-white/10 hover:bg-slate-200 px-2 py-0.5 rounded-lg transition-colors"
               >
                 Limpiar
               </button>
@@ -204,7 +204,7 @@ export default function CommerceProducts() {
                 className={`px-3.5 py-1.5 rounded-full text-[11px] whitespace-nowrap transition-all ${
                   selectedCategory === "all"
                     ? "bg-[#FF6A00] text-white font-black shadow-sm shadow-[#FF6A00]/25"
-                    : "bg-white text-slate-600 border border-slate-200/90 hover:bg-slate-50 font-medium"
+                    : "bg-white dark:bg-[#16161B] text-slate-600 dark:text-zinc-300 border border-slate-200/90 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5 font-medium"
                 }`}
               >
                 Todos ({products.length})
@@ -220,7 +220,7 @@ export default function CommerceProducts() {
                     className={`px-3.5 py-1.5 rounded-full text-[11px] whitespace-nowrap transition-all ${
                       isSelected
                         ? "bg-[#FF6A00] text-white font-black shadow-sm shadow-[#FF6A00]/25"
-                        : "bg-white text-slate-600 border border-slate-200/90 hover:bg-slate-50 font-medium"
+                        : "bg-white dark:bg-[#16161B] text-slate-600 dark:text-zinc-300 border border-slate-200/90 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5 font-medium"
                     }`}
                   >
                     {cat} ({count})
@@ -240,12 +240,12 @@ export default function CommerceProducts() {
 
         {/* Estado Vacío */}
         {!loading && filtered.length === 0 && (
-          <div className="bg-white rounded-3xl border border-slate-200/80 p-8 sm:p-12 text-center shadow-2xs">
-            <div className="w-14 h-14 rounded-3xl bg-orange-50 text-[#FF6A00] flex items-center justify-center mx-auto mb-3">
+          <div className="bg-white dark:bg-[#16161B] rounded-3xl border border-slate-200/80 dark:border-white/10 p-8 sm:p-12 text-center shadow-2xs">
+            <div className="w-14 h-14 rounded-3xl bg-orange-50 dark:bg-orange-950/40 text-[#FF6A00] flex items-center justify-center mx-auto mb-3">
               <Package className="w-7 h-7" />
             </div>
-            <h3 className="text-sm min-[360px]:text-base font-bold text-slate-800">Sin productos disponibles</h3>
-            <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto leading-relaxed">
+            <h3 className="text-sm min-[360px]:text-base font-bold text-slate-800 dark:text-white">Sin productos disponibles</h3>
+            <p className="text-xs text-slate-400 dark:text-zinc-400 mt-1 max-w-xs mx-auto leading-relaxed">
               {search || selectedCategory !== "all"
                 ? "No hay productos que coincidan con el filtro actual."
                 : "Aún no tienes productos en tu menú. ¡Publica tu primer plato o artículo ahora!"}
@@ -273,16 +273,16 @@ export default function CommerceProducts() {
               return (
                 <div
                   key={p.id}
-                  className={`bg-white rounded-3xl border transition-all duration-200 p-3.5 min-[380px]:p-4 flex flex-col justify-between shadow-2xs hover:shadow-md ${
+                  className={`bg-white dark:bg-[#16161B] rounded-3xl border transition-all duration-200 p-3.5 min-[380px]:p-4 flex flex-col justify-between shadow-2xs hover:shadow-md ${
                     isAvail
-                      ? "border-slate-200/80 hover:border-orange-200/80"
-                      : "border-slate-200/60 opacity-80 bg-slate-50/40"
+                      ? "border-slate-200/80 dark:border-white/10 hover:border-orange-200/80 dark:hover:border-brand/40"
+                      : "border-slate-200/60 dark:border-white/5 opacity-80 bg-slate-50/40 dark:bg-white/5"
                   }`}
                 >
                   {/* Sección Superior: Imagen e Información */}
                   <div className="flex gap-3 items-start">
                     {/* Miniatura del Producto */}
-                    <div className="relative w-18 h-18 min-[360px]:w-20 min-[360px]:h-20 rounded-2xl bg-slate-100 overflow-hidden flex-shrink-0 border border-slate-100 shadow-2xs">
+                    <div className="relative w-18 h-18 min-[360px]:w-20 min-[360px]:h-20 rounded-2xl bg-slate-100 dark:bg-zinc-800 overflow-hidden flex-shrink-0 border border-slate-100 dark:border-white/10 shadow-2xs">
                       <img
                         src={
                           safeImage(p.image, "product") ||
@@ -306,10 +306,10 @@ export default function CommerceProducts() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-1">
                         <div className="min-w-0">
-                          <h3 className="text-xs min-[360px]:text-sm font-bold text-slate-800 truncate">
+                          <h3 className="text-xs min-[360px]:text-sm font-bold text-slate-800 dark:text-white truncate">
                             {p.name}
                           </h3>
-                          <span className="text-[10px] text-slate-400 font-medium truncate block">
+                          <span className="text-[10px] text-slate-400 dark:text-zinc-400 font-medium truncate block">
                             {p.category || "General"}
                           </span>
                         </div>
@@ -320,7 +320,7 @@ export default function CommerceProducts() {
                             type="button"
                             onClick={() => openEdit(p)}
                             title="Editar"
-                            className="w-7 h-7 rounded-xl hover:bg-orange-50 text-slate-400 hover:text-[#FF6A00] flex items-center justify-center transition-colors active:scale-90"
+                            className="w-7 h-7 rounded-xl hover:bg-orange-50 dark:hover:bg-white/10 text-slate-400 dark:text-zinc-400 hover:text-[#FF6A00] dark:hover:text-brand flex items-center justify-center transition-colors active:scale-90"
                           >
                             <Pencil className="w-3.5 h-3.5" />
                           </button>
@@ -331,7 +331,7 @@ export default function CommerceProducts() {
                               setDeleteError(null);
                             }}
                             title="Eliminar"
-                            className="w-7 h-7 rounded-xl hover:bg-red-50 text-slate-400 hover:text-red-500 flex items-center justify-center transition-colors active:scale-90"
+                            className="w-7 h-7 rounded-xl hover:bg-red-50 dark:hover:bg-red-500/10 text-slate-400 dark:text-zinc-400 hover:text-red-500 flex items-center justify-center transition-colors active:scale-90"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -339,17 +339,17 @@ export default function CommerceProducts() {
                       </div>
 
                       {p.description && (
-                        <p className="text-[10px] min-[360px]:text-[11px] text-slate-500 line-clamp-1 mt-1 leading-snug">
+                        <p className="text-[10px] min-[360px]:text-[11px] text-slate-500 dark:text-zinc-400 line-clamp-1 mt-1 leading-snug">
                           {p.description}
                         </p>
                       )}
 
                       {/* Precio y Conmutador de Disponibilidad */}
-                      <div className="flex items-center justify-between gap-1 mt-2.5 pt-2 border-t border-slate-100">
+                      <div className="flex items-center justify-between gap-1 mt-2.5 pt-2 border-t border-slate-100 dark:border-white/10">
                         <span className="text-xs min-[360px]:text-sm font-black text-[#FF6A00] tracking-tight">
                           ${parseFloat(p.price || 0).toFixed(2)}
                           {p.unitType === "kg" && (
-                            <span className="text-[10px] font-normal text-slate-400 ml-0.5">/ kg</span>
+                            <span className="text-[10px] font-normal text-slate-400 dark:text-zinc-400 ml-0.5">/ kg</span>
                           )}
                         </span>
 
@@ -358,13 +358,13 @@ export default function CommerceProducts() {
                           onClick={() => toggleAvailable(p.id, p.isAvailable)}
                           className={`px-2.5 py-1 rounded-full text-[10px] font-bold transition-all flex items-center gap-1.5 select-none ${
                             isAvail
-                              ? "bg-orange-500/10 text-[#FF6A00] border border-[#FF6A00]/30 hover:bg-orange-500/15"
-                              : "bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200/70"
+                              ? "bg-orange-500/10 dark:bg-brand/20 text-[#FF6A00] dark:text-orange-400 border border-[#FF6A00]/30 dark:border-brand/40 hover:bg-orange-500/15"
+                              : "bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-zinc-400 border border-slate-200 dark:border-white/10 hover:bg-slate-200/70"
                           }`}
                         >
                           <span
                             className={`w-1.5 h-1.5 rounded-full ${
-                              isAvail ? "bg-[#FF6A00]" : "bg-slate-400"
+                              isAvail ? "bg-[#FF6A00]" : "bg-slate-400 dark:bg-zinc-500"
                             }`}
                           />
                           {isAvail ? "Activo" : "Pausado"}

@@ -191,6 +191,38 @@ export function isActiveStatus(status: string | null | undefined): boolean {
   return !!status && !isTerminalStatus(status) && status !== "payment_rejected";
 }
 
+/**
+ * Estados globales que mandan sobre el estado de cocina por comercio.
+ * Sirve para que el panel no muestre “preparando” cuando el pedido ya fue
+ * cancelado, entregado, retirado o asignado a un repartidor.
+ */
+const COMMERCE_GLOBAL_OVERRIDES = new Set([
+  "pending_payment",
+  "payment_rejected",
+  "driver_assigned",
+  "picked_up",
+  "on_the_way",
+  "delivered",
+  "cancelled",
+]);
+
+export function getCommerceOrderStatus(
+  globalStatus: string | null | undefined,
+  commerceStatus: string | null | undefined,
+): string {
+  if (globalStatus && COMMERCE_GLOBAL_OVERRIDES.has(globalStatus)) return globalStatus;
+  return commerceStatus || globalStatus || "received";
+}
+
+/** Estados en los que el comercio todavía debe actuar en cocina. */
+export function commerceCanPrepare(status: string | null | undefined): boolean {
+  return status === "received" || status === "accepted";
+}
+
+export function commerceCanMarkReady(status: string | null | undefined): boolean {
+  return status === "preparing";
+}
+
 export type ViewerRole = "customer" | "driver" | "merchant" | "admin";
 
 const TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
@@ -210,7 +242,7 @@ const TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
 const ROLE_ALLOWED: Record<ViewerRole, OrderStatus[]> = {
   customer: ["cancelled", "pending_payment"],
   driver: ["picked_up", "on_the_way", "delivered"],
-  merchant: ["accepted", "preparing", "ready_for_pickup", "cancelled"],
+  merchant: ["accepted", "preparing", "cancelled"],
   admin: [...ORDER_STATUSES],
 };
 

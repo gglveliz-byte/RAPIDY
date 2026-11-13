@@ -159,8 +159,12 @@ export function useCommerceEvents(commerceId: number | undefined, utils: ReturnT
       () => {
         utils.order.getCommerceOrders.invalidate({ commerceId });
         utils.product.getByCommerce.invalidate({ commerceId });
+        utils.commerce.getById.invalidate({ id: commerceId });
+        utils.commerce.getStats.invalidate({ id: commerceId });
         queryClient.invalidateQueries({ queryKey: ["order.getCommerceOrders", commerceId] });
         queryClient.invalidateQueries({ queryKey: ["product.getByCommerce", commerceId] });
+        queryClient.invalidateQueries({ queryKey: ["commerce.getById", commerceId] });
+        queryClient.invalidateQueries({ queryKey: ["commerce.getStats", commerceId] });
       }
     );
 
@@ -203,8 +207,16 @@ export function useProductEvents(utils: ReturnType<typeof trpc.useUtils>) {
         utils.product.getFeatured.invalidate();
         utils.product.list.invalidate();
         utils.product.getByCommerce.invalidate();
+        utils.product.getTopOrdered.invalidate();
+        utils.product.search.invalidate();
+        utils.commerce.list.invalidate();
+        utils.commerce.getById.invalidate();
         queryClient.invalidateQueries({ queryKey: ["product.getFeatured"] });
         queryClient.invalidateQueries({ queryKey: ["product.getByCommerce"] });
+        queryClient.invalidateQueries({ queryKey: ["product.getTopOrdered"] });
+        queryClient.invalidateQueries({ queryKey: ["product.search"] });
+        queryClient.invalidateQueries({ queryKey: ["commerce.list"] });
+        queryClient.invalidateQueries({ queryKey: ["commerce.getById"] });
       }
     );
 
@@ -220,6 +232,10 @@ export function useCommercesEvents(utils: ReturnType<typeof trpc.useUtils>) {
       () => {
         utils.commerce.list.invalidate();
         queryClient.invalidateQueries({ queryKey: ["commerce.list"] });
+        queryClient.invalidateQueries({ queryKey: ["commerce.getById"] });
+        queryClient.invalidateQueries({ queryKey: ["product.list"] });
+        queryClient.invalidateQueries({ queryKey: ["product.getFeatured"] });
+        queryClient.invalidateQueries({ queryKey: ["product.getByCommerce"] });
       }
     );
 

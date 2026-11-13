@@ -35,22 +35,34 @@ export const loginRouter = createRouter({
     }))
     .mutation(async ({ input, ctx }) => {
       const db = getDb();
-      clearAdminCookie(ctx.resHeaders);
-      clearDriverCookies(ctx.resHeaders);
-      clearMerchantCookie(ctx.resHeaders);
 
       if (input.email) {
-        const userResult = await db.select().from(users).where(eq(users.email, input.email));
+        const email = input.email.trim().toLowerCase();
+        const userResult = await db.select().from(users).where(eq(users.email, email));
         const user = userResult[0];
         if (user && user.passwordHash) {
           const valid = await bcrypt.compare(input.password, user.passwordHash);
           if (valid) {
-            await db.update(users).set({ lastSignInAt: new Date() }).where(eq(users.id, user.id));
-            if (user.role === "admin") {
-              await setAdminCookie(ctx.resHeaders, ctx.req.headers, user.id);
-            } else if (user.role === "merchant") {
-              await setMerchantCookie(ctx.resHeaders, ctx.req.headers, user.id);
+            if (user.role !== "admin" && user.role !== "merchant") {
+              return { success: false, message: "Credenciales inválidas" };
             }
+
+            // Un solo rol profesional activo por navegador. La sesión de
+            // cliente es independiente y no se toca aquí.
+            if (user.role === "admin") {
+              clearDriverCookies(ctx.resHeaders);
+              clearMerchantCookie(ctx.resHeaders);
+              await setAdminCookie(ctx.resHeaders, ctx.req.headers, user.id);
+            } else {
+              clearAdminCookie(ctx.resHeaders);
+              clearDriverCookies(ctx.resHeaders);
+              const merchant = await setMerchantCookie(ctx.resHeaders, ctx.req.headers, user.id);
+              if (!merchant) {
+                return { success: false, message: "Credenciales inválidas" };
+              }
+            }
+
+            await db.update(users).set({ lastSignInAt: new Date() }).where(eq(users.id, user.id));
             const result: any = {
               success: true,
               role: user.role,
@@ -111,7 +123,24 @@ export const loginRouter = createRouter({
       return { authenticated: true, role: "admin", user: { id: ctx.admin.id, name: ctx.admin.name, email: ctx.admin.email, role: "admin" } };
     }
     if (ctx.merchant) {
-      return { authenticated: true, role: "merchant", user: { id: ctx.merchant.id, name: ctx.merchant.name, email: ctx.merchant.email, role: "merchant" } };
+      const db = getDb();
+      const commerce = await db
+        .select({ id: commerces.id })
+        .from(commerces)
+        .where(eq(commerces.merchantUserId, ctx.merchant.id))
+        .orderBy(commerces.id)
+        .limit(1);
+      return {
+        authenticated: true,
+        role: "merchant",
+        user: {
+          id: ctx.merchant.id,
+          name: ctx.merchant.name,
+          email: ctx.merchant.email,
+          role: "merchant",
+          commerceId: commerce[0]?.id ?? null,
+        },
+      };
     }
     if (ctx.driver) {
       return { authenticated: true, role: "driver", user: { id: ctx.driver.id, name: ctx.driver.name, phone: ctx.driver.phone, role: "driver" } };
@@ -122,13 +151,24 @@ export const loginRouter = createRouter({
     return { authenticated: false, role: null, user: null };
   }),
 
-  logout: publicQuery.mutation(async ({ ctx }) => {
-    clearAdminCookie(ctx.resHeaders);
-    clearDriverCookies(ctx.resHeaders);
-    clearMerchantCookie(ctx.resHeaders);
-    clearCustomerCookies(ctx.resHeaders, ctx.req.headers);
-    return { success: true };
-  }),
+  logout: publicQuery
+    .input(
+      z
+        .object({
+          scope: z.enum(["all", "admin", "driver", "merchant", "customer"]).optional(),
+        })
+        .optional(),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const scope = input?.scope ?? "all";
+      if (scope === "all" || scope === "admin") clearAdminCookie(ctx.resHeaders);
+      if (scope === "all" || scope === "driver") clearDriverCookies(ctx.resHeaders);
+      if (scope === "all" || scope === "merchant") clearMerchantCookie(ctx.resHeaders);
+      if (scope === "all" || scope === "customer") {
+        clearCustomerCookies(ctx.resHeaders, ctx.req.headers);
+      }
+      return { success: true, scope };
+    }),
 
   refresh: publicQuery.mutation(async ({ ctx }) => {
     const raw = ctx.req.headers.get("cookie") || "";
@@ -164,8 +204,8 @@ export const loginRouter = createRouter({
     if (merchantRefresh) {
       const userId = await verifyMerchantRefreshToken(merchantRefresh);
       if (userId) {
-        await setMerchantCookie(ctx.resHeaders, ctx.req.headers, userId);
-        return { success: true, role: "merchant" };
+        const merchant = await setMerchantCookie(ctx.resHeaders, ctx.req.headers, userId);
+        if (merchant) return { success: true, role: "merchant" };
       }
     }
 

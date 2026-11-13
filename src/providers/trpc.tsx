@@ -4,6 +4,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import superjson from "superjson";
 import { invalidateCustomerAuthCache } from "@/lib/customerAuthCache";
+import {
+  roleForPath,
+  clearRoleUser,
+  clearSession,
+  dispatchLogout,
+} from "@/hooks/useSessionSync";
 import type { AppRouter } from "../../server/router";
 import type { ReactNode } from "react";
 
@@ -11,26 +17,25 @@ export const trpc = createTRPCReact<AppRouter>();
 
 function handleAuthError() {
   invalidateCustomerAuthCache()
-  if (window.location.pathname === "/login" || window.location.pathname === "/customer-login") return
+  const role = roleForPath(window.location.pathname)
+  if (!role) return
+
   fetch("/api/trpc/login.logout", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({}),
+    body: JSON.stringify({ json: { scope: role } }),
     credentials: "include",
   }).catch(() => {})
-  try {
-    localStorage.removeItem("qs_session")
-    localStorage.removeItem("customer_session")
-    localStorage.removeItem("merchant_user")
-    localStorage.removeItem("driver_user")
-    localStorage.removeItem("cart")
-  } catch { /* sin acción */ }
-  window.dispatchEvent(new Event("rapidy:logout"))
-  const isBackoffice =
-    window.location.pathname.startsWith("/admin") ||
-    window.location.pathname.startsWith("/driver") ||
-    window.location.pathname.startsWith("/commerce")
-  window.location.href = isBackoffice ? "/login" : "/customer-login"
+
+  clearRoleUser(role)
+  clearSession(role)
+  if (role === "customer") {
+    try {
+      localStorage.removeItem("cart")
+    } catch { /* sin acción */ }
+  }
+  dispatchLogout(role)
+  window.location.href = role === "customer" ? "/customer-login" : "/login"
 }
 
 const queryClient = new QueryClient({
