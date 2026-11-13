@@ -5,8 +5,8 @@ export default function Welcome() {
   const navigate = useNavigate();
 
   return (
-    <div className="w-full min-h-[100dvh] bg-[#121212] flex items-center justify-center">
-      <div className="mobile-container relative w-full min-h-[100dvh] bg-[#1C1C1C] flex flex-col justify-between overflow-x-hidden overflow-y-auto select-none shadow-2xl">
+    <div className="fixed inset-0 w-full h-[100dvh] max-h-[100dvh] bg-[#121212] overflow-hidden flex items-center justify-center">
+      <div className="relative w-full h-full max-w-md mx-auto bg-[#1C1C1C] flex flex-col justify-between overflow-hidden select-none">
         {/* Background Hero Image (Motorcycle rider + city, fading seamlessly to #1C1C1C) */}
         <div className="absolute inset-0 z-0 pointer-events-none">
           <img
@@ -18,11 +18,11 @@ export default function Welcome() {
           <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#1C1C1C] via-[#1C1C1C]/90 to-transparent" />
         </div>
 
-        {/* Top spacer (leaves room for the top logo and rider in the background) */}
-        <div className="relative z-10 flex-1 min-h-[32vh] sm:min-h-[40vh]" />
+        {/* Top spacer (leaves room for the top logo and rider, shrinks dynamically) */}
+        <div className="relative z-10 flex-1 min-h-[22vh] sm:min-h-[36vh] pointer-events-none" />
 
         {/* Bottom Content Area: Logo, Slogan, Feature Pills, and Interactive Buttons */}
-        <div className="relative z-10 w-full px-5 pb-5 sm:px-6 sm:pb-6 pt-1 flex flex-col items-center">
+        <div className="relative z-10 w-full px-5 pb-safe pb-4 pt-1 flex flex-col items-center flex-shrink-0">
           {/* Stylized Brand Logo */}
           <div className="flex items-center justify-center tracking-tight mb-1 sm:mb-1.5">
             <span className="text-2xl sm:text-3xl lg:text-4xl font-black italic text-white tracking-wider">
@@ -39,7 +39,7 @@ export default function Welcome() {
           </h1>
 
           {/* 3 Distintivos Informativos (Pills) */}
-          <div className="flex items-center justify-center gap-1.5 sm:gap-2 mb-4 sm:mb-6 w-full max-w-xs">
+          <div className="flex items-center justify-center gap-1.5 sm:gap-2 mb-3 sm:mb-4 w-full max-w-xs">
             <div className="bg-[#242424]/90 border border-white/10 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full flex items-center gap-1 sm:gap-1.5 shadow-sm">
               <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#FF7A00]" />
               <span className="text-[10px] sm:text-xs font-medium text-white/90 whitespace-nowrap">
@@ -81,7 +81,7 @@ export default function Welcome() {
             </button>
 
             {/* Enlace para Socios / Repartidores */}
-            <div className="pt-1 sm:pt-2 text-center">
+            <div className="pt-1 text-center">
               <button
                 onClick={() => navigate("/login")}
                 className="text-xs sm:text-sm font-medium text-[#FF7A00] hover:text-[#ff9233] transition-colors cursor-pointer"
@@ -92,7 +92,7 @@ export default function Welcome() {
             </div>
 
             {/* Enlaces Legales Inferiores */}
-            <div className="pt-2 sm:pt-4 text-center text-[11px] sm:text-xs text-white/40 space-x-2">
+            <div className="pt-2 text-center text-[11px] sm:text-xs text-white/40 space-x-2">
               <button
                 onClick={() => navigate("/terminos-y-condiciones")}
                 className="hover:underline hover:text-white/70 transition-colors"

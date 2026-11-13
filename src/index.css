@@ -4,6 +4,7 @@
 
 /* Native PWA Behaviors */
 html, body {
+  background-color: #121212;
   overscroll-behavior-y: none;
   -webkit-touch-callout: none;
   -webkit-user-select: none;
