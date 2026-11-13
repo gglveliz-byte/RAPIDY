@@ -1,6 +1,6 @@
 # REGISTRO VIVO DE ARQUITECTURA, DEPENDENCIAS E INTEGRACIONES (LIVE LEDGER)
 
-**Última Actualización:** 2026-11-13 16:38:00 UTC  
+**Última Actualización:** 2026-11-13 16:56:00 UTC  
 **Agente / Autor de Última Modificación:** Antigravity (Google DeepMind)  
 **Estado de Integridad (<500 líneas por archivo):** VERIFICADO (100% compliant)  
 **Repositorio Oficial:** `https://github.com/gglveliz-byte/RAPIDY`
@@ -13,13 +13,13 @@
 
 | Dominio / Módulo | Propósito Técnico | Archivos Clave de Lectura Obligatoria | Contratos / Puertos que Expone |
 | :--- | :--- | :--- | :--- |
-| **00. UI Kernel & Canvas** | Motor visual 60 FPS, partículas reactivas, constelaciones, inputs telefónicos adaptativos | `src/components/RapidyCanvas.tsx`, `src/components/PhoneInput.tsx`, `src/lib/locationUtils.ts` | `<RapidyCanvas />`, `<PhoneInput />`, `getAddressFromCoords()` |
+| **00. UI Kernel & Canvas** | Motor visual 60 FPS, partículas reactivas, constelaciones, inputs telefónicos adaptativos y barra de navegación | `src/components/RapidyCanvas.tsx`, `src/components/PhoneInput.tsx`, `src/components/CustomerBottomNav.tsx`, `src/lib/locationUtils.ts` | `<RapidyCanvas />`, `<PhoneInput />`, `<CustomerBottomNav />`, `getAddressFromCoords()` |
 | **01. Identidad & Onboarding** | Bienvenida, inicio de sesión clientes, portal socios y registro de clientes con GPS | `src/pages/customer/Welcome.tsx`, `src/pages/customer/CustomerLogin.tsx`, `src/pages/customer/Register.tsx`, `src/pages/Login.tsx` | `useCustomerSession()`, `trpcMutate("customer.register")`, `trpcMutate("customer.login")`, `trpcMutate("login.login")` |
-| **02. Catálogo & Pedidos Cliente** | Exploración de comercios, carrito, tracking en vivo con Leaflet y WebSocket | `src/pages/customer/Home.tsx`, `src/pages/customer/CommerceDetail.tsx`, `src/pages/customer/Cart.tsx`, `src/pages/customer/OrderTracking.tsx` | `useDeliveryData()`, `useCartStore()`, `useOrderEvents()` |
+| **02. Panel de Cliente (Home)** | Identidad oficial, búsqueda rápida, atajos a 4 categorías, banner "¡Pedidos más rápidos!", carrusel de destacados y comercios | `src/pages/customer/Home.tsx`, `src/pages/customer/components/HomeHeader.tsx`, `src/pages/customer/components/HomePromoBanner.tsx`, `src/pages/customer/components/HomeCategories.tsx`, `src/pages/customer/components/HomeFeaturedCommerces.tsx` | `useCategories()`, `useCommerces()`, `useFeaturedProducts()`, `<HomeHeader />`, `<HomePromoBanner />` |
 | **03. Repartidor (Driver App)** | Aceptación de pedidos, geolocalización continua, historial y ganancias | `src/pages/driver/DriverHome.tsx`, `src/pages/driver/DriverOrder.tsx`, `src/pages/driver/DriverEarnings.tsx` | `driverRouter`, `driverStatusEnum` |
 | **04. Comercios Aliados** | Gestión de menú, inventario de productos, estados de comandas y métricas | `src/pages/commerce/Dashboard.tsx`, `src/pages/commerce/Orders.tsx`, `src/pages/commerce/Products.tsx` | `commerceRouter`, `orderCommerceStatusEnum` |
 | **05. Administración Central** | Auditoría global, gestión de comisiones, liquidaciones, repartidores y settings | `src/pages/admin/Dashboard.tsx`, `src/pages/admin/Commerces.tsx`, `src/pages/admin/Drivers.tsx`, `src/pages/admin/Orders.tsx` | `adminRouter`, `docs/ADMIN_LIVE_ARCHITECTURE_LEDGER.md` |
-| **06. Backend tRPC & Neon DB** | Procedimientos remotos tipados, autenticación por cookies/JWT, pool PostgreSQL Neon | `server/customer-router.ts`, `server/driver-router.ts`, `server/commerce-router.ts`, `server/admin-router.ts`, `db/schema.ts` | `appRouter`, `getDb()` |
+| **06. Backend tRPC & Neon DB** | Procedimientos remotos tipados, autenticación por cookies/JWT, pool PostgreSQL Neon | `server/customer-router.ts`, `server/driver-router.ts`, `server/commerce-router.ts`, `server/admin-router.ts`, `db/schema.ts`, `db/seed.ts` | `appRouter`, `getDb()` |
 
 ---
 
@@ -42,6 +42,7 @@
 | :--- | :--- | :--- |
 | `RapidyCanvas` | `src/components/RapidyCanvas.tsx` | Motor Canvas 60 FPS con malla de constelaciones dinámicas, pulsación y partículas reactivas al puntero. |
 | `PhoneInput` | `src/components/PhoneInput.tsx` | Selector internacional de prefijo de país + entrada telefónica móvil en modos claro/oscuro. |
+| `CustomerBottomNav` | `src/components/CustomerBottomNav.tsx` | Barra inferior fija con islas flotantes en Glassmorphism e indicador activo en naranja Rapidy. |
 | `getAddressFromCoords` | `src/lib/locationUtils.ts` | Geocodificación inversa vía Nominatim OpenStreetMap (traduce lat/lng a dirección física). **Prohibido duplicar**. |
 | `useCustomerSession` | `src/hooks/useCustomerSession.ts` | Gestión de sesión de cliente final en memoria y localStorage. |
 | `trpcMutate` / `trpcQuery` | `src/hooks/useDeliveryData.ts` | Wrapper cliente para ejecución de queries y mutaciones tRPC. |
@@ -52,7 +53,7 @@
 
 | Agente IA | Módulo / Tarea Activa | Archivos Bloqueados Temporalmente | Estado | Timestamp Inicio |
 | :--- | :--- | :--- | :---: | :--- |
-| `Antigravity` | 01. Identidad & Onboarding | `src/pages/customer/Register.tsx` | `LIBRE` | 2026-11-13 16:38 UTC |
+| `Antigravity` | 02. Panel de Cliente (Home) | `src/pages/customer/Home.tsx` | `LIBRE` | 2026-11-13 16:56 UTC |
 
 ---
 
@@ -60,6 +61,12 @@
 
 | Ruta del Archivo | Módulo | Líneas Actuales (`/ 500 máx`) | Resumen de Responsabilidad y Exportaciones | Dependencias que Consume |
 | :--- | :--- | :---: | :--- | :--- |
+| `src/pages/customer/Home.tsx` | Cliente | `315 / 500` | Orquesta catálogo, búsqueda y componentes modulares del Home | `HomeHeader`, `HomePromoBanner`, `HomeCategories`, `HomeFeaturedCommerces`, `CustomerBottomNav` |
+| `src/pages/customer/components/HomeHeader.tsx` | Cliente | `132 / 500` | Logotipo oficial Rapidy, eslogan, buscador flotante y saludo | `lucide-react`, `react-router` |
+| `src/pages/customer/components/HomePromoBanner.tsx` | Cliente | `82 / 500` | Banner "¡Pedidos más rápidos!" con platillos flotantes en 3D | `lucide-react`, `react-router` |
+| `src/pages/customer/components/HomeCategories.tsx` | Cliente | `145 / 500` | 4 categorías principales del mockup (Comida, Supermercado, Farmacia, Compras) | `lucide-react` |
+| `src/pages/customer/components/HomeFeaturedCommerces.tsx` | Cliente | `118 / 500` | Carrusel de restaurantes destacados con fotos, tiempo y rating | `safeImage`, `lucide-react`, `react-router` |
+| `src/components/CustomerBottomNav.tsx` | UI Kernel | `88 / 500` | Navegación inferior flotante con acentos Rapidy Flame Orange | `framer-motion`, `lucide-react`, `react-router` |
 | `src/pages/customer/Welcome.tsx` | Identidad | `168 / 500` | Pantalla inicial de bienvenida con Hero visual y accesos principales | `react-router`, `lucide-react` |
 | `src/pages/customer/CustomerLogin.tsx` | Identidad | `185 / 500` | Login directo de cliente final con tarjeta Glassmorphism | `RapidyCanvas`, `PhoneInput`, `useCustomerSession`, `trpcMutate` |
 | `src/pages/customer/Register.tsx` | Identidad | `283 / 500` | Registro de nuevos clientes con GPS autocompletado y validación | `RapidyCanvas`, `PhoneInput`, `locationUtils`, `useCustomerSession`, `registerCustomer` |
@@ -72,19 +79,27 @@
 
 ## 5. Bitácora Cronológica de Integraciones (Changelog Técnico Live)
 
+### [2026-11-13 16:56 UTC] - Rediseño Modular del Panel de Cliente (Home) según Mockup Rapidy
+- **Resumen Técnico:** 
+  1. Se rediseñó la pantalla `Home.tsx` aplicando la estética exacta enviada por el usuario (Logotipo oficial centrado con eslogan *"Todo lo que quieres, en un solo pedido"*, píldora de búsqueda blanca flotante *"Buscar en Rapidy..."*, atajos a las 4 categorías: Comida, Supermercado, Farmacia y Compras).
+  2. Se construyó el banner promocional interactivo `HomePromoBanner.tsx` con degradado cálido, insignia Rapidy Express y platillos flotantes en levitación.
+  3. Se construyó el carrusel `HomeFeaturedCommerces.tsx` para "Restaurantes destacados" con tiempos y ratings.
+  4. Se descompuso la pantalla en 4 subcomponentes modulares dentro de `src/pages/customer/components/` respetando estrictamente el límite de 500 líneas de `reglas-globales-construccion-codigo`.
+  5. Se actualizaron los datos semilla (`db/seed.ts`) agregando clientes de prueba oficiales: **Lautaro Ezequiel (`+593 99 123 4567`)** y **Cliente Rapidy (`+54 9 11 1234-5678`)**.
+- **Archivos Creados / Modificados:**
+  - `src/pages/customer/Home.tsx` (315 líneas - Rediseñado y modularizado).
+  - `src/pages/customer/components/HomeHeader.tsx` (132 líneas - Creado).
+  - `src/pages/customer/components/HomePromoBanner.tsx` (82 líneas - Creado).
+  - `src/pages/customer/components/HomeCategories.tsx` (145 líneas - Creado).
+  - `src/pages/customer/components/HomeFeaturedCommerces.tsx` (118 líneas - Creado).
+  - `src/components/CustomerBottomNav.tsx` (88 líneas - Modificado a naranja Rapidy).
+  - `db/seed.ts` (Modificado con clientes de prueba e import de `customers`).
+  - `docs/LIVE_ARCHITECTURE_LEDGER.md` (Actualizado con nuevo inventario de líneas).
+- **Dependencias Integradas:** Reutilización de `safeImage`, `useCustomerSession`, `useCart`.
+- **Impacto en Base de Datos:** Base de datos sembrada con 5 comercios, 8 categorías, 20 productos y 2 clientes de prueba.
+
 ### [2026-11-13 16:38 UTC] - Creación de Ledger Live & Erradicación de Duplicación en Registro
 - **Resumen Técnico:** 
-  1. Se aplicó la skill `ecosystem-connect` eliminando la función duplicada `getAddressFromCoords` en `src/pages/customer/Register.tsx`, importándola directamente desde `src/lib/locationUtils.ts`.
-  2. Se aplicó la skill `reglas-globales-construccion-codigo`, agregando cabeceras documentales estructuradas en español al 100% de los archivos tocados (`Register.tsx`, `CustomerLogin.tsx`, `Login.tsx`, `RapidyCanvas.tsx`, `PhoneInput.tsx`).
-  3. Se aplicó la skill `documentadora-live-contexto`, creando este archivo maestro canónico `docs/LIVE_ARCHITECTURE_LEDGER.md` con su mapa de lectura dirigida, catálogo de dependencias sin duplicados, semáforo de concurrencia y auditoría estricta de líneas (<500).
-- **Archivos Modificados:**
-  - `src/pages/customer/Register.tsx` (283 líneas - Reutilización de `locationUtils.ts` y cabecera en español).
-  - `src/pages/customer/CustomerLogin.tsx` (185 líneas - Cabecera canónica en español).
-  - `src/pages/Login.tsx` (246 líneas - Cabecera canónica en español).
-  - `src/components/RapidyCanvas.tsx` (268 líneas - Cabecera canónica en español).
-  - `src/components/PhoneInput.tsx` (187 líneas - Cabecera canónica en español).
-  - `docs/LIVE_ARCHITECTURE_LEDGER.md` (Creado - Registro vivo maestro de arquitectura).
-- **Dependencias Integradas:** Reutilización estricta de `src/lib/locationUtils.ts` y `RapidyCanvas`. Cero librerías redundantes instaladas.
-- **Impacto en Contratos / Base de Datos:** Total compatibilidad con tabla `customers` de PostgreSQL Neon y endpoint `customer.register`.
-- **Guía para el Siguiente Agente:** Leer la Sección 1 de este Ledger para intervenir cualquier módulo subsiguiente sin recorrer carpetas a ciegas.
-
+  1. Se aplicó la skill `ecosystem-connect` eliminando la función duplicada `getAddressFromCoords` en `src/pages/customer/Register.tsx`.
+  2. Se agregaron cabeceras canónicas estructuradas en español al 100% de los archivos modificados.
+  3. Se creó el archivo maestro `docs/LIVE_ARCHITECTURE_LEDGER.md`.

@@ -1,53 +1,68 @@
+/**
+ * @archivo src/pages/customer/Home.tsx
+ * @modulo 02-customer-home (Panel Principal de Cliente)
+ * @proposito
+ *   Pantalla principal para clientes autenticados de Rapidy.
+ *   Presenta la identidad visual oficial con el eslogan corporativo,
+ *   barra de búsqueda, atajos a las 4 categorías clave (Comida, Supermercado, Farmacia, Compras),
+ *   banner promocional interactivo con platillos en levitación,
+ *   carrusel de restaurantes destacados y listado de comercios asociados.
+ *
+ * @resumen_contenido
+ *   - Componente `CustomerHome`: Orquesta el encabezado, categorías, promociones y catálogo.
+ *   - Componentes locales `ProductCard` y `CommerceCard`: Tarjetas de platillos y comercios.
+ *   - Eventos SSE en tiempo real: Actualiza productos y estados mediante `useProductEvents`.
+ *
+ * @dependencias_internas
+ *   - `HomeHeader` (./components/HomeHeader)
+ *   - `HomePromoBanner` (./components/HomePromoBanner)
+ *   - `HomeCategories` (./components/HomeCategories)
+ *   - `HomeFeaturedCommerces` (./components/HomeFeaturedCommerces)
+ *   - `CustomerBottomNav` (@/components/CustomerBottomNav)
+ *   - `useCustomerSession` (@/hooks/useCustomerSession)
+ *   - `useCart` (@/hooks/useCart)
+ *   - `useCategories`, `useCommerces`, `useFeaturedProducts` (@/hooks/useDeliveryData)
+ *   - `safeImage` (@/lib/imageUtils)
+ *
+ * @dependencias_externas
+ *   - `lucide-react` (`Search`, `Clock`, `Star`, `Plus`, `ChevronRight`)
+ *   - `react-router` (`useNavigate`)
+ *
+ * @tablas_bd_o_redis
+ *   - PostgreSQL (Neon): `commerces`, `categories`, `products`
+ */
+
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router";
-import {
-  Search,
-  ShoppingCart,
-  Star,
-  Clock,
-  UtensilsCrossed,
-  Croissant,
-  ShoppingBasket,
-  Pill,
-  IceCreamCone,
-  Coffee,
-  Dog,
-  MoreHorizontal,
-  ChevronRight,
-  MapPin,
-  User,
-  Plus,
-} from "lucide-react";
+import { Search, Clock, Star, Plus, ChevronRight } from "lucide-react";
 import { useCart } from "@/hooks/useCart";
 import { useCustomerSession } from "@/hooks/useCustomerSession";
-import { useCategories, useCommerces, useFeaturedProducts, useProductsByCommerce } from "@/hooks/useDeliveryData";
+import {
+  useCategories,
+  useCommerces,
+  useFeaturedProducts,
+  useProductsByCommerce,
+} from "@/hooks/useDeliveryData";
 import { CustomerBottomNav } from "@/components/CustomerBottomNav";
 import { useProductEvents, useCommercesEvents } from "@/hooks/useOrderEvents";
 import { trpc } from "@/providers/trpc";
 import { safeImage } from "@/lib/imageUtils";
 
-const iconMap: Record<string, React.ReactNode> = {
-  UtensilsCrossed: <UtensilsCrossed className="w-5 h-5" />,
-  Croissant: <Croissant className="w-5 h-5" />,
-  ShoppingCart: <ShoppingBasket className="w-5 h-5" />,
-  Pill: <Pill className="w-5 h-5" />,
-  IceCreamCone: <IceCreamCone className="w-5 h-5" />,
-  Coffee: <Coffee className="w-5 h-5" />,
-  Dog: <Dog className="w-5 h-5" />,
-  MoreHorizontal: <MoreHorizontal className="w-5 h-5" />,
-};
+import { HomeHeader } from "./components/HomeHeader";
+import { HomePromoBanner } from "./components/HomePromoBanner";
+import { HomeCategories } from "./components/HomeCategories";
+import { HomeFeaturedCommerces } from "./components/HomeFeaturedCommerces";
 
 export default function CustomerHome() {
   const navigate = useNavigate();
   const { customer } = useCustomerSession();
-  const { totalItems } = useCart();
   const { data: categories } = useCategories();
   const { data: commerces, loading: loadingCommerces } = useCommerces();
   const { data: featuredProducts, loading: loadingFeatured } = useFeaturedProducts();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
 
-  // Escuchar cambios de productos en tiempo real
+  // Escuchar cambios de productos y comercios en tiempo real
   const productUtils = trpc.useUtils();
   useProductEvents(productUtils);
   useCommercesEvents(productUtils);
@@ -72,13 +87,14 @@ export default function CustomerHome() {
 
   const filteredProducts = useMemo(() => {
     if (!searchQuery) return featuredProducts;
-    return featuredProducts.filter((p) =>
-      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (p.commerceName || "").toLowerCase().includes(searchQuery.toLowerCase())
+    return featuredProducts.filter(
+      (p) =>
+        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (p.commerceName || "").toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [featuredProducts, searchQuery]);
 
-  const handleCategoryClick = (catId: number) => {
+  const handleSelectCategory = (catId: number) => {
     setSelectedCategory(selectedCategory === catId ? null : catId);
     setSearchQuery("");
   };
@@ -90,158 +106,104 @@ export default function CustomerHome() {
   };
 
   return (
-    <div className="mobile-container bg-gray-50 min-h-screen pb-safe-nav">
-      {/* Header */}
-      <div className="bg-[#2E7D32] px-4 pt-safe pb-5 shadow-sm">
-        <div className="flex items-center justify-between mb-3.5">
-          <div className="flex items-center gap-2.5">
-            <img src="/logotipo.jpeg" alt="Rapidy" className="w-9 h-9 rounded-full object-cover border-2 border-white/20 shadow-sm" />
-            <div>
-              <p className="text-white/75 text-xs font-medium">Hola,</p>
-              <p className="text-white font-bold text-sm tracking-tight">{customer?.firstName || "Invitado"}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={() => navigate("/profile")} 
-              className="w-9 h-9 rounded-full bg-white/15 text-white flex items-center justify-center hover:bg-white/25 active:scale-90 transition-all"
-            >
-              <MapPin className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
+    <div className="mobile-container bg-[#F7F7FA] min-h-screen pb-28 select-none">
+      {/* 1. Header with Logo, Slogan and Search */}
+      <HomeHeader
+        customerName={customer?.firstName}
+        customerAddress={customer?.address}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        onSearchSubmit={handleSearchSubmit}
+      />
 
-        {/* Search */}
-        <div className="bg-white rounded-2xl h-11 flex items-center px-4 gap-2.5 shadow-sm">
-          <Search className="w-4 h-4 text-gray-400 flex-shrink-0" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSearchSubmit()}
-            placeholder="¿Qué deseas pedir hoy?"
-            className="flex-1 text-sm text-gray-800 bg-transparent outline-none placeholder:text-gray-400"
+      {/* Main Content Body */}
+      <div className="px-4 space-y-5 mt-4">
+        {/* 2. Top Categories (Comida, Supermercado, Farmacia, Compras) */}
+        <HomeCategories
+          categories={activeCategories}
+          selectedCategory={selectedCategory}
+          onSelectCategory={handleSelectCategory}
+          onClearCategory={() => setSelectedCategory(null)}
+        />
+
+        {/* 3. Promo Banner with Floating Combo Dishes */}
+        {!selectedCategory && !searchQuery && <HomePromoBanner />}
+
+        {/* 4. Featured Restaurants Section */}
+        {!selectedCategory && !searchQuery && (
+          <HomeFeaturedCommerces
+            commerces={commerces.slice(0, 5)}
+            loading={loadingCommerces}
           />
-          {searchQuery && (
-            <button onClick={() => setSearchQuery("")} className="text-gray-400 hover:text-gray-600">
-              <span className="text-lg leading-none">×</span>
-            </button>
-          )}
-        </div>
-      </div>
+        )}
 
-      {/* Categories - Grid 4x2 */}
-      <div className="px-4 mt-4">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-base font-semibold text-gray-800">Categorías</h2>
-          {selectedCategory && (
-            <button
-              onClick={() => setSelectedCategory(null)}
-              className="text-[#2E7D32] text-xs font-medium flex items-center gap-0.5"
-            >
-              Ver todas
-            </button>
-          )}
-        </div>
-        <div className="grid grid-cols-4 gap-1.5 sm:gap-3">
-          {activeCategories.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => handleCategoryClick(cat.id)}
-              className={`flex flex-col items-center gap-1.5 py-1.5 sm:py-2 rounded-xl transition-all ${
-                selectedCategory === cat.id
-                  ? "bg-[#2E7D32]/10 scale-95"
-                  : "active:scale-95"
-              }`}
-            >
-              <div
-                className={`w-11 h-11 rounded-xl flex items-center justify-center text-white ${
-                  selectedCategory === cat.id ? "ring-2 ring-[#2E7D32] ring-offset-1" : ""
-                }`}
-                style={{ backgroundColor: cat.color || "#2E7D32" }}
+        {/* 5. Popular Products Horizontal List */}
+        {!selectedCategory && !searchQuery && (
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-base sm:text-lg font-black text-zinc-900 tracking-tight">
+                Platillos populares
+              </h2>
+              <button
+                onClick={() => navigate("/search")}
+                className="text-xs font-bold text-[#FF6A00] flex items-center gap-0.5 cursor-pointer"
               >
-                {iconMap[cat.icon] || <MoreHorizontal className="w-5 h-5" />}
+                <span>Ver todo</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {loadingFeatured ? (
+              <div className="flex gap-3 overflow-x-auto no-scrollbar">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="min-w-[160px] h-48 bg-zinc-200 rounded-2xl animate-pulse" />
+                ))}
               </div>
-              <span className="text-[10px] sm:text-[11px] text-gray-600 text-center leading-tight truncate w-full px-0.5">
-                {cat.name}
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Popular Products */}
-      {!selectedCategory && !searchQuery && (
-        <div className="px-4 mt-5">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-base font-semibold text-gray-800">Productos populares</h2>
-            <button onClick={() => navigate("/search")} className="text-[#2E7D32] text-xs font-medium flex items-center gap-0.5">
-              Ver todo <ChevronRight className="w-3 h-3" />
-            </button>
-          </div>
-          {loadingFeatured ? (
-            <div className="flex gap-3 overflow-x-auto no-scrollbar">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="min-w-[160px] h-48 bg-gray-200 rounded-xl animate-pulse" />
-              ))}
-            </div>
-          ) : (
-            <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
-              {filteredProducts.slice(0, 8).map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Search Results */}
-      {(searchQuery || selectedCategory) && filteredProducts.length > 0 && !selectedCategory && (
-        <div className="px-4 mt-5">
-          <h2 className="text-sm font-medium text-gray-500 mb-2">
-            Productos ({filteredProducts.length})
-          </h2>
-          <div className="grid grid-cols-2 gap-3 mb-4">
-            {filteredProducts.slice(0, 6).map((product) => (
-              <ProductCardGrid key={product.id} product={product} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Commerces List */}
-      <div className="px-4 mt-5">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-base font-semibold text-gray-800">
-            {selectedCategory
-              ? `Comercios (${filteredCommerces.length})`
-              : searchQuery
-                ? `Resultados (${filteredCommerces.length})`
-                : "Comercios"
-            }
-          </h2>
-        </div>
-        {loadingCommerces ? (
-          <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-32 bg-gray-200 rounded-xl animate-pulse" />
-            ))}
-          </div>
-        ) : filteredCommerces.length === 0 ? (
-          <div className="text-center py-8">
-            <Search className="w-10 h-10 text-gray-300 mx-auto mb-2" />
-            <p className="text-gray-500 text-sm">No se encontraron comercios</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {filteredCommerces.map((commerce) => (
-              <CommerceCard key={commerce.id} commerce={commerce} />
-            ))}
+            ) : (
+              <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
+                {filteredProducts.slice(0, 8).map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
+            )}
           </div>
         )}
+
+        {/* 6. All Commerces or Search Results */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-base sm:text-lg font-black text-zinc-900 tracking-tight">
+              {selectedCategory
+                ? `Comercios (${filteredCommerces.length})`
+                : searchQuery
+                ? `Resultados para "${searchQuery}" (${filteredCommerces.length})`
+                : "Todos los Comercios"}
+            </h2>
+          </div>
+
+          {loadingCommerces ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-32 bg-zinc-200 rounded-2xl animate-pulse" />
+              ))}
+            </div>
+          ) : filteredCommerces.length === 0 ? (
+            <div className="text-center py-12 bg-white rounded-3xl border border-zinc-100">
+              <Search className="w-10 h-10 text-zinc-300 mx-auto mb-2" />
+              <p className="text-zinc-600 font-bold text-sm">No encontramos resultados</p>
+              <p className="text-zinc-400 text-xs mt-1">Prueba buscando otra categoría o producto</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredCommerces.map((commerce) => (
+                <CommerceCard key={commerce.id} commerce={commerce} />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Bottom Nav */}
+      {/* Bottom Floating Navigation */}
       <CustomerBottomNav active="home" />
     </div>
   );
@@ -252,17 +214,19 @@ function ProductCard({ product }: { product: any }) {
   const { addItem } = useCart();
 
   return (
-    <div className="min-w-[160px] bg-white rounded-xl card-shadow overflow-hidden">
+    <div className="min-w-[165px] bg-white rounded-2xl border border-zinc-100 shadow-[0_4px_16px_rgba(0,0,0,0.05)] overflow-hidden flex flex-col justify-between group">
       <div
-        className="h-24 bg-gray-100 bg-cover bg-center cursor-pointer"
+        className="h-28 bg-zinc-100 bg-cover bg-center cursor-pointer group-hover:scale-105 transition-transform duration-300"
         style={{ backgroundImage: `url(${safeImage(product.image, "product")})` }}
         onClick={() => navigate(`/commerce/${product.commerceId}`)}
       />
-      <div className="p-2.5">
-        <p className="text-xs text-gray-500 truncate">{product.commerceName}</p>
-        <p className="text-sm font-medium text-gray-800 truncate mt-0.5">{product.name}</p>
-        <div className="flex items-center justify-between mt-1.5">
-          <span className="text-sm font-bold text-[#2E7D32]">${product.price}</span>
+      <div className="p-3">
+        <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 truncate">
+          {product.commerceName}
+        </p>
+        <p className="text-xs font-bold text-zinc-900 truncate mt-0.5">{product.name}</p>
+        <div className="flex items-center justify-between mt-2 pt-1 border-t border-zinc-50">
+          <span className="text-sm font-black text-[#FF6A00]">${product.price}</span>
           <button
             onClick={() =>
               addItem({
@@ -274,44 +238,8 @@ function ProductCard({ product }: { product: any }) {
                 commerceName: product.commerceName,
               })
             }
-            className="w-8 h-8 bg-[#2E7D32] text-white rounded-xl flex items-center justify-center hover:bg-[#1B5E20] active:scale-90 transition-all shadow-sm"
-          >
-            <Plus className="w-4 h-4 stroke-[2.5]" />
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ProductCardGrid({ product }: { product: any }) {
-  const navigate = useNavigate();
-  const { addItem } = useCart();
-
-  return (
-    <div className="bg-white rounded-2xl card-shadow overflow-hidden cursor-pointer active:scale-[0.98] transition-transform" onClick={() => navigate(`/commerce/${product.commerceId}`)}>
-      <div
-        className="h-28 bg-gray-100 bg-cover bg-center"
-        style={{ backgroundImage: `url(${safeImage(product.image, "product")})` }}
-      />
-      <div className="p-2.5">
-        <p className="text-xs text-gray-500 truncate">{product.commerceName}</p>
-        <p className="text-sm font-semibold text-gray-800 truncate mt-0.5">{product.name}</p>
-        <div className="flex items-center justify-between mt-2">
-          <span className="text-sm font-bold text-[#2E7D32]">${product.price}</span>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              addItem({
-                productId: product.id,
-                commerceId: product.commerceId,
-                name: product.name,
-                price: product.price,
-                image: product.image,
-                commerceName: product.commerceName,
-              });
-            }}
-            className="w-8 h-8 bg-[#2E7D32] text-white rounded-xl flex items-center justify-center hover:bg-[#1B5E20] active:scale-90 transition-all shadow-sm"
+            className="w-7 h-7 bg-[#FF6A00] hover:bg-[#e65f00] text-white rounded-xl flex items-center justify-center active:scale-90 transition-all shadow-sm shadow-[#FF6A00]/30 cursor-pointer"
+            aria-label="Agregar al carrito"
           >
             <Plus className="w-4 h-4 stroke-[2.5]" />
           </button>
@@ -325,42 +253,46 @@ function CommerceCard({ commerce }: { commerce: any }) {
   const navigate = useNavigate();
   const { addItem } = useCart();
   const { data: products } = useProductsByCommerce(commerce.id);
-  const featuredProducts = (products || []).filter((p: any) => p.isFeatured === "yes").slice(0, 3);
+  const featured = (products || []).filter((p: any) => p.isFeatured === "yes").slice(0, 3);
 
   return (
-    <div className="bg-white rounded-2xl card-shadow overflow-hidden">
+    <div className="bg-white rounded-3xl border border-zinc-100 shadow-[0_4px_20px_rgba(0,0,0,0.04)] overflow-hidden">
       <div
-        className="h-32 bg-gray-100 bg-cover bg-center cursor-pointer active:scale-[0.99] transition-transform relative"
+        className="h-32 bg-zinc-100 bg-cover bg-center cursor-pointer relative"
         style={{ backgroundImage: `url(${safeImage(commerce.coverImage, "cover")})` }}
         onClick={() => navigate(`/commerce/${commerce.id}`)}
       >
-        <div className="flex justify-between items-start p-2.5">
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+        <div className="flex justify-between items-start p-3 relative z-10">
           <span
-            className={`text-xs font-semibold px-2.5 py-1 rounded-full shadow-sm backdrop-blur-md ${
-              commerce.isOpen === "open" ? "bg-green-600/90 text-white" : "bg-red-600/90 text-white"
+            className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow-xs backdrop-blur-md ${
+              commerce.isOpen === "open" ? "bg-emerald-500/90 text-white" : "bg-red-500/90 text-white"
             }`}
           >
             {commerce.isOpen === "open" ? "Abierto" : "Cerrado"}
           </span>
         </div>
       </div>
-      <div className="p-3.5 cursor-pointer relative" onClick={() => navigate(`/commerce/${commerce.id}`)}>
+
+      <div className="p-4 cursor-pointer relative" onClick={() => navigate(`/commerce/${commerce.id}`)}>
         <div className="flex items-start gap-3">
           <img
             src={safeImage(commerce.logo, "logo")}
             alt={commerce.name}
-            className="w-14 h-14 rounded-full object-cover -mt-9 relative z-10 border-[3px] border-white shadow-md bg-white shrink-0"
-            onError={(e) => { (e.target as HTMLImageElement).src = safeImage(null, "logo") }}
+            className="w-14 h-14 rounded-2xl object-cover -mt-10 relative z-10 border-2 border-white shadow-md bg-white shrink-0"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = safeImage(null, "logo");
+            }}
           />
           <div className="flex-1 min-w-0">
-            <h3 className="font-bold text-gray-800 text-sm truncate">{commerce.name}</h3>
-            <div className="flex items-center gap-3 mt-1 text-xs text-gray-500 font-medium">
+            <h3 className="font-bold text-zinc-900 text-sm truncate">{commerce.name}</h3>
+            <div className="flex items-center gap-3 mt-1 text-xs text-zinc-500 font-medium">
               <span className="flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5 text-gray-400" />
+                <Clock className="w-3.5 h-3.5 text-zinc-400" />
                 {commerce.deliveryTime}
               </span>
-              <span className="flex items-center gap-1">
-                <Star className="w-3.5 h-3.5 text-[#FFC107] fill-[#FFC107]" />
+              <span className="flex items-center gap-1 font-bold text-zinc-700">
+                <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
                 {commerce.rating}
               </span>
               {commerce.minOrder && parseFloat(commerce.minOrder) > 0 && (
@@ -370,19 +302,23 @@ function CommerceCard({ commerce }: { commerce: any }) {
           </div>
         </div>
       </div>
-      {featuredProducts.length > 0 && (
-        <div className="border-t border-gray-100 p-3 bg-gray-50/50">
+
+      {featured.length > 0 && (
+        <div className="border-t border-zinc-100 p-3 bg-zinc-50/50">
           <div className="flex gap-2.5 overflow-x-auto no-scrollbar pb-1">
-            {featuredProducts.map((product: any) => (
-              <div key={product.id} className="flex-shrink-0 w-36 bg-white rounded-xl p-2.5 border border-gray-100 shadow-sm">
+            {featured.map((product: any) => (
+              <div
+                key={product.id}
+                className="shrink-0 w-36 bg-white rounded-2xl p-2.5 border border-zinc-100 shadow-xs"
+              >
                 <div
-                  className="w-full h-18 bg-gray-100 bg-cover bg-center rounded-lg mb-1.5 cursor-pointer"
+                  className="w-full h-20 bg-zinc-100 bg-cover bg-center rounded-xl mb-1.5 cursor-pointer"
                   style={{ backgroundImage: `url(${safeImage(product.image, "product")})` }}
                   onClick={() => navigate(`/commerce/${commerce.id}`)}
                 />
-                <p className="text-xs font-semibold text-gray-800 truncate">{product.name}</p>
+                <p className="text-xs font-bold text-zinc-900 truncate">{product.name}</p>
                 <div className="flex items-center justify-between mt-1.5">
-                  <span className="text-xs font-bold text-[#2E7D32]">${product.price}</span>
+                  <span className="text-xs font-black text-[#FF6A00]">${product.price}</span>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -395,7 +331,7 @@ function CommerceCard({ commerce }: { commerce: any }) {
                         commerceName: commerce.name,
                       });
                     }}
-                    className="w-7 h-7 bg-[#2E7D32] text-white rounded-lg flex items-center justify-center hover:bg-[#1B5E20] active:scale-90 transition-transform shadow-sm"
+                    className="w-6 h-6 bg-[#FF6A00] text-white rounded-lg flex items-center justify-center active:scale-90 transition-transform shadow-xs cursor-pointer"
                   >
                     <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
                   </button>

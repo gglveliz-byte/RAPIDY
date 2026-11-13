@@ -1,3 +1,27 @@
+/**
+ * @archivo src/components/CustomerBottomNav.tsx
+ * @modulo 00-ui-kernel (Navegación Inferior Flotante de Clientes)
+ * @proposito
+ *   Barra de navegación inferior fija estilo isla flotante (Glassmorphism) para clientes.
+ *   Permite acceso con un toque a Inicio, Búsqueda, Carrito de Compras (con contador reactivo)
+ *   y Perfil de usuario con estética oficial Rapidy (acentos anaranjados).
+ *
+ * @resumen_contenido
+ *   - Componente `CustomerBottomNav`: Botones táctiles animados con framer-motion,
+ *     indicador de pestaña activa e insignia numérica de artículos en el carrito.
+ *
+ * @dependencias_internas
+ *   - `useCart` (@/hooks/useCart)
+ *
+ * @dependencias_externas
+ *   - `framer-motion` (`motion`)
+ *   - `lucide-react` (`UtensilsCrossed`, `Search`, `ShoppingCart`, `User`)
+ *   - `react-router` (`useNavigate`)
+ *
+ * @tablas_bd_o_redis
+ *   - Ninguna (Estado de UI y carrito en cliente)
+ */
+
 import { useNavigate } from "react-router";
 import {
   UtensilsCrossed,
@@ -14,16 +38,16 @@ export function CustomerBottomNav({ active }: { active: string }) {
 
   return (
     <nav 
-      className="fixed bottom-safe-nav left-2 right-2 sm:left-3 sm:right-3 bg-white/95 backdrop-blur-xl border border-gray-200/70 rounded-3xl shadow-xl px-1 py-1 sm:px-1.5 sm:py-1.5 flex justify-between items-center z-50 select-none transition-all" 
+      className="fixed bottom-safe-nav left-3 right-3 bg-white/90 backdrop-blur-2xl border border-zinc-200/80 rounded-3xl shadow-[0_12px_36px_rgba(0,0,0,0.12)] px-1.5 py-1.5 flex justify-between items-center z-50 select-none transition-all" 
       style={{ maxWidth: "440px", margin: "0 auto" }}
     >
       <motion.button 
         whileTap={{ scale: 0.88 }}
         onClick={() => navigate("/home")} 
-        className={`flex-1 min-w-0 flex flex-col items-center justify-center py-1 px-0.5 rounded-2xl transition-all min-h-[44px] ${
+        className={`flex-1 min-w-0 flex flex-col items-center justify-center py-1.5 px-0.5 rounded-2xl transition-all min-h-[46px] cursor-pointer ${
           active === "home" 
-            ? "text-[#2E7D32] bg-green-50 font-semibold" 
-            : "text-gray-500 hover:text-gray-800"
+            ? "text-[#FF6A00] bg-[#FF6A00]/10 font-bold" 
+            : "text-zinc-500 hover:text-zinc-900"
         }`}
       >
         <UtensilsCrossed className="w-5 h-5 stroke-[2.2]" />
@@ -33,10 +57,10 @@ export function CustomerBottomNav({ active }: { active: string }) {
       <motion.button 
         whileTap={{ scale: 0.88 }}
         onClick={() => navigate("/search")} 
-        className={`flex-1 min-w-0 flex flex-col items-center justify-center py-1 px-0.5 rounded-2xl transition-all min-h-[44px] ${
+        className={`flex-1 min-w-0 flex flex-col items-center justify-center py-1.5 px-0.5 rounded-2xl transition-all min-h-[46px] cursor-pointer ${
           active === "search" 
-            ? "text-[#2E7D32] bg-green-50 font-semibold" 
-            : "text-gray-500 hover:text-gray-800"
+            ? "text-[#FF6A00] bg-[#FF6A00]/10 font-bold" 
+            : "text-zinc-500 hover:text-zinc-900"
         }`}
       >
         <Search className="w-5 h-5 stroke-[2.2]" />
@@ -46,10 +70,10 @@ export function CustomerBottomNav({ active }: { active: string }) {
       <motion.button 
         whileTap={{ scale: 0.88 }}
         onClick={() => navigate("/cart")} 
-        className={`relative flex-1 min-w-0 flex flex-col items-center justify-center py-1 px-0.5 rounded-2xl transition-all min-h-[44px] ${
+        className={`relative flex-1 min-w-0 flex flex-col items-center justify-center py-1.5 px-0.5 rounded-2xl transition-all min-h-[46px] cursor-pointer ${
           active === "cart" 
-            ? "text-[#2E7D32] bg-green-50 font-semibold" 
-            : "text-gray-500 hover:text-gray-800"
+            ? "text-[#FF6A00] bg-[#FF6A00]/10 font-bold" 
+            : "text-zinc-500 hover:text-zinc-900"
         }`}
       >
         <div className="relative">
@@ -58,7 +82,7 @@ export function CustomerBottomNav({ active }: { active: string }) {
             <motion.span 
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              className="absolute -top-1.5 -right-2.5 min-w-[17px] h-[17px] px-1 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center shadow-sm"
+              className="absolute -top-1.5 -right-2.5 min-w-[17px] h-[17px] px-1 bg-[#FF2D55] text-white text-[9px] font-black rounded-full flex items-center justify-center shadow-xs"
             >
               {totalItems}
             </motion.span>
@@ -70,10 +94,10 @@ export function CustomerBottomNav({ active }: { active: string }) {
       <motion.button 
         whileTap={{ scale: 0.88 }}
         onClick={() => navigate("/profile")} 
-        className={`flex-1 min-w-0 flex flex-col items-center justify-center py-1 px-0.5 rounded-2xl transition-all min-h-[44px] ${
+        className={`flex-1 min-w-0 flex flex-col items-center justify-center py-1.5 px-0.5 rounded-2xl transition-all min-h-[46px] cursor-pointer ${
           active === "profile" 
-            ? "text-[#2E7D32] bg-green-50 font-semibold" 
-            : "text-gray-500 hover:text-gray-800"
+            ? "text-[#FF6A00] bg-[#FF6A00]/10 font-bold" 
+            : "text-zinc-500 hover:text-zinc-900"
         }`}
       >
         <User className="w-5 h-5 stroke-[2.2]" />

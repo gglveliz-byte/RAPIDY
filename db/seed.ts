@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { getDb } from "../server/queries/connection";
-import { categories, commerces, products, appSettings, users } from "../db/schema";
+import { categories, commerces, products, appSettings, users, customers } from "../db/schema";
 import { eq, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
@@ -201,6 +201,23 @@ async function seed() {
       name: "Administrador",
       passwordHash: adminHash,
       role: "admin",
+    },
+  ]);
+
+  // Seed test customers
+  console.log("Seeding test customers...");
+  await db.insert(customers).values([
+    {
+      firstName: "Lautaro",
+      lastName: "Ezequiel",
+      phone: "+593 99 123 4567",
+      address: "Av. Amazonas y Naciones Unidas, Quito",
+    },
+    {
+      firstName: "Cliente",
+      lastName: "Rapidy",
+      phone: "+54 9 11 1234-5678",
+      address: "Av. Corrientes 1234, Buenos Aires",
     },
   ]);
 
