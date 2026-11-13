@@ -57,6 +57,13 @@
       "when": 1794600497374,
       "tag": "0007_dashing_mesmero",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794609169219,
+      "tag": "0008_simple_vance_astro",
+      "breakpoints": true
     }
   ]
 }
