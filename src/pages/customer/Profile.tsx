@@ -48,8 +48,6 @@ import {
   Trash2,
   Sparkles,
   Clock,
-  Sun,
-  Moon,
 } from "lucide-react";
 import { useCustomerSession } from "@/hooks/useCustomerSession";
 import { useCustomerOrders, useUpdateCustomerProfile } from "@/hooks/useDeliveryData";
@@ -58,12 +56,10 @@ import { getAddressFromCoords } from "@/lib/locationUtils";
 import { ProfileOrdersModal } from "./components/ProfileOrdersModal";
 import { getOrderStatusMeta } from "@contracts/orderStatus";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { useTheme } from "@/hooks/useTheme";
 
 export default function CustomerProfile() {
   const navigate = useNavigate();
   const { customer, login, logout, isAuthenticated } = useCustomerSession();
-  const { isDark, toggleTheme } = useTheme();
   const [editingAddress, setEditingAddress] = useState(false);
   const [editAddress, setEditAddress] = useState("");
   const [geoLoading, setGeoLoading] = useState(false);
@@ -339,51 +335,6 @@ export default function CustomerProfile() {
               )}
             </div>
           )}
-        </div>
-
-        {/* Configuración de Apariencia (Modo Oscuro / Modo Claro) */}
-        <div>
-          <h2 className="text-[11px] font-black uppercase tracking-wider text-zinc-400 mb-2">
-            Apariencia
-          </h2>
-          <div className="bg-white dark:bg-[#1A1A1E] rounded-2xl border border-zinc-100 dark:border-white/10 shadow-[0_2px_12px_rgba(0,0,0,0.04)] dark:shadow-none p-3.5 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-orange-50 dark:bg-brand/10 border border-orange-100 dark:border-brand/20 flex items-center justify-center text-brand">
-                {isDark ? <Moon className="w-4 h-4 text-brand" /> : <Sun className="w-4 h-4 text-brand" />}
-              </div>
-              <div>
-                <span className="text-xs sm:text-sm font-semibold text-zinc-800 dark:text-zinc-200 block">
-                  Tema visual
-                </span>
-                <span className="text-[11px] text-zinc-400 font-medium">
-                  {isDark ? "Modo Oscuro activado" : "Modo Claro activado"}
-                </span>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={toggleTheme}
-              className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 border ${
-                isDark
-                  ? "bg-white/10 hover:bg-white/15 text-white border-white/15 shadow-xs"
-                  : "bg-zinc-100 hover:bg-zinc-200 text-zinc-800 border-zinc-200 shadow-xs"
-              }`}
-              aria-label="Alternar tema visual"
-            >
-              {isDark ? (
-                <>
-                  <Moon className="w-3.5 h-3.5 text-amber-300" />
-                  <span>Modo Oscuro</span>
-                </>
-              ) : (
-                <>
-                  <Sun className="w-3.5 h-3.5 text-amber-500" />
-                  <span>Modo Claro</span>
-                </>
-              )}
-            </button>
-          </div>
         </div>
 
         {/* Información y Marco Legal */}

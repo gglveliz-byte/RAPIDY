@@ -87,7 +87,7 @@ export default function CommerceDetail() {
   useProductEvents(commerceUtils);
 
   const products = (allProducts || []).filter((p: any) => p.isAvailable === "yes");
-  const isStoreOpen = commerce.isOpen === "open";
+  const isStoreOpen = commerce?.isOpen === "open";
 
   const groupedProducts = products.reduce((acc: Record<string, any[]>, p: any) => {
     const cat = p.category || "General";
