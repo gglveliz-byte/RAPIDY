@@ -176,7 +176,7 @@ Crear una aplicación móvil y plataforma administrativa que conecte clientes, c
 1. **Pantalla de bienvenida:** Solo nombre de la app + botón "Crear cuenta". Sin otras opciones.
 2. **Registro de clientes:** Solo nombre, apellido, celular, dirección. Sin email, sin contraseña, sin Google.
 3. **Login:** Existe para admin, comercios y repartidores (email/teléfono + contraseña). SMS omitido por costo.
-4. **Admin por defecto:** admin@quickgo.com / admin123 (configurable en .env).
+4. **Admin inicial:** se define con `ADMIN_EMAIL` y `ADMIN_PASSWORD` en `.env`. No hay credenciales por defecto; usa una contraseña única y no reutilices valores de ejemplo.
 5. **PWA:** El prompt de instalación se muestra justo después del registro exitoso.
 6. **Pedido multi-comercio:** Es la función estrella — un carrito, productos de varios comercios, una sola entrega.
 7. **Rutas definidas en:** `ROUTES.md`

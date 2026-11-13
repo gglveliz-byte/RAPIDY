@@ -8,9 +8,25 @@ function required(name: string): string {
   return value ?? "";
 }
 
+const appSecret = required("APP_SECRET");
+if (process.env.NODE_ENV === "production") {
+  if (
+    appSecret.length < 32 ||
+    /your_jwt|change[_-]?me|example|secret_here/i.test(appSecret)
+  ) {
+    throw new Error(
+      "APP_SECRET inseguro: usa un secreto único de al menos 32 caracteres en producción",
+    );
+  }
+  const adminPassword = process.env.ADMIN_PASSWORD ?? "";
+  if (adminPassword && adminPassword.length < 12) {
+    throw new Error("ADMIN_PASSWORD debe tener al menos 12 caracteres en producción");
+  }
+}
+
 export const env = {
   appId: required("APP_ID"),
-  appSecret: required("APP_SECRET"),
+  appSecret,
   isProduction: process.env.NODE_ENV === "production",
   databaseUrl: required("DATABASE_URL"),
   ownerUnionId: process.env.OWNER_UNION_ID ?? "",

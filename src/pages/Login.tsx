@@ -187,7 +187,7 @@ export default function Login() {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="admin@rapidy.app"
+                    placeholder="tu-correo@empresa.com"
                     className="w-full h-12 sm:h-13 pl-11 pr-4 bg-transparent text-white placeholder-zinc-500 text-sm font-medium outline-none rounded-2xl"
                   />
                 </div>

@@ -121,7 +121,12 @@ export function useCommerce(id: number) {
     queryFn: () => trpcCall<any>("commerce.getById", { id }),
     enabled: Boolean(id),
   });
-  return { data: query.data ?? null, loading: query.isLoading };
+  return {
+    data: query.data ?? null,
+    loading: query.isLoading,
+    error: query.error as Error | null,
+    refresh: query.refetch,
+  };
 }
 
 export function useMerchantCommerceId() {
@@ -207,7 +212,12 @@ export function useProductsByCommerce(commerceId: number) {
     queryFn: () => trpcCall<any[]>("product.getByCommerce", { commerceId }),
     enabled: Boolean(commerceId),
   });
-  return { data: query.data ?? [], loading: query.isLoading };
+  return {
+    data: query.data ?? [],
+    loading: query.isLoading,
+    error: query.error as Error | null,
+    refresh: query.refetch,
+  };
 }
 
 export function useCreateProduct(commerceId: number) {
@@ -522,7 +532,12 @@ export function useCommerceStats(commerceId: number) {
     queryFn: () => trpcCall<any>("commerce.getStats", { id: commerceId }),
     enabled: Boolean(commerceId),
   });
-  return { data: query.data ?? null, loading: query.isLoading };
+  return {
+    data: query.data ?? null,
+    loading: query.isLoading,
+    error: query.error as Error | null,
+    refresh: query.refetch,
+  };
 }
 
 export function useUpdateCommerceProfile(commerceId: number) {
@@ -530,8 +545,12 @@ export function useUpdateCommerceProfile(commerceId: number) {
   return useMutation({
     mutationFn: (input: any) => trpcMutate<any>("commerce.update", { id: commerceId, ...input }),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["commerce.me"] });
       queryClient.invalidateQueries({ queryKey: ["commerce.getById", commerceId] });
       queryClient.invalidateQueries({ queryKey: ["commerce.getStats", commerceId] });
+      queryClient.invalidateQueries({ queryKey: ["commerce.list"] });
+      queryClient.invalidateQueries({ queryKey: ["product.list"] });
+      queryClient.invalidateQueries({ queryKey: ["product.getFeatured"] });
     },
   });
 }
@@ -541,8 +560,12 @@ export function useToggleCommerceStatus(commerceId: number) {
   return useMutation({
     mutationFn: () => trpcMutate<any>("commerce.toggleStatus", { id: commerceId }),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["commerce.me"] });
       queryClient.invalidateQueries({ queryKey: ["commerce.getById", commerceId] });
       queryClient.invalidateQueries({ queryKey: ["commerce.getStats", commerceId] });
+      queryClient.invalidateQueries({ queryKey: ["commerce.list"] });
+      queryClient.invalidateQueries({ queryKey: ["product.list"] });
+      queryClient.invalidateQueries({ queryKey: ["product.getFeatured"] });
     },
   });
 }

@@ -1,9 +1,20 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   darkMode: ["class"],
-  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
+  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}', './contracts/**/*.{ts,tsx}'],
   theme: {
     extend: {
+      spacing: {
+        '4.5': '1.125rem',
+        '8.5': '2.125rem',
+        '9.5': '2.375rem',
+        '13': '3.25rem',
+        '18': '4.5rem',
+        '22': '5.5rem',
+      },
+      boxShadow: {
+        '2xs': '0 1px 2px 0 rgb(0 0 0 / 0.04)',
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",

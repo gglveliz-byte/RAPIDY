@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { createRouter, publicQuery } from "./middleware";
 import { getDb } from "./queries/connection";
 import { users, drivers, commerces, customers } from "@db/schema";
@@ -9,6 +10,72 @@ import { setAdminCookie, clearAdminCookie, verifyAdminRefreshToken } from "./adm
 import { setDriverCookies, clearDriverCookies, verifyDriverRefreshToken } from "./driver-auth";
 import { setMerchantCookie, clearMerchantCookie, verifyMerchantRefreshToken } from "./merchant-auth";
 import { clearCustomerCookies, setCustomerCookies, verifyRefreshTokenPayload } from "./customer-auth";
+
+const LOGIN_WINDOW_MS = 10 * 60 * 1000;
+const LOGIN_MAX_FAILURES = 8;
+const LOGIN_BLOCK_MS = 15 * 60 * 1000;
+const LOGIN_MAX_ENTRIES = 2_000;
+
+interface LoginAttempt {
+  count: number;
+  firstAt: number;
+  blockedUntil?: number;
+}
+
+const loginAttempts = new Map<string, LoginAttempt>();
+// Hash válido para igualar el coste de bcrypt cuando el email/teléfono no existe.
+const DUMMY_HASH = bcrypt.hashSync("rapidy-dummy-password", 10);
+
+function clientIp(req: Request): string {
+  const forwarded = req.headers.get("x-forwarded-for");
+  if (forwarded) return forwarded.split(",")[0]?.trim() || "unknown";
+  return req.headers.get("x-real-ip") || "local";
+}
+
+function loginKey(req: Request, identifier: string): string {
+  return `${clientIp(req)}:${identifier || "unknown"}`;
+}
+
+function assertLoginAllowed(key: string) {
+  const now = Date.now();
+  const attempt = loginAttempts.get(key);
+  if (!attempt) return;
+  if (attempt.blockedUntil && attempt.blockedUntil > now) {
+    throw new TRPCError({
+      code: "TOO_MANY_REQUESTS",
+      message: "Demasiados intentos fallidos. Espera unos minutos antes de volver a intentar.",
+    });
+  }
+  if (now - attempt.firstAt > LOGIN_WINDOW_MS) {
+    loginAttempts.delete(key);
+  }
+}
+
+function recordLoginFailure(key: string) {
+  const now = Date.now();
+  const current = loginAttempts.get(key);
+  if (!current || now - current.firstAt > LOGIN_WINDOW_MS) {
+    loginAttempts.set(key, { count: 1, firstAt: now });
+    return;
+  }
+  current.count += 1;
+  if (current.count >= LOGIN_MAX_FAILURES) {
+    current.blockedUntil = now + LOGIN_BLOCK_MS;
+  }
+  loginAttempts.set(key, current);
+
+  if (loginAttempts.size > LOGIN_MAX_ENTRIES) {
+    for (const [entryKey, entry] of loginAttempts) {
+      if ((entry.blockedUntil ?? 0) < now && now - entry.firstAt > LOGIN_WINDOW_MS) {
+        loginAttempts.delete(entryKey);
+      }
+    }
+  }
+}
+
+function clearLoginFailures(key: string) {
+  loginAttempts.delete(key);
+}
 
 export async function seedAdminUser() {
   if (!env.adminEmail || !env.adminPassword) return;
@@ -31,52 +98,60 @@ export const loginRouter = createRouter({
     .input(z.object({
       email: z.string().email().optional(),
       phone: z.string().optional(),
-      password: z.string().min(1, "Contraseña requerida"),
+      password: z.string().min(1, "Contraseña requerida").max(200),
     }))
     .mutation(async ({ input, ctx }) => {
       const db = getDb();
+      const identifier = input.email?.trim().toLowerCase()
+        || input.phone?.replace(/\D/g, "")
+        || "unknown";
+      const attemptKey = loginKey(ctx.req, identifier);
+      assertLoginAllowed(attemptKey);
 
       if (input.email) {
         const email = input.email.trim().toLowerCase();
         const userResult = await db.select().from(users).where(eq(users.email, email));
         const user = userResult[0];
-        if (user && user.passwordHash) {
-          const valid = await bcrypt.compare(input.password, user.passwordHash);
-          if (valid) {
-            if (user.role !== "admin" && user.role !== "merchant") {
+        // Se compara siempre, incluso sin usuario, para no filtrar por timing
+        // si el email existe.
+        const valid = await bcrypt.compare(input.password, user?.passwordHash ?? DUMMY_HASH);
+        if (user && user.passwordHash && valid) {
+          if (user.role !== "admin" && user.role !== "merchant") {
+            recordLoginFailure(attemptKey);
+            return { success: false, message: "Credenciales inválidas" };
+          }
+
+          // Un solo rol profesional activo por navegador. La sesión de
+          // cliente es independiente y no se toca aquí.
+          if (user.role === "admin") {
+            clearDriverCookies(ctx.resHeaders);
+            clearMerchantCookie(ctx.resHeaders);
+            await setAdminCookie(ctx.resHeaders, ctx.req.headers, user.id);
+          } else {
+            clearAdminCookie(ctx.resHeaders);
+            clearDriverCookies(ctx.resHeaders);
+            const merchant = await setMerchantCookie(ctx.resHeaders, ctx.req.headers, user.id);
+            if (!merchant) {
+              recordLoginFailure(attemptKey);
               return { success: false, message: "Credenciales inválidas" };
             }
-
-            // Un solo rol profesional activo por navegador. La sesión de
-            // cliente es independiente y no se toca aquí.
-            if (user.role === "admin") {
-              clearDriverCookies(ctx.resHeaders);
-              clearMerchantCookie(ctx.resHeaders);
-              await setAdminCookie(ctx.resHeaders, ctx.req.headers, user.id);
-            } else {
-              clearAdminCookie(ctx.resHeaders);
-              clearDriverCookies(ctx.resHeaders);
-              const merchant = await setMerchantCookie(ctx.resHeaders, ctx.req.headers, user.id);
-              if (!merchant) {
-                return { success: false, message: "Credenciales inválidas" };
-              }
-            }
-
-            await db.update(users).set({ lastSignInAt: new Date() }).where(eq(users.id, user.id));
-            const result: any = {
-              success: true,
-              role: user.role,
-              user: { id: user.id, name: user.name, email: user.email, role: user.role },
-            };
-            if (user.role === "merchant") {
-              const commerceResult = await db.select().from(commerces).where(eq(commerces.merchantUserId, user.id));
-              if (commerceResult.length > 0) {
-                result.commerceId = commerceResult[0].id;
-                result.user.commerceId = commerceResult[0].id;
-              }
-            }
-            return result;
           }
+
+          clearLoginFailures(attemptKey);
+          await db.update(users).set({ lastSignInAt: new Date() }).where(eq(users.id, user.id));
+          const result: any = {
+            success: true,
+            role: user.role,
+            user: { id: user.id, name: user.name, email: user.email, role: user.role },
+          };
+          if (user.role === "merchant") {
+            const commerceResult = await db.select().from(commerces).where(eq(commerces.merchantUserId, user.id));
+            if (commerceResult.length > 0) {
+              result.commerceId = commerceResult[0].id;
+              result.user.commerceId = commerceResult[0].id;
+            }
+          }
+          return result;
         }
       }
 
@@ -97,26 +172,21 @@ export const loginRouter = createRouter({
         }
 
         const driver = driverResult[0];
-        if (driver && driver.passwordHash) {
-          const valid = await bcrypt.compare(input.password, driver.passwordHash);
-          if (valid) {
-            await setDriverCookies(ctx.resHeaders, ctx.req.headers, driver.id);
-            return {
-              success: true,
-              role: "driver",
-              user: { id: driver.id, name: driver.name, phone: driver.phone, role: "driver" },
-            };
-          }
+        const valid = await bcrypt.compare(input.password, driver?.passwordHash ?? DUMMY_HASH);
+        if (driver && driver.passwordHash && valid) {
+          clearLoginFailures(attemptKey);
+          await setDriverCookies(ctx.resHeaders, ctx.req.headers, driver.id);
+          return {
+            success: true,
+            role: "driver",
+            user: { id: driver.id, name: driver.name, phone: driver.phone, role: "driver" },
+          };
         }
       }
 
+      recordLoginFailure(attemptKey);
       return { success: false, message: "Credenciales inválidas" };
     }),
-
-  seedAdmin: publicQuery.mutation(async () => {
-    await seedAdminUser();
-    return { success: true };
-  }),
 
   checkAuth: publicQuery.query(async ({ ctx }) => {
     if (ctx.admin) {
