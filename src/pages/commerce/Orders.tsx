@@ -42,6 +42,9 @@ export default function CommerceOrders() {
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [expandedOrder, setExpandedOrder] = useState<number | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<number | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelError, setCancelError] = useState<string | null>(null);
 
   const {
     commerceId,
@@ -66,10 +69,32 @@ export default function CommerceOrders() {
   };
 
   const handleStatusUpdate = async (orderId: number, status: string) => {
+    if (status === "cancelled") {
+      setCancelTarget(orderId);
+      setCancelReason("");
+      setCancelError(null);
+      return;
+    }
     try {
       await updateOrderStatus.mutateAsync({ id: orderId, status });
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleConfirmCancel = async () => {
+    if (!cancelTarget) return;
+    setCancelError(null);
+    try {
+      await updateOrderStatus.mutateAsync({
+        id: cancelTarget,
+        status: "cancelled",
+        cancellationReason: cancelReason.trim() || "Rechazado por el comercio",
+      });
+      setCancelTarget(null);
+      setCancelReason("");
+    } catch (err) {
+      setCancelError(err instanceof Error ? err.message : "No se pudo rechazar el pedido.");
     }
   };
 
@@ -288,6 +313,56 @@ export default function CommerceOrders() {
         )}
 
       </div>
+
+      {cancelTarget !== null && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="cancel-order-title"
+        >
+          <div className="w-full max-w-sm bg-white dark:bg-[#16161B] rounded-3xl border border-zinc-200/80 dark:border-white/10 shadow-2xl p-5">
+            <h2 id="cancel-order-title" className="text-sm font-extrabold text-zinc-900 dark:text-white">
+              Rechazar pedido #{cancelTarget}
+            </h2>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">
+              El cliente verá el pedido cancelado. Indica el motivo para que sepa qué ocurrió.
+            </p>
+            <textarea
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              rows={3}
+              maxLength={500}
+              placeholder="Ej: nos quedamos sin ingredientes"
+              className="mt-3 w-full rounded-2xl border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-zinc-900 px-3 py-2 text-xs text-zinc-800 dark:text-zinc-100 outline-none focus:border-[#FF6A00] focus:ring-2 focus:ring-[#FF6A00]/20 resize-none"
+              autoFocus
+            />
+            {cancelError && (
+              <p role="alert" className="mt-2 text-[11px] font-medium text-red-600 dark:text-red-400">
+                {cancelError}
+              </p>
+            )}
+            <div className="mt-4 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setCancelTarget(null)}
+                disabled={updateOrderStatus.isPending}
+                className="flex-1 h-10 rounded-xl border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200 text-xs font-bold disabled:opacity-50"
+              >
+                Volver
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmCancel}
+                disabled={updateOrderStatus.isPending}
+                className="flex-1 h-10 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold disabled:opacity-50"
+              >
+                {updateOrderStatus.isPending ? "Rechazando..." : "Rechazar pedido"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </CommerceLayout>
   );
 }
