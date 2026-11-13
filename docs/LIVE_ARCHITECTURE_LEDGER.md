@@ -61,9 +61,10 @@
 
 | Ruta del Archivo | Módulo | Líneas Actuales (`/ 500 máx`) | Resumen de Responsabilidad y Exportaciones | Dependencias que Consume |
 | :--- | :--- | :---: | :--- | :--- |
-| `src/pages/customer/Search.tsx` | Cliente | `290 / 500` | Búsqueda reactiva por texto y categorías, tarjetas Dark Velvet de productos y comercios | `useCategories`, `useCommerces`, `useFeaturedProducts`, `useCart`, `CustomerBottomNav`, `safeImage` |
-| `src/pages/customer/Cart.tsx` | Cliente | `443 / 500` | Gestión de carrito multi-comercio, selector de pago, checkout y modal de entrega con geolocalización | `useCart`, `useCustomerSession`, `useCreateOrder`, `usePublicSettings`, `useCommerces`, `locationUtils` |
-| `src/pages/customer/Profile.tsx` | Cliente | `291 / 500` | Perfil de usuario, editor GPS de dirección, historial de pedidos y accesos al marco legal | `useCustomerSession`, `useCustomerOrders`, `useUpdateCustomerProfile`, `CustomerBottomNav`, `locationUtils` |
+| `src/pages/customer/Search.tsx` | Cliente | `300 / 500` | Búsqueda reactiva por texto y categorías, estética oficial Rapidy (cabecera Dark Velvet + cuerpo luminoso con tarjetas blancas) | `useCategories`, `useCommerces`, `useFeaturedProducts`, `useCart`, `CustomerBottomNav`, `safeImage` |
+| `src/pages/customer/Cart.tsx` | Cliente | `390 / 500` | Carrito multi-comercio, selector de pago Efectivo/Transferencia, totales y confirmación | `useCart`, `useCustomerSession`, `useCreateOrder`, `usePublicSettings`, `useCommerces`, `CartAddressModal`, `locationUtils` |
+| `src/pages/customer/components/CartAddressModal.tsx` | Cliente | `198 / 500` | Modal modular de selección de domicilio (Perfil/Manual/GPS) y comprobante de transferencia bancaria | `lucide-react` |
+| `src/pages/customer/Profile.tsx` | Cliente | `314 / 500` | Perfil de usuario, cabecera Dark Velvet, editor GPS de dirección, historial de pedidos en tarjetas blancas y marco legal | `useCustomerSession`, `useCustomerOrders`, `useUpdateCustomerProfile`, `CustomerBottomNav`, `locationUtils` |
 | `src/pages/customer/Home.tsx` | Cliente | `346 / 500` | Orquesta catálogo con cabecera compacta 50/50, padding-top optimizado y scroll fluido | `HomeHeader`, `HomePromoBanner`, `HomeCategories`, `HomeFeaturedCommerces`, `CustomerBottomNav` |
 | `src/pages/customer/components/HomeHeader.tsx` | Cliente | `146 / 500` | Cabecera fija split (50% cliente izq / 50% Rapidy der) con buscador inferior de ancho completo | `lucide-react`, `react-router`, `react` |
 | `src/pages/customer/components/HomePromoBanner.tsx` | Cliente | `82 / 500` | Banner "¡Pedidos más rápidos!" con platillos flotantes en 3D | `lucide-react`, `react-router` |
@@ -81,6 +82,18 @@
 ---
 
 ## 5. Bitácora Cronológica de Integraciones (Changelog Técnico Live)
+
+### [2026-11-13 17:58 UTC] - Armonización Visual Luminosa de Search, Cart y Profile según Estética Home
+- **Resumen Técnico:**
+  1. Se ajustó la estética de `Search.tsx`, `Cart.tsx` y `Profile.tsx` para coincidir al 100% con la elegancia de la pantalla principal (`Home.tsx`): cabecera superior Dark Velvet con logotipo/buscador y cuerpo de catálogo luminoso (`bg-[#F7F7FA]`) con tarjetas blancas de alta gama, tipografía oscura de máximo contraste y acentos Flame Orange (`#FF6A00`).
+  2. Se extrajo `CartAddressModal.tsx` (198 líneas) para mantener `Cart.tsx` en 390 líneas (dentro de la zona saludable de la regla de <500 líneas).
+  3. Verificación de compilación exitosa con `npm run build` e inspección visual en Playwright completada.
+- **Archivos Modificados / Creados:**
+  - `src/pages/customer/Search.tsx` (300 líneas).
+  - `src/pages/customer/Cart.tsx` (390 líneas).
+  - `src/pages/customer/components/CartAddressModal.tsx` (198 líneas - Creado).
+  - `src/pages/customer/Profile.tsx` (314 líneas).
+  - `docs/LIVE_ARCHITECTURE_LEDGER.md` (Actualizado).
 
 ### [2026-11-13 17:48 UTC] - Rediseño Concurrente Multi-Agente de Search, Cart y Profile (Estilo Rapidy)
 - **Resumen Técnico:**
