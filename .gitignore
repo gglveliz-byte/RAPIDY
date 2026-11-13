@@ -47,3 +47,4 @@ build/
 coverage/
 .nyc_output/
 .vercel
+.playwright-mcp/
