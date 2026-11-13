@@ -61,8 +61,8 @@
 
 | Ruta del Archivo | Módulo | Líneas Actuales (`/ 500 máx`) | Resumen de Responsabilidad y Exportaciones | Dependencias que Consume |
 | :--- | :--- | :---: | :--- | :--- |
-| `src/pages/customer/Home.tsx` | Cliente | `346 / 500` | Orquesta catálogo con cabecera fija, padding-top compensado y scroll fluido | `HomeHeader`, `HomePromoBanner`, `HomeCategories`, `HomeFeaturedCommerces`, `CustomerBottomNav` |
-| `src/pages/customer/components/HomeHeader.tsx` | Cliente | `154 / 500` | Cabecera fija fixed-top con Glassmorphism, buscador Rapidy, logo y saludo (sin botón duplicado) | `lucide-react`, `react-router`, `react` |
+| `src/pages/customer/Home.tsx` | Cliente | `346 / 500` | Orquesta catálogo con cabecera compacta 50/50, padding-top optimizado y scroll fluido | `HomeHeader`, `HomePromoBanner`, `HomeCategories`, `HomeFeaturedCommerces`, `CustomerBottomNav` |
+| `src/pages/customer/components/HomeHeader.tsx` | Cliente | `146 / 500` | Cabecera fija split (50% cliente izq / 50% Rapidy der) con buscador inferior de ancho completo | `lucide-react`, `react-router`, `react` |
 | `src/pages/customer/components/HomePromoBanner.tsx` | Cliente | `82 / 500` | Banner "¡Pedidos más rápidos!" con platillos flotantes en 3D | `lucide-react`, `react-router` |
 | `src/pages/customer/components/HomeCategories.tsx` | Cliente | `104 / 500` | Carrusel dinámico de categorías conectado a BD (eliminado bloque estático redundante) | `lucide-react` |
 | `src/pages/customer/components/HomeFeaturedCommerces.tsx` | Cliente | `118 / 500` | Carrusel de restaurantes destacados con fotos, tiempo y rating | `safeImage`, `lucide-react`, `react-router` |
