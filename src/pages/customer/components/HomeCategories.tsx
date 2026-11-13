@@ -2,13 +2,14 @@
  * @archivo src/pages/customer/components/HomeCategories.tsx
  * @modulo 02-customer-home (Píldoras y Categorías Dinámicas)
  * @proposito
- *   Muestra las categorías dinámicas registradas en la base de datos PostgreSQL.
+ *   Muestra las categorías dinámicas registradas en la base de datos PostgreSQL con
+ *   compatibilidad nativa para Modo Oscuro (Dark Velvet & Flame Orange) y Modo Claro.
  *   Permite filtrado instantáneo de comercios y productos con estado activo de selección
  *   y botón de limpieza de filtro.
  *
  * @resumen_contenido
  *   - Componente `HomeCategories`: Renderiza el carrusel horizontal con iconos vectoriales
- *     y etiquetas interactivas con estética Rapidy.
+ *     y etiquetas interactivas en tarjetas táctiles con dark:bg-[#1A1A1E] y dark:border-white/10.
  *
  * @dependencias_internas
  *   - Ninguna
@@ -68,7 +69,7 @@ export function HomeCategories({
   return (
     <div className="w-full pt-1">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-[11px] font-black uppercase tracking-wider text-zinc-400">
+        <span className="text-[11px] font-black uppercase tracking-wider text-zinc-400 dark:text-zinc-400">
           Categorías
         </span>
         {selectedCategory && (
@@ -93,7 +94,7 @@ export function HomeCategories({
               className={`flex items-center gap-1.5 px-3.5 py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
                 isSelected
                   ? "bg-brand text-white shadow-md shadow-brand/30 scale-105"
-                  : "bg-white text-zinc-700 border border-zinc-200/80 hover:bg-zinc-50 shadow-xs"
+                  : "bg-white dark:bg-[#1A1A1E] text-zinc-700 dark:text-zinc-200 border border-zinc-200/80 dark:border-white/10 hover:bg-zinc-50 dark:hover:bg-[#222227] shadow-xs"
               }`}
             >
               <span className={isSelected ? "text-white" : "text-brand"}>

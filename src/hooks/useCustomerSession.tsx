@@ -26,6 +26,11 @@
 import { useState, useEffect, useCallback, useRef, createContext, useContext, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import superjson from "superjson";
+import {
+  checkCustomerAuth,
+  invalidateCustomerAuthCache,
+  primeCustomerAuthCache,
+} from "@/lib/customerAuthCache";
 
 export interface CustomerSession {
   id: number;
@@ -61,6 +66,7 @@ export function CustomerSessionProvider({ children }: { children: ReactNode }) {
   const clearLocalSession = useCallback(() => {
     customerRef.current = null;
     setCustomer(null);
+    invalidateCustomerAuthCache();
     try {
       localStorage.removeItem(CUSTOMER_STORAGE_KEY);
       localStorage.removeItem("qs_session");
@@ -69,32 +75,32 @@ export function CustomerSessionProvider({ children }: { children: ReactNode }) {
     queryClient.clear();
   }, [queryClient]);
 
-  // Verificación en segundo plano sin bloquear la UI
+  // Verificación en segundo plano sin bloquear la UI (deduplicada y cacheada).
   useEffect(() => {
-    const serialized = superjson.serialize({});
-    fetch(`/api/trpc/customer.checkAuth?input=${encodeURIComponent(JSON.stringify(serialized))}`, {
-      method: "GET",
-      credentials: "include",
-    })
-      .then(r => r.json())
-      .then((data) => {
-        const deserialized = superjson.deserialize<{ customer: CustomerSession | null } | undefined>(data.result?.data);
-        if (deserialized?.customer) {
-          customerRef.current = deserialized.customer;
-          setCustomer(deserialized.customer);
-          localStorage.setItem(CUSTOMER_STORAGE_KEY, JSON.stringify(deserialized.customer));
+    let cancelled = false;
+    checkCustomerAuth()
+      .then((customer) => {
+        if (cancelled) return;
+        if (customer) {
+          customerRef.current = customer;
+          setCustomer(customer);
+          localStorage.setItem(CUSTOMER_STORAGE_KEY, JSON.stringify(customer));
+          localStorage.setItem("qs_session", JSON.stringify({ role: "customer", ts: Date.now() }));
         } else if (!customerRef.current) {
-          // La cookie expiró o fue revocada: no dejar PII local.
           setCustomer(null);
           localStorage.removeItem(CUSTOMER_STORAGE_KEY);
           localStorage.removeItem("qs_session");
         }
       })
-      .catch(() => {});
+      .catch(() => { /* sin acción */ });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const login = useCallback((customerData: CustomerSession) => {
     customerRef.current = customerData;
+    primeCustomerAuthCache(customerData);
     setCustomer(customerData);
     try {
       localStorage.setItem(CUSTOMER_STORAGE_KEY, JSON.stringify(customerData));
@@ -125,8 +131,10 @@ export function CustomerSessionProvider({ children }: { children: ReactNode }) {
       const deserialized = superjson.deserialize<{ customer: CustomerSession | null } | undefined>(data.result?.data);
       if (deserialized?.customer) {
         customerRef.current = deserialized.customer;
+        primeCustomerAuthCache(deserialized.customer);
         setCustomer(deserialized.customer);
         localStorage.setItem(CUSTOMER_STORAGE_KEY, JSON.stringify(deserialized.customer));
+        localStorage.setItem("qs_session", JSON.stringify({ role: "customer", ts: Date.now() }));
         return true;
       }
       clearLocalSession();

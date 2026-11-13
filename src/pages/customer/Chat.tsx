@@ -14,6 +14,7 @@ import { useCustomerSession } from "@/hooks/useCustomerSession";
 import { useChatMessages, useSendChatMessage, trpcMutate } from "@/hooks/useDeliveryData";
 import { useOrderEvents } from "@/hooks/useOrderEvents";
 import { trpc } from "@/providers/trpc";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const quickMessages = [
   "Hola, ¿cuánto falta?",
@@ -155,8 +156,8 @@ export default function Chat() {
   const isMine = (message: any) => message.senderType === "customer";
 
   return (
-    <div className="mobile-container h-screen h-[100dvh] flex flex-col bg-surface text-zinc-900 select-none notranslate">
-      <header className="bg-ink px-4 pt-safe pb-3 flex items-center gap-3 border-b border-white/10 shadow-lg text-white shrink-0 z-20">
+    <div className="mobile-container h-screen h-[100dvh] flex flex-col bg-surface dark:bg-[#0E0E12] text-zinc-900 dark:text-zinc-100 select-none notranslate">
+      <header className="bg-ink dark:bg-ink/95 px-4 pt-safe pb-3 flex items-center gap-3 border-b border-white/10 dark:border-white/10 shadow-lg text-white shrink-0 z-20">
         <button
           onClick={() => navigate(-1)}
           className="w-11 h-11 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 flex items-center justify-center text-white active:scale-90 transition-all cursor-pointer shrink-0"
@@ -183,11 +184,13 @@ export default function Chat() {
             <span>{connected ? "Mensajes en tiempo real" : "Reconectando..."}</span>
           </p>
         </div>
+
+        <ThemeToggle size="sm" className="shrink-0" />
       </header>
 
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto px-4 py-3 space-y-3 min-h-0 bg-surface"
+        className="flex-1 overflow-y-auto px-4 py-3 space-y-3 min-h-0 bg-surface dark:bg-[#0E0E12]"
         aria-live="polite"
       >
         {loading && allMessages.length === 0 && (
@@ -199,11 +202,11 @@ export default function Chat() {
         {error && allMessages.length === 0 && (
           <div className="text-center py-10">
             <AlertCircle className="w-8 h-8 text-rose-400 mx-auto mb-2" />
-            <p className="text-sm font-bold text-zinc-700">No pudimos cargar el chat</p>
-            <p className="text-xs text-zinc-500 mt-1">{error.message}</p>
+            <p className="text-sm font-bold text-zinc-700 dark:text-zinc-200">No pudimos cargar el chat</p>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{error.message}</p>
             <button
               onClick={() => refresh()}
-              className="mt-3 h-10 px-4 bg-brand text-white text-xs font-bold rounded-xl"
+              className="mt-3 h-10 px-4 bg-brand hover:bg-brand-strong text-white text-xs font-bold rounded-xl"
             >
               Reintentar
             </button>
@@ -213,7 +216,7 @@ export default function Chat() {
         {grouped.map((group) => (
           <div key={group.date} className="space-y-2.5">
             <div className="flex justify-center my-2">
-              <span className="bg-zinc-200/70 text-zinc-600 text-[10px] font-bold px-3 py-1 rounded-full shadow-2xs">
+              <span className="bg-zinc-200/70 dark:bg-white/10 text-zinc-600 dark:text-zinc-300 text-[10px] font-bold px-3 py-1 rounded-full shadow-2xs border border-transparent dark:border-white/5">
                 {group.date}
               </span>
             </div>
@@ -239,8 +242,8 @@ export default function Chat() {
                     <div
                       className={`px-3.5 py-2.5 shadow-xs ${
                         mine
-                          ? "bg-gradient-to-r from-[#FF5E00] to-brand text-white rounded-2xl rounded-tr-xs"
-                          : "bg-white text-zinc-900 border border-zinc-200/80 rounded-2xl rounded-tl-xs"
+                          ? "bg-brand text-white rounded-2xl rounded-tr-xs"
+                          : "bg-white dark:bg-[#1E1E24] text-zinc-900 dark:text-white border border-zinc-200/80 dark:border-white/10 rounded-2xl rounded-tl-xs"
                       } ${failed ? "ring-2 ring-rose-400/60" : ""}`}
                     >
                       <p className="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap break-words font-medium">
@@ -249,7 +252,7 @@ export default function Chat() {
 
                       <div
                         className={`flex items-center gap-1 mt-1 text-[10px] ${
-                          mine ? "justify-end text-white/80" : "justify-start text-zinc-400"
+                          mine ? "justify-end text-white/80 dark:text-white/60" : "justify-start text-zinc-400 dark:text-zinc-400"
                         }`}
                       >
                         <span>
@@ -292,30 +295,30 @@ export default function Chat() {
 
         {!loading && !error && allMessages.length === 0 && (
           <div className="flex flex-col items-center justify-center py-12 text-center">
-            <div className="w-12 h-12 rounded-2xl bg-orange-50 border border-orange-100 flex items-center justify-center text-brand mb-2.5">
+            <div className="w-12 h-12 rounded-2xl bg-orange-50 dark:bg-brand/10 border border-orange-100 dark:border-brand/20 flex items-center justify-center text-brand mb-2.5">
               <Bike className="w-6 h-6 stroke-[1.8]" />
             </div>
-            <p className="text-xs font-bold text-zinc-700">Envía un mensaje sobre tu pedido</p>
-            <p className="text-[11px] text-zinc-400 mt-0.5 max-w-[260px]">
+            <p className="text-xs font-bold text-zinc-700 dark:text-zinc-200">Envía un mensaje sobre tu pedido</p>
+            <p className="text-[11px] text-zinc-400 dark:text-zinc-400 mt-0.5 max-w-[260px]">
               Escribe cualquier indicación sobre la entrega, la dirección o el pago.
             </p>
           </div>
         )}
       </div>
 
-      <div className="bg-white/90 backdrop-blur-xs px-3 py-2 border-t border-zinc-200/70 flex gap-2 overflow-x-auto no-scrollbar shrink-0">
+      <div className="bg-white/90 dark:bg-[#0E0E12]/95 backdrop-blur-xs px-3 py-2 border-t border-zinc-200/70 dark:border-white/10 flex gap-2 overflow-x-auto no-scrollbar shrink-0">
         {quickMessages.map((quickMessage) => (
           <button
             key={quickMessage}
             onClick={() => handleSend(quickMessage)}
-            className="min-h-[36px] px-3 py-1.5 bg-zinc-100/90 hover:bg-orange-50 hover:text-brand hover:border-orange-200 border border-zinc-200/70 rounded-full text-xs text-zinc-700 whitespace-nowrap active:scale-95 transition-all shadow-2xs cursor-pointer font-medium"
+            className="min-h-[36px] px-3 py-1.5 bg-zinc-100/90 dark:bg-[#1E1E24] hover:bg-orange-50 dark:hover:bg-brand/15 hover:text-brand dark:hover:text-brand hover:border-orange-200 dark:hover:border-brand/30 border border-zinc-200/70 dark:border-white/10 rounded-full text-xs text-zinc-700 dark:text-zinc-300 whitespace-nowrap active:scale-95 transition-all shadow-2xs cursor-pointer font-medium"
           >
             {quickMessage}
           </button>
         ))}
       </div>
 
-      <div className="bg-white px-3 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] flex items-center gap-2 border-t border-zinc-200/80 shrink-0 shadow-lg">
+      <div className="bg-white dark:bg-ink/95 px-3 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] flex items-center gap-2 border-t border-zinc-200/80 dark:border-white/10 shrink-0 shadow-lg">
         <input
           type="text"
           value={text}
@@ -329,7 +332,7 @@ export default function Chat() {
           maxLength={2000}
           placeholder="Escribe un mensaje aquí..."
           aria-label="Mensaje"
-          className="flex-1 h-11 px-4 bg-zinc-100 border border-zinc-200/80 rounded-2xl text-xs sm:text-sm text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/20 font-medium"
+          className="flex-1 h-11 px-4 bg-zinc-100 dark:bg-[#1E1E24] border border-zinc-200/80 dark:border-white/15 rounded-2xl text-xs sm:text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/20 font-medium"
         />
         <button
           onClick={() => handleSend(text)}

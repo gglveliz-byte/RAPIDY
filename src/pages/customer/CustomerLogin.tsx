@@ -9,7 +9,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router";
+import { Navigate, useNavigate } from "react-router";
 import { ArrowLeft, ArrowRight, KeyRound, MessageCircle, ShieldCheck, Sparkles } from "lucide-react";
 import { useCustomerSession } from "@/hooks/useCustomerSession";
 import { trpcMutate } from "@/hooks/useDeliveryData";
@@ -20,7 +20,7 @@ type Step = "phone" | "code";
 
 export default function CustomerLogin() {
   const navigate = useNavigate();
-  const { login } = useCustomerSession();
+  const { login, customer } = useCustomerSession();
   const [step, setStep] = useState<Step>("phone");
   const [phone, setPhone] = useState("");
   const [otpId, setOtpId] = useState("");
@@ -36,6 +36,10 @@ export default function CustomerLogin() {
     const timer = setInterval(() => setResendIn((value) => Math.max(0, value - 1)), 1000);
     return () => clearInterval(timer);
   }, [resendIn]);
+
+  if (customer) {
+    return <Navigate to="/home" replace />;
+  }
 
   const requestCode = async (event?: React.FormEvent) => {
     event?.preventDefault();

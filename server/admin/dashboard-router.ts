@@ -156,7 +156,6 @@ export const adminDashboardProcedures = {
         if (input.period === "week") {
           const weekStart = new Date(dateObj);
           weekStart.setDate(dateObj.getDate() - dateObj.getDay());
-          key: weekStart.toISOString().split("T")[0];
           return weekStart.toISOString().split("T")[0];
         }
         if (input.period === "month") return `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, "0")}`;

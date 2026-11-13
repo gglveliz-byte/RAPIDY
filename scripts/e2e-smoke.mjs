@@ -20,8 +20,8 @@ function assert(condition, message) {
 async function waitForAnyText(page, texts, timeout = 15000) {
   const started = Date.now();
   while (Date.now() - started < timeout) {
-    const body = await page.locator("body").innerText().catch(() => "");
-    if (texts.some((text) => body.includes(text))) return true;
+    const body = (await page.locator("body").innerText().catch(() => "")).toLowerCase();
+    if (texts.some((text) => body.includes(text.toLowerCase()))) return true;
     await page.waitForTimeout(250);
   }
   return false;
@@ -37,6 +37,12 @@ async function main() {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1 });
   const page = await context.newPage();
   const pageErrors = [];
+  let commerceProductRequests = 0;
+  let authRequests = 0;
+  page.on("request", (request) => {
+    if (request.url().includes("/api/trpc/product.getByCommerce")) commerceProductRequests += 1;
+    if (request.url().includes("/api/trpc/customer.checkAuth")) authRequests += 1;
+  });
   page.on("pageerror", (error) => pageErrors.push(error.message));
   page.on("console", (message) => {
     if (message.type() === "error") pageErrors.push(`console: ${message.text()}`);
@@ -52,14 +58,33 @@ async function main() {
     assert(codeVisible, "No apareció el paso de verificación OTP");
     const bodyText = await page.locator("body").innerText();
     const match = bodyText.match(/tu código es\s*(\d{4,8})/i);
-    assert(match, "No se encontró el código de desarrollo en la UI");
-    await page.locator('input[aria-label="Código de verificación"]').fill(match[1]);
+    const code = process.env.E2E_OTP_CODE || match?.[1];
+    assert(
+      code,
+      "No se encontró un código OTP. Define E2E_OTP_CODE o usa OTP_DEV_FALLBACK en desarrollo.",
+    );
+    await page.locator('input[aria-label="Código de verificación"]').fill(code);
     await page.getByRole("button", { name: /Verificar y entrar/i }).click();
     await page.waitForURL("**/home", { timeout: 20000 });
     await page.locator("body").getByText("Todos los Comercios").first().waitFor({ timeout: 20000 });
-    await page.waitForTimeout(800);
+    await page.getByText("La Esquina del Sabor").first().waitFor({ timeout: 20000 });
+    await page.getByText("Milanesa con papas fritas").first().waitFor({ timeout: 20000 });
+    assert(
+      commerceProductRequests === 0,
+      `Home hizo ${commerceProductRequests} llamadas product.getByCommerce (N+1)`,
+    );
+    await page.waitForTimeout(500);
     await page.screenshot({ path: `${SHOT_DIR}/01-home.png`, fullPage: false });
     record("OTP login + /home", true);
+
+    // 1b. Estando logueado, la landing y el login no deben mostrar el estado público.
+    await page.goto(`${BASE_URL}/`, { waitUntil: "domcontentloaded" });
+    await page.waitForURL("**/home", { timeout: 10000 });
+    const homeAfterLanding = await page.getByText("Todos los Comercios").first().isVisible().catch(() => false);
+    assert(homeAfterLanding, "La landing no redirigió a /home con sesión activa");
+    await page.goto(`${BASE_URL}/customer-login`, { waitUntil: "domcontentloaded" });
+    await page.waitForURL("**/home", { timeout: 10000 });
+    record("Landing/login redirigen a /home con sesión", true);
 
     // 2. Home search finds a non-featured product (Leche)
     const homeSearch = page.locator('input[placeholder="Buscar en Rapidy..."]');
@@ -100,6 +125,10 @@ async function main() {
     await page.getByRole("dialog").getByRole("button", { name: "Transferencia" }).click();
     await page.waitForTimeout(300);
     const bankFallback = await waitForAnyText(page, ["Los datos bancarios aún no están configurados", "Datos Bancarios Oficiales"], 5000);
+    if (!bankFallback) {
+      await page.screenshot({ path: `${SHOT_DIR}/03b-cart-transfer-debug.png`, fullPage: false });
+      console.log("DEBUG MODAL:", await page.getByRole("dialog").innerText().catch(() => "sin dialog"));
+    }
     assert(bankFallback, "El modal de transferencia no muestra datos ni advertencia de configuración");
     await page.screenshot({ path: `${SHOT_DIR}/03-cart-modal.png`, fullPage: false });
     await page.getByRole("dialog").getByRole("button", { name: "Cerrar modal" }).click();
@@ -125,6 +154,13 @@ async function main() {
     await page.screenshot({ path: `${SHOT_DIR}/05-order.png`, fullPage: false });
     record("/order estado compartido + sin auto-redirect", true);
 
+    // 6b. Acción de cancelación visible en pedido activo
+    await page.goto(`${BASE_URL}/order/3`, { waitUntil: "domcontentloaded" });
+    await page.getByText("Pedido #3").waitFor({ timeout: 15000 });
+    const cancelVisible = await page.getByRole("button", { name: "Cancelar pedido" }).isVisible().catch(() => false);
+    assert(cancelVisible, "El pedido activo no muestra la acción de cancelar");
+    record("Cancelación de pedido activo visible", true);
+
     // 7. Chat send
     await page.goto(`${BASE_URL}/chat/1`, { waitUntil: "domcontentloaded" });
     await page.getByText("Chat del Pedido #1").waitFor({ timeout: 15000 });
@@ -135,6 +171,7 @@ async function main() {
     await page.waitForTimeout(900);
     await page.screenshot({ path: `${SHOT_DIR}/06-chat.png`, fullPage: false });
     record("/chat envío y SSE", true);
+    console.log("AUTH CHECK REQUESTS:", authRequests);
 
     const criticalErrors = pageErrors.filter((message) =>
       !message.includes("favicon") && !message.includes("manifest") && !message.toLowerCase().includes("eventSource")

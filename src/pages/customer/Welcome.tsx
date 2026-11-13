@@ -1,8 +1,16 @@
-import { useNavigate } from "react-router";
+import { Navigate, useNavigate } from "react-router";
 import { Clock, Timer, ShieldCheck } from "lucide-react";
+import { useCustomerSession } from "@/hooks/useCustomerSession";
 
 export default function Welcome() {
   const navigate = useNavigate();
+  const { isAuthenticated } = useCustomerSession();
+
+  // Si el cliente ya tiene sesión, la landing pública no debe mostrarle
+  // "Crear cuenta / Iniciar sesión" como si hubiera cerrado sesión.
+  if (isAuthenticated) {
+    return <Navigate to="/home" replace />;
+  }
 
   return (
     <div className="fixed inset-0 w-full h-[100dvh] max-h-[100dvh] bg-ink-soft overflow-hidden flex items-center justify-center">

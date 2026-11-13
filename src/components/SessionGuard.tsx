@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback, type ReactNode } from "react"
 import { useNavigate } from "react-router"
 import { getSession, useSessionSync, clearSession } from "@/hooks/useSessionSync"
 import { useCustomerSession } from "@/hooks/useCustomerSession"
+import { checkCustomerAuth } from "@/lib/customerAuthCache"
 import { trpcCall } from "@/hooks/useDeliveryData"
 import { usePushNotifications } from "@/hooks/usePushNotifications"
 import { Loader2 } from "lucide-react"
@@ -45,24 +46,19 @@ export default function SessionGuard({ role, children }: { role: GuardRole; chil
   useSessionSync(handleSessionChange)
 
   useEffect(() => {
-    const session = getSession()
-    if (!session || session.role !== role) {
-      redirectOut()
-      return
-    }
-
+    // Para clientes, la cookie HttpOnly es la fuente de verdad.
+    // No bloquear por localStorage desincronizado: verificar backend primero.
     if (role === "customer") {
       let cancelled = false
       if (isAuthenticated && localStorage.getItem("customer_session")) {
         setChecking(false)
       }
 
-      // Verificación real contra el backend: localStorage por sí solo no autentica.
-      trpcCall<{ customer: any | null }>("customer.checkAuth")
-        .then((result) => {
+      checkCustomerAuth()
+        .then((customer) => {
           if (cancelled) return
-          if (result?.customer) {
-            login(result.customer)
+          if (customer) {
+            login(customer)
             setChecking(false)
           } else {
             redirectOut()
@@ -75,6 +71,12 @@ export default function SessionGuard({ role, children }: { role: GuardRole; chil
       return () => {
         cancelled = true
       }
+    }
+
+    const session = getSession()
+    if (!session || session.role !== role) {
+      redirectOut()
+      return
     }
 
     // For non-customer roles: verify with backend

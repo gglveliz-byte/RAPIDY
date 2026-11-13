@@ -17,11 +17,13 @@
  *   - `useCustomerOrders`, `useUpdateCustomerProfile` (@/hooks/useDeliveryData)
  *   - `getAddressFromCoords` (@/lib/locationUtils)
  *   - `ProfileOrdersModal` (./components/ProfileOrdersModal)
+ *   - `ThemeToggle` (@/components/ThemeToggle)
+ *   - `useTheme` (@/hooks/useTheme)
  *
  * @dependencias_externas
  *   - `react` (`useState`)
  *   - `react-router` (`useNavigate`)
- *   - `lucide-react` (`User`, `Phone`, `MapPin`, `ShoppingBag`, `ChevronRight`, `LogOut`, `Navigation`, `Pencil`, `Check`, `X`, `Shield`, `Undo2`, `Trash2`, `Sparkles`, `Clock`)
+ *   - `lucide-react` (`User`, `Phone`, `MapPin`, `ShoppingBag`, `ChevronRight`, `LogOut`, `Navigation`, `Pencil`, `Check`, `X`, `Shield`, `Undo2`, `Trash2`, `Sparkles`, `Clock`, `Sun`, `Moon`)
  *
  * @tablas_bd_o_redis
  *   - PostgreSQL (Neon): `customers`, `orders`
@@ -46,6 +48,8 @@ import {
   Trash2,
   Sparkles,
   Clock,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { useCustomerSession } from "@/hooks/useCustomerSession";
 import { useCustomerOrders, useUpdateCustomerProfile } from "@/hooks/useDeliveryData";
@@ -53,10 +57,13 @@ import { CustomerBottomNav } from "@/components/CustomerBottomNav";
 import { getAddressFromCoords } from "@/lib/locationUtils";
 import { ProfileOrdersModal } from "./components/ProfileOrdersModal";
 import { getOrderStatusMeta } from "@contracts/orderStatus";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { useTheme } from "@/hooks/useTheme";
 
 export default function CustomerProfile() {
   const navigate = useNavigate();
   const { customer, login, logout, isAuthenticated } = useCustomerSession();
+  const { isDark, toggleTheme } = useTheme();
   const [editingAddress, setEditingAddress] = useState(false);
   const [editAddress, setEditAddress] = useState("");
   const [geoLoading, setGeoLoading] = useState(false);
@@ -70,12 +77,12 @@ export default function CustomerProfile() {
 
   if (!isAuthenticated || !customer) {
     return (
-      <div className="mobile-container bg-surface min-h-screen flex flex-col items-center justify-center px-6 text-center select-none pb-safe-nav">
-        <div className="w-20 h-20 rounded-full bg-orange-50 border border-orange-100 flex items-center justify-center mb-4 shadow-xs">
+      <div className="mobile-container bg-surface dark:bg-[#0E0E12] min-h-screen flex flex-col items-center justify-center px-6 text-center select-none pb-safe-nav">
+        <div className="w-20 h-20 rounded-full bg-orange-50 dark:bg-brand/10 border border-orange-100 dark:border-brand/20 flex items-center justify-center mb-4 shadow-xs">
           <User className="w-10 h-10 text-brand" />
         </div>
-        <h2 className="text-xl font-black text-zinc-900 mb-2">Inicia sesión en Rapidy</h2>
-        <p className="text-zinc-500 text-sm max-w-[260px] mb-6">
+        <h2 className="text-xl font-black text-zinc-900 dark:text-white mb-2">Inicia sesión en Rapidy</h2>
+        <p className="text-zinc-500 dark:text-zinc-400 text-sm max-w-[260px] mb-6">
           Registrate o ingresa con tu número de celular para realizar pedidos
         </p>
         <button
@@ -146,9 +153,9 @@ export default function CustomerProfile() {
   const previewOrders = ordersList.slice(0, 2);
 
   return (
-    <div className="mobile-container bg-surface min-h-screen text-zinc-900 pb-32 select-none">
+    <div className="mobile-container bg-surface dark:bg-[#0E0E12] min-h-screen text-zinc-900 dark:text-white pb-32 select-none">
       {/* 1. Cabecera Fija Dark Velvet (Fixed Top Header con datos del cliente y salir) */}
-      <header className="fixed top-0 left-0 right-0 max-w-[480px] mx-auto z-40 bg-ink/95 backdrop-blur-2xl border-b border-white/10 shadow-xl px-4 pt-safe pb-2.5 transition-all flex items-center justify-between">
+      <header className="fixed top-0 left-0 right-0 max-w-[480px] mx-auto z-40 bg-ink/95 dark:bg-ink/95 backdrop-blur-2xl border-b border-white/10 dark:border-white/10 shadow-xl px-4 pt-safe pb-2.5 transition-all flex items-center justify-between">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="w-9 h-9 rounded-2xl bg-white/10 border border-white/15 flex items-center justify-center text-brand ring-1 ring-brand/40 shadow-xs shrink-0">
             <User className="w-4 h-4 text-brand" />
@@ -167,21 +174,24 @@ export default function CustomerProfile() {
           </div>
         </div>
 
-        {/* Botón Salir reubicado en la cabecera fija */}
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-500/10 hover:bg-red-500/20 border border-red-500/25 text-red-400 hover:text-red-300 text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-xs shrink-0 ml-2"
-          aria-label="Cerrar sesión"
-        >
-          <LogOut className="w-3.5 h-3.5 stroke-[2.2]" />
-          <span>Salir</span>
-        </button>
+        {/* Acciones de cabecera: ThemeToggle + Salir */}
+        <div className="flex items-center gap-2 shrink-0 ml-2">
+          <ThemeToggle size="sm" />
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-500/10 hover:bg-red-500/20 border border-red-500/25 text-red-400 hover:text-red-300 text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-xs shrink-0"
+            aria-label="Cerrar sesión"
+          >
+            <LogOut className="w-3.5 h-3.5 stroke-[2.2]" />
+            <span>Salir</span>
+          </button>
+        </div>
       </header>
 
       {/* 2. Contenido desplazable por detrás de la cabecera fija */}
       <div className="px-4 pt-[calc(env(safe-area-inset-top,0px)+68px)] space-y-4">
         {/* Tarjeta de Dirección de Entrega con Edición / GPS */}
-        <div className="bg-white rounded-2xl border border-zinc-100 shadow-[0_4px_16px_rgba(0,0,0,0.05)] p-4">
+        <div className="bg-white dark:bg-[#1A1A1E] rounded-2xl border border-zinc-100 dark:border-white/10 shadow-[0_4px_16px_rgba(0,0,0,0.05)] dark:shadow-none p-4">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] font-black uppercase tracking-wider text-zinc-400">
               Dirección de entrega
@@ -189,7 +199,7 @@ export default function CustomerProfile() {
             {!editingAddress && (
               <button
                 onClick={startEditing}
-                className="w-7 h-7 rounded-lg bg-zinc-50 border border-zinc-100 flex items-center justify-center text-zinc-500 hover:text-zinc-900 transition-colors cursor-pointer"
+                className="w-7 h-7 rounded-lg bg-zinc-50 dark:bg-zinc-800/80 border border-zinc-100 dark:border-white/10 flex items-center justify-center text-zinc-500 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-colors cursor-pointer"
                 aria-label="Editar dirección"
               >
                 <Pencil className="w-3.5 h-3.5" />
@@ -205,7 +215,7 @@ export default function CustomerProfile() {
                   value={editAddress}
                   onChange={(e) => setEditAddress(e.target.value)}
                   rows={2}
-                  className="flex-1 text-xs sm:text-sm bg-zinc-50 border border-zinc-200 rounded-xl p-2.5 focus:border-brand focus:ring-1 focus:ring-brand outline-none resize-none text-zinc-900"
+                  className="flex-1 text-xs sm:text-sm bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-white/15 rounded-xl p-2.5 focus:border-brand focus:ring-1 focus:ring-brand outline-none resize-none text-zinc-900 dark:text-white placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
                   placeholder="Ingresa tu dirección completa"
                 />
               </div>
@@ -213,7 +223,7 @@ export default function CustomerProfile() {
                 type="button"
                 onClick={handleGetLocation}
                 disabled={geoLoading}
-                className="mt-2 w-full h-8 border border-zinc-200 bg-white rounded-xl text-xs text-zinc-700 font-semibold flex items-center justify-center gap-2 hover:bg-zinc-50 active:scale-[0.98] transition-all disabled:opacity-50 cursor-pointer shadow-xs"
+                className="mt-2 w-full h-8 border border-zinc-200 dark:border-white/15 bg-white dark:bg-zinc-800/80 rounded-xl text-xs text-zinc-700 dark:text-zinc-200 font-semibold flex items-center justify-center gap-2 hover:bg-zinc-50 dark:hover:bg-zinc-800 active:scale-[0.98] transition-all disabled:opacity-50 cursor-pointer shadow-xs"
               >
                 <Navigation className="w-3.5 h-3.5 text-brand" />
                 {geoLoading ? "Obteniendo ubicación..." : "Usar mi ubicación GPS actual"}
@@ -229,7 +239,7 @@ export default function CustomerProfile() {
                 </button>
                 <button
                   onClick={cancelEditing}
-                  className="h-8 px-3 border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50 text-xs font-semibold rounded-xl flex items-center justify-center gap-1 transition-all cursor-pointer"
+                  className="h-8 px-3 border border-zinc-200 dark:border-white/15 bg-white dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700 text-xs font-semibold rounded-xl flex items-center justify-center gap-1 transition-all cursor-pointer"
                 >
                   <X className="w-3.5 h-3.5" />
                   Cancelar
@@ -237,9 +247,9 @@ export default function CustomerProfile() {
               </div>
             </div>
           ) : (
-            <div className="flex items-start gap-2 text-xs sm:text-sm text-zinc-700">
+            <div className="flex items-start gap-2 text-xs sm:text-sm text-zinc-700 dark:text-zinc-200">
               <MapPin className="w-4 h-4 text-brand mt-0.5 shrink-0" />
-              <span className="font-semibold">{customer.address || "Sin dirección guardada"}</span>
+              <span className="font-semibold text-zinc-900 dark:text-white">{customer.address || "Sin dirección guardada"}</span>
             </div>
           )}
         </div>
@@ -247,7 +257,7 @@ export default function CustomerProfile() {
         {/* Sección de Historial de Pedidos (Preview + Botón de Modal) */}
         <div>
           <div className="flex items-center justify-between mb-2.5">
-            <h2 className="text-base font-black text-zinc-900 tracking-tight">
+            <h2 className="text-base font-black text-zinc-900 dark:text-white tracking-tight">
               Historial de pedidos
             </h2>
             {ordersList.length > 0 && (
@@ -262,13 +272,13 @@ export default function CustomerProfile() {
           </div>
 
           {ordersLoading ? (
-            <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm p-5">
-              <div className="h-14 bg-zinc-100 rounded-xl animate-pulse" />
+            <div className="bg-white dark:bg-[#1A1A1E] rounded-2xl border border-zinc-100 dark:border-white/10 shadow-sm p-5">
+              <div className="h-14 bg-zinc-100 dark:bg-zinc-800 rounded-xl animate-pulse" />
             </div>
           ) : ordersError ? (
-            <div className="bg-white rounded-2xl border border-rose-100 shadow-sm p-5 text-center">
-              <p className="text-sm font-bold text-zinc-700">No pudimos cargar tus pedidos</p>
-              <p className="text-xs text-zinc-500 mt-1">{ordersError.message}</p>
+            <div className="bg-white dark:bg-[#1A1A1E] rounded-2xl border border-rose-100 dark:border-rose-950/40 shadow-sm p-5 text-center">
+              <p className="text-sm font-bold text-zinc-700 dark:text-zinc-200">No pudimos cargar tus pedidos</p>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{ordersError.message}</p>
               <button
                 onClick={() => refreshOrders()}
                 className="mt-3 h-10 px-4 bg-brand text-white text-xs font-bold rounded-xl"
@@ -277,9 +287,9 @@ export default function CustomerProfile() {
               </button>
             </div>
           ) : ordersList.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-zinc-100 shadow-[0_2px_12px_rgba(0,0,0,0.04)] p-6 text-center">
-              <ShoppingBag className="w-10 h-10 text-zinc-300 mx-auto mb-2" />
-              <p className="text-sm font-medium text-zinc-500">No tienes pedidos aún</p>
+            <div className="bg-white dark:bg-[#1A1A1E] rounded-2xl border border-zinc-100 dark:border-white/10 shadow-[0_2px_12px_rgba(0,0,0,0.04)] dark:shadow-none p-6 text-center">
+              <ShoppingBag className="w-10 h-10 text-zinc-300 dark:text-zinc-600 mx-auto mb-2" />
+              <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">No tienes pedidos aún</p>
             </div>
           ) : (
             <div className="space-y-2.5">
@@ -289,11 +299,11 @@ export default function CustomerProfile() {
                   <button
                     key={order.id}
                     onClick={() => navigate(`/order/${order.id}`)}
-                    className="w-full bg-white rounded-2xl border border-zinc-100 shadow-[0_2px_12px_rgba(0,0,0,0.04)] p-3.5 flex items-center justify-between text-left hover:border-brand/40 hover:shadow-md transition-all group cursor-pointer"
+                    className="w-full bg-white dark:bg-[#1A1A1E] rounded-2xl border border-zinc-100 dark:border-white/10 shadow-[0_2px_12px_rgba(0,0,0,0.04)] dark:shadow-none p-3.5 flex items-center justify-between text-left hover:border-brand/40 hover:shadow-md transition-all group cursor-pointer"
                   >
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold text-zinc-900 group-hover:text-brand transition-colors">
+                        <span className="text-sm font-bold text-zinc-900 dark:text-white group-hover:text-brand transition-colors">
                           Pedido #{order.id}
                         </span>
                         <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${meta.badgeClass}`}>
@@ -321,7 +331,7 @@ export default function CustomerProfile() {
               {ordersList.length > 2 && (
                 <button
                   onClick={() => setShowAllOrdersModal(true)}
-                  className="w-full py-2.5 px-4 bg-white border border-zinc-200/80 hover:bg-zinc-50 rounded-2xl text-xs font-bold text-zinc-700 flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                  className="w-full py-2.5 px-4 bg-white dark:bg-[#1A1A1E] border border-zinc-200/80 dark:border-white/10 hover:bg-zinc-50 dark:hover:bg-white/5 rounded-2xl text-xs font-bold text-zinc-700 dark:text-zinc-200 flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
                 >
                   <span>Ver los {ordersList.length} pedidos anteriores</span>
                   <ChevronRight className="w-3.5 h-3.5 text-brand" />
@@ -331,19 +341,64 @@ export default function CustomerProfile() {
           )}
         </div>
 
+        {/* Configuración de Apariencia (Modo Oscuro / Modo Claro) */}
+        <div>
+          <h2 className="text-[11px] font-black uppercase tracking-wider text-zinc-400 mb-2">
+            Apariencia
+          </h2>
+          <div className="bg-white dark:bg-[#1A1A1E] rounded-2xl border border-zinc-100 dark:border-white/10 shadow-[0_2px_12px_rgba(0,0,0,0.04)] dark:shadow-none p-3.5 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-orange-50 dark:bg-brand/10 border border-orange-100 dark:border-brand/20 flex items-center justify-center text-brand">
+                {isDark ? <Moon className="w-4 h-4 text-brand" /> : <Sun className="w-4 h-4 text-brand" />}
+              </div>
+              <div>
+                <span className="text-xs sm:text-sm font-semibold text-zinc-800 dark:text-zinc-200 block">
+                  Tema visual
+                </span>
+                <span className="text-[11px] text-zinc-400 font-medium">
+                  {isDark ? "Modo Oscuro activado" : "Modo Claro activado"}
+                </span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 border ${
+                isDark
+                  ? "bg-white/10 hover:bg-white/15 text-white border-white/15 shadow-xs"
+                  : "bg-zinc-100 hover:bg-zinc-200 text-zinc-800 border-zinc-200 shadow-xs"
+              }`}
+              aria-label="Alternar tema visual"
+            >
+              {isDark ? (
+                <>
+                  <Moon className="w-3.5 h-3.5 text-amber-300" />
+                  <span>Modo Oscuro</span>
+                </>
+              ) : (
+                <>
+                  <Sun className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Modo Claro</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
         {/* Información y Marco Legal */}
         <div>
           <h2 className="text-[11px] font-black uppercase tracking-wider text-zinc-400 mb-2">
             Información y Marco Legal
           </h2>
-          <div className="bg-white rounded-2xl border border-zinc-100 shadow-[0_2px_12px_rgba(0,0,0,0.04)] divide-y divide-zinc-100 overflow-hidden">
+          <div className="bg-white dark:bg-[#1A1A1E] rounded-2xl border border-zinc-100 dark:border-white/10 shadow-[0_2px_12px_rgba(0,0,0,0.04)] dark:shadow-none divide-y divide-zinc-100 dark:divide-white/5 overflow-hidden">
             <button
               onClick={() => navigate("/legal")}
-              className="w-full p-3.5 flex items-center justify-between text-left hover:bg-zinc-50 transition-colors cursor-pointer"
+              className="w-full p-3.5 flex items-center justify-between text-left hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors cursor-pointer"
             >
               <div className="flex items-center gap-3">
                 <Shield className="w-4 h-4 text-brand" />
-                <span className="text-xs sm:text-sm font-semibold text-zinc-800">
+                <span className="text-xs sm:text-sm font-semibold text-zinc-800 dark:text-zinc-200">
                   Centro Legal y Privacidad
                 </span>
               </div>
@@ -352,11 +407,11 @@ export default function CustomerProfile() {
 
             <button
               onClick={() => navigate("/boton-de-arrepentimiento")}
-              className="w-full p-3.5 flex items-center justify-between text-left hover:bg-zinc-50 transition-colors cursor-pointer"
+              className="w-full p-3.5 flex items-center justify-between text-left hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors cursor-pointer"
             >
               <div className="flex items-center gap-3">
                 <Undo2 className="w-4 h-4 text-brand" />
-                <span className="text-xs sm:text-sm font-semibold text-zinc-800">
+                <span className="text-xs sm:text-sm font-semibold text-zinc-800 dark:text-zinc-200">
                   Devolución y Desistimiento (🇪🇨)
                 </span>
               </div>
@@ -365,11 +420,11 @@ export default function CustomerProfile() {
 
             <button
               onClick={() => navigate("/eliminar-cuenta")}
-              className="w-full p-3.5 flex items-center justify-between text-left hover:bg-zinc-50 transition-colors cursor-pointer"
+              className="w-full p-3.5 flex items-center justify-between text-left hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors cursor-pointer"
             >
               <div className="flex items-center gap-3">
                 <Trash2 className="w-4 h-4 text-zinc-400" />
-                <span className="text-xs sm:text-sm font-semibold text-zinc-500">
+                <span className="text-xs sm:text-sm font-semibold text-zinc-500 dark:text-zinc-400">
                   Eliminar cuenta y datos
                 </span>
               </div>

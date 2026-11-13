@@ -1,4 +1,7 @@
-﻿# Auditoría de `/cart` y checkout — Rapidy (DeliveryCity)
+> **Reporte histórico de auditoría (2026-11-13).** No es un backlog ni una lista de tareas.
+> Varios hallazgos ya están corregidos. No implementes nada de este documento sin pedido explícito.
+> Estado actual verificado: [docs/customer/README.md](../customer/README.md).
+# Auditoría de `/cart` y checkout — Rapidy (DeliveryCity)
 
 - **Repo:** `C:\Users\HP\OneDrive\Desktop\Rapidy`
 - **Commit base:** `3f673c6` (`master`, 2026-11-13); la revisión comenzó sobre `fd11626`. El commit `3f673c6` solo sincronizó saltos de línea en tres componentes de OrderTracking, sin cambios de lógica en el checkout.

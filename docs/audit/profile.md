@@ -1,3 +1,6 @@
+> **Reporte histórico de auditoría (2026-11-13).** No es un backlog ni una lista de tareas.
+> Varios hallazgos ya están corregidos. No implementes nada de este documento sin pedido explícito.
+> Estado actual verificado: [docs/customer/README.md](../customer/README.md).
 # Auditoría de la ruta `/profile` — Rapidy (Customer Profile)
 
 - **Fecha:** 13/11/2026

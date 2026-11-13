@@ -78,12 +78,12 @@ export default function DriverChat() {
   return (
     <div className="mobile-container min-h-screen flex flex-col notranslate">
       {/* Header */}
-      <div className="bg-[#075E54] px-4 py-3 flex items-center gap-3 shadow-md z-10">
-        <button onClick={() => navigate(-1)} className="touch-target">
+      <div className="bg-ink px-4 pt-safe pb-3 flex items-center gap-3 shadow-md z-10">
+        <button onClick={() => navigate(-1)} className="touch-target text-white">
           <ArrowLeft className="w-5 h-5 text-white" />
         </button>
-        <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-          <span className="text-white text-sm font-medium">
+        <div className="w-10 h-10 bg-brand/15 border border-brand/30 rounded-full flex items-center justify-center">
+          <span className="text-brand text-sm font-black">
             {driverSession?.name?.charAt(0) || "C"}
           </span>
         </div>
@@ -97,7 +97,7 @@ export default function DriverChat() {
       </div>
 
       {/* Messages area */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-2" style={{background:"#ECE5DD"}}>
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-2 bg-surface">
         {grouped.map((group) => (
           <div key={group.date}>
             {/* Date separator */}
@@ -113,24 +113,24 @@ export default function DriverChat() {
               >
                 <div className={`max-w-[78%] ${isMine(msg) ? "order-1" : "order-1"}`}>
                   {!isMine(msg) && (
-                    <p className="text-[11px] font-semibold text-[#2E7D32] ml-1 mb-0.5">
+                    <p className="text-[11px] font-semibold text-brand ml-1 mb-0.5">
                       {msg.senderName || "Cliente"}
                     </p>
                   )}
                   <div className={`px-3 py-2 ${isMine(msg)
-                    ? "bg-[#DCF8C6] rounded-tl-xl rounded-tr-sm rounded-bl-xl rounded-br-xl shadow-sm"
-                    : "bg-white rounded-tl-sm rounded-tr-xl rounded-bl-xl rounded-br-xl shadow-sm"}`}
+                    ? "bg-brand text-white rounded-tl-xl rounded-tr-sm rounded-bl-xl rounded-br-xl shadow-sm"
+                    : "bg-white text-zinc-900 rounded-tl-sm rounded-tr-xl rounded-bl-xl rounded-br-xl shadow-sm"}`}
                   >
-                    <p className="text-sm text-gray-800 leading-snug whitespace-pre-wrap break-words">{msg.message}</p>
+                    <p className={`text-sm leading-snug whitespace-pre-wrap break-words ${isMine(msg) ? "text-white" : "text-zinc-800"}`}>{msg.message}</p>
                     <div className={`flex items-center gap-0.5 mt-0.5 ${isMine(msg) ? "justify-end" : "justify-start"}`}>
-                      <span className="text-[10px] text-gray-400">
+                      <span className={`text-[10px] ${isMine(msg) ? "text-white/80" : "text-zinc-400"}`}>
                         {new Date(msg.createdAt).toLocaleTimeString("es-ES", {
                           hour: "2-digit",
                           minute: "2-digit",
                         })}
                       </span>
                       {isMine(msg) && (
-                        <span className="text-[10px] text-blue-500">
+                        <span className="text-[10px] text-white">
                           {msg.isRead === "yes" ? <CheckCheck className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5" />}
                         </span>
                       )}
@@ -151,12 +151,12 @@ export default function DriverChat() {
       </div>
 
       {/* Quick messages */}
-      <div className="bg-[#F0F0F0] px-3 py-2 border-t border-gray-200 flex gap-2 overflow-x-auto no-scrollbar">
+      <div className="bg-white/95 px-3 py-2 border-t border-zinc-200 flex gap-2 overflow-x-auto no-scrollbar">
         {quickMessages.map((qm) => (
           <button
             key={qm}
             onClick={() => handleSend(qm)}
-            className="px-3 py-1.5 bg-white rounded-full text-xs text-gray-700 whitespace-nowrap hover:bg-gray-100 transition-colors shadow-sm"
+            className="px-3 py-1.5 bg-zinc-100 rounded-full text-xs text-zinc-700 whitespace-nowrap hover:bg-brand-soft hover:text-brand transition-colors shadow-sm"
           >
             {qm}
           </button>
@@ -164,7 +164,7 @@ export default function DriverChat() {
       </div>
 
       {/* Input */}
-      <div className="bg-[#F0F0F0] px-3 py-2 flex items-center gap-2">
+      <div className="bg-white px-3 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] flex items-center gap-2 border-t border-zinc-200/80">
         <input
           type="text"
           value={text}
@@ -177,12 +177,12 @@ export default function DriverChat() {
           }}
           maxLength={2000}
           placeholder="Escribe un mensaje..."
-          className="flex-1 h-11 px-4 bg-white rounded-full text-sm focus:outline-none shadow-sm"
+          className="flex-1 h-11 px-4 bg-zinc-100 border border-zinc-200/80 rounded-full text-sm text-zinc-900 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/20 shadow-sm"
         />
         <button
           onClick={() => handleSend(text)}
           disabled={sendChat.isPending || !text.trim()}
-          className="w-11 h-11 bg-[#075E54] rounded-full flex items-center justify-center text-white hover:bg-[#064E47] disabled:opacity-40 transition-all flex-shrink-0 shadow-sm"
+          className="w-11 h-11 bg-brand rounded-full flex items-center justify-center text-white hover:bg-brand-strong disabled:opacity-40 transition-all flex-shrink-0 shadow-sm"
         >
           <Send className="w-4 h-4" />
         </button>

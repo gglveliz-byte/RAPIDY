@@ -67,7 +67,8 @@ function SessionRefresh() {
   useEffect(() => {
     const interval = setInterval(async () => {
       const session = getSession()
-      if (!session) return
+      // El cliente tiene su propio refresh deslizante en useCustomerSession.
+      if (!session || session.role === "customer") return
       try {
         await trpcMutate("login.refresh", {})
       } catch { /* sin acción */ }

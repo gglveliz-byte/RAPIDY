@@ -29,6 +29,8 @@ export default defineConfig({
         manualChunks: {
           vendor: ["react", "react-dom", "react-router"],
           ui: ["lucide-react"],
+          motion: ["framer-motion"],
+          data: ["@tanstack/react-query", "@trpc/client", "@trpc/react-query", "superjson"],
           maps: ["leaflet"],
           charts: ["recharts"],
           export: ["jspdf", "jspdf-autotable", "xlsx"],

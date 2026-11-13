@@ -8,7 +8,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router";
+import { Navigate, useLocation, useNavigate } from "react-router";
 import {
   ArrowLeft,
   ArrowRight,
@@ -33,7 +33,7 @@ export default function Register() {
   const navigate = useNavigate();
   const location = useLocation();
   const navState = (location.state ?? null) as NavState;
-  const { login } = useCustomerSession();
+  const { login, customer } = useCustomerSession();
 
   const [form, setForm] = useState({
     firstName: "",
@@ -61,6 +61,10 @@ export default function Register() {
     const timer = setInterval(() => setResendIn((value) => Math.max(0, value - 1)), 1000);
     return () => clearInterval(timer);
   }, [resendIn]);
+
+  if (customer) {
+    return <Navigate to="/home" replace />;
+  }
 
   const handleGetLocation = async () => {
     if (!navigator.geolocation) {

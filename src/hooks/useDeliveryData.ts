@@ -2,6 +2,7 @@ import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import superjson from "superjson";
 import { useState, useEffect } from "react";
 import { useDebouncedValue } from "./useDebouncedValue";
+import { invalidateCustomerAuthCache } from "@/lib/customerAuthCache";
 
 const API_URL = "/api/trpc";
 
@@ -10,6 +11,7 @@ function isAuthError(data: any): boolean {
 }
 
 function handleAuthError() {
+  invalidateCustomerAuthCache()
   if (window.location.pathname === "/login" || window.location.pathname === "/customer-login") return
   fetch("/api/trpc/login.logout", {
     method: "POST",
@@ -145,8 +147,8 @@ export function useMerchantCommerceId() {
     if (fromMe?.id) {
       setCommerceId(fromMe.id);
       if (merchantUser) {
-        merchantUser.commerceId = fromMe.id;
-        localStorage.setItem("merchant_user", JSON.stringify(merchantUser));
+        const updatedUser = { ...merchantUser, commerceId: fromMe.id };
+        localStorage.setItem("merchant_user", JSON.stringify(updatedUser));
       }
       return;
     }
@@ -155,8 +157,8 @@ export function useMerchantCommerceId() {
       const id = results[0].id;
       setCommerceId(id);
       if (merchantUser) {
-        merchantUser.commerceId = id;
-        localStorage.setItem("merchant_user", JSON.stringify(merchantUser));
+        const updatedUser = { ...merchantUser, commerceId: id };
+        localStorage.setItem("merchant_user", JSON.stringify(updatedUser));
       }
     }
   }, [meQuery.data, searchQuery.data, commerceId, merchantUser]);

@@ -142,31 +142,31 @@ export function ProfileOrdersModal({
       <div className="absolute inset-0" onClick={onClose} />
 
       {/* Contenedor del Modal Bottom Sheet */}
-      <div className="relative bg-surface w-full max-w-[500px] rounded-t-[32px] sm:rounded-3xl shadow-2xl flex flex-col max-h-[90dvh] min-h-[50dvh] border border-zinc-200/80 overflow-hidden text-zinc-900 z-[121] animate-in slide-in-from-bottom-8 duration-200">
+      <div className="relative bg-surface dark:bg-[#141418] w-full max-w-[500px] rounded-t-[32px] sm:rounded-3xl shadow-2xl flex flex-col max-h-[90dvh] min-h-[50dvh] border border-zinc-200/80 dark:border-white/10 overflow-hidden text-zinc-900 dark:text-white z-[121] animate-in slide-in-from-bottom-8 duration-200">
         
         {/* Handle táctil para dispositivos móviles */}
-        <div className="w-12 h-1.5 bg-zinc-300 rounded-full mx-auto my-2.5 shrink-0" />
+        <div className="w-12 h-1.5 bg-zinc-300 dark:bg-zinc-700 rounded-full mx-auto my-2.5 shrink-0" />
 
         {/* Encabezado Principal */}
-        <div className="px-5 pb-3 border-b border-zinc-200/80 shrink-0">
+        <div className="px-5 pb-3 border-b border-zinc-200/80 dark:border-white/10 shrink-0 dark:bg-[#141418]">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <div className="w-9 h-9 rounded-2xl bg-brand/10 border border-brand/20 flex items-center justify-center text-brand shrink-0">
                 <ShoppingBag className="w-4 h-4 stroke-[2.4]" />
               </div>
               <div>
-                <h2 id="orders-history-title" className="text-base sm:text-lg font-black text-zinc-900 tracking-tight leading-none">
+                <h2 id="orders-history-title" className="text-base sm:text-lg font-black text-zinc-900 dark:text-white tracking-tight leading-none">
                   Historial de pedidos
                 </h2>
-                <p className="text-[11px] text-zinc-500 font-medium mt-1">
-                  Tienes <strong className="text-zinc-800">{orders.length}</strong> {orders.length === 1 ? "pedido registrado" : "pedidos registrados"}
+                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium mt-1">
+                  Tienes <strong className="text-zinc-800 dark:text-zinc-200">{orders.length}</strong> {orders.length === 1 ? "pedido registrado" : "pedidos registrados"}
                 </p>
               </div>
             </div>
 
             <button
               onClick={onClose}
-              className="w-11 h-11 rounded-full bg-zinc-200/70 hover:bg-zinc-200 active:scale-95 flex items-center justify-center text-zinc-600 hover:text-zinc-900 transition-all cursor-pointer"
+              className="w-11 h-11 rounded-full bg-zinc-200/70 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 dark:hover:text-white active:scale-95 flex items-center justify-center text-zinc-600 hover:text-zinc-900 transition-all cursor-pointer"
               aria-label="Cerrar modal"
             >
               <X className="w-4 h-4" />
@@ -176,18 +176,18 @@ export function ProfileOrdersModal({
           {/* Barra de Búsqueda (Visible si hay más de 2 pedidos) */}
           {orders.length > 2 && (
             <div className="relative mt-3">
-              <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <Search className="w-4 h-4 text-zinc-400 dark:text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="text"
                 placeholder="Buscar por # de orden o producto..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full h-9 pl-9 pr-3 text-xs bg-white rounded-xl border border-zinc-200 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/20 text-zinc-800 placeholder-zinc-400 shadow-2xs"
+                className="w-full h-9 pl-9 pr-3 text-xs bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-white/15 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/20 text-zinc-800 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 shadow-2xs"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery("")}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 cursor-pointer"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300 cursor-pointer"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -202,8 +202,8 @@ export function ProfileOrdersModal({
                 onClick={() => setStatusFilter("all")}
                 className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   statusFilter === "all"
-                    ? "bg-zinc-900 text-white shadow-xs"
-                    : "bg-white text-zinc-600 border border-zinc-200/70 hover:bg-zinc-100"
+                    ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 shadow-xs"
+                    : "bg-white dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200/70 dark:border-white/10 hover:bg-zinc-100 dark:hover:bg-zinc-700"
                 }`}
               >
                 Todos ({orders.length})
@@ -213,7 +213,7 @@ export function ProfileOrdersModal({
                 className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   statusFilter === "delivered"
                     ? "bg-brand text-white shadow-xs shadow-brand/25"
-                    : "bg-white text-zinc-600 border border-zinc-200/70 hover:bg-zinc-100"
+                    : "bg-white dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200/70 dark:border-white/10 hover:bg-zinc-100 dark:hover:bg-zinc-700"
                 }`}
               >
                 Entregados ({orders.filter((o) => (o.status || "").toLowerCase() === "delivered").length})
@@ -223,7 +223,7 @@ export function ProfileOrdersModal({
                 className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   statusFilter === "active"
                     ? "bg-sky-600 text-white shadow-xs"
-                    : "bg-white text-zinc-600 border border-zinc-200/70 hover:bg-zinc-100"
+                    : "bg-white dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200/70 dark:border-white/10 hover:bg-zinc-100 dark:hover:bg-zinc-700"
                 }`}
               >
                 En proceso ({orders.filter((o) => {
@@ -239,11 +239,11 @@ export function ProfileOrdersModal({
         <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-3 space-y-3 pb-[calc(2.5rem+env(safe-area-inset-bottom,0px))] min-h-0">
           {filteredOrders.length === 0 ? (
             <div className="py-14 text-center">
-              <div className="w-14 h-14 rounded-full bg-zinc-100 flex items-center justify-center mx-auto mb-3 text-zinc-400">
+              <div className="w-14 h-14 rounded-full bg-zinc-100 dark:bg-zinc-800/80 flex items-center justify-center mx-auto mb-3 text-zinc-400 dark:text-zinc-500">
                 <ShoppingBag className="w-6 h-6 stroke-[1.5]" />
               </div>
-              <p className="text-sm font-bold text-zinc-700">No se encontraron pedidos</p>
-              <p className="text-xs text-zinc-400 mt-0.5">
+              <p className="text-sm font-bold text-zinc-700 dark:text-zinc-200">No se encontraron pedidos</p>
+              <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">
                 {searchQuery ? "Intenta con otro término de búsqueda" : "Aún no tienes pedidos en esta categoría"}
               </p>
             </div>
@@ -268,12 +268,12 @@ export function ProfileOrdersModal({
                       navigate(`/order/${order.id}`);
                     }
                   }}
-                  className="w-full bg-white rounded-2xl border border-zinc-200/80 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-4 hover:border-brand/50 hover:shadow-md transition-all group cursor-pointer text-left"
+                  className="w-full bg-white dark:bg-[#1E1E24] rounded-2xl border border-zinc-200/80 dark:border-white/10 shadow-[0_2px_12px_rgba(0,0,0,0.03)] dark:shadow-none p-4 hover:border-brand/50 dark:hover:border-brand/50 hover:shadow-md transition-all group cursor-pointer text-left"
                 >
                   {/* Fila Superior: ID del Pedido + Estado en Español */}
-                  <div className="flex items-center justify-between gap-2 pb-2 border-b border-zinc-100">
+                  <div className="flex items-center justify-between gap-2 pb-2 border-b border-zinc-100 dark:border-white/5">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-black text-zinc-900 group-hover:text-brand transition-colors">
+                      <span className="text-sm font-black text-zinc-900 dark:text-white group-hover:text-brand transition-colors">
                         Pedido #{order.id}
                       </span>
                       <span
@@ -293,17 +293,17 @@ export function ProfileOrdersModal({
                   {order.items && order.items.length > 0 && (
                     <div className="py-2.5 space-y-1">
                       {order.items.slice(0, 3).map((item, idx) => (
-                        <div key={idx} className="flex items-center justify-between text-xs text-zinc-600">
+                        <div key={idx} className="flex items-center justify-between text-xs text-zinc-600 dark:text-zinc-300">
                           <span className="truncate pr-2">
-                            • <strong className="text-zinc-800">{parseFloat(String(item.quantity))}x</strong> {item.productName}
+                            • <strong className="text-zinc-800 dark:text-zinc-100">{parseFloat(String(item.quantity))}x</strong> {item.productName}
                           </span>
-                          <span className="text-zinc-400 shrink-0 text-[11px]">
+                          <span className="text-zinc-400 dark:text-zinc-500 shrink-0 text-[11px]">
                             ${parseFloat(item.total || "0").toFixed(2)}
                           </span>
                         </div>
                       ))}
                       {order.items.length > 3 && (
-                        <p className="text-[11px] text-zinc-400 font-medium italic pt-0.5">
+                        <p className="text-[11px] text-zinc-400 dark:text-zinc-500 font-medium italic pt-0.5">
                           +{order.items.length - 3} productos adicionales...
                         </p>
                       )}
@@ -311,8 +311,8 @@ export function ProfileOrdersModal({
                   )}
 
                   {/* Fila Inferior: Fecha y Botón de Navegación */}
-                  <div className="flex items-center justify-between pt-2 border-t border-zinc-50 text-xs">
-                    <div className="flex items-center gap-1.5 text-zinc-400">
+                  <div className="flex items-center justify-between pt-2 border-t border-zinc-50 dark:border-white/5 text-xs">
+                    <div className="flex items-center gap-1.5 text-zinc-400 dark:text-zinc-400">
                       <Clock className="w-3.5 h-3.5" />
                       <span>
                         {new Date(order.createdAt).toLocaleString("es-ES", {

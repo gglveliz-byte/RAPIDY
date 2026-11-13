@@ -2,14 +2,16 @@
  * @archivo src/pages/customer/components/HomePromoBanner.tsx
  * @modulo 02-customer-home (Banner Dinámico: Tops de Productos Más Pedidos)
  * @proposito
- *   Banner interactivo de alto impacto visual para el inicio de Rapidy.
+ *   Banner interactivo de alto impacto visual para el inicio de Rapidy con
+ *   compatibilidad para Modo Oscuro (Dark Velvet #0E0E12) y Modo Claro.
  *   Clasifica y rota dinámicamente en tiempo real los productos más pedidos (TOP 1, 2, 3, 4...)
  *   conforme a las órdenes registradas en PostgreSQL. Presenta insignias de ranking (TOP #1 MÁS PEDIDO),
  *   animaciones fluidas con framer-motion, fotos del platillo, precio y botón de compra directa.
  *
  * @resumen_contenido
  *   - Componente `HomePromoBanner`: Carrusel rotativo con temporizador automático,
- *     insignia de ranking reactivo, selector de indicadores y enlace directo al comercio.
+ *     insignia de ranking reactivo, selector de indicadores y enlace directo al comercio
+ *     con acento Flame Orange oficial y bordes sutiles dark:border-white/10.
  *
  * @dependencias_internas
  *   - `useTopOrderedProducts` (@/hooks/useDeliveryData)
@@ -19,7 +21,7 @@
  *   - `react` (`useState`, `useEffect`)
  *   - `react-router` (`useNavigate`)
  *   - `framer-motion` (`motion`, `AnimatePresence`)
- *   - `lucide-react` (`Zap`, `ArrowRight`, `Flame`, `Trophy`)
+ *   - `lucide-react` (`Zap`, `ArrowRight`, `Flame`)
  *
  * @tablas_bd_o_redis
  *   - PostgreSQL (Neon): `order_items`, `products`, `commerces`
@@ -99,7 +101,7 @@ export function HomePromoBanner() {
   return (
     <div
       onClick={handleActionClick}
-      className="relative w-full overflow-hidden rounded-3xl bg-gradient-to-r from-[#FFA000] via-[#FF8500] to-[#FF5E00] shadow-[0_12px_36px_rgba(255,106,0,0.35)] p-5 sm:p-6 text-white cursor-pointer select-none group"
+      className="relative w-full overflow-hidden rounded-3xl bg-gradient-to-r from-[#FFA000] via-[#FF8500] to-[#FF5E00] shadow-[0_12px_36px_rgba(255,106,0,0.35)] dark:shadow-[0_12px_36px_rgba(255,106,0,0.25)] border border-transparent dark:border-white/10 p-5 sm:p-6 text-white cursor-pointer select-none group"
     >
       {/* Luces y destellos dinámicos de fondo */}
       <div className="absolute -right-10 -bottom-10 w-48 h-48 bg-white/20 rounded-full blur-2xl pointer-events-none group-hover:scale-125 transition-transform duration-700" />
@@ -160,7 +162,7 @@ export function HomePromoBanner() {
               <img
                 src={safeImage(currentProduct.image, "product")}
                 alt={currentProduct.name}
-                className="w-24 sm:w-28 h-24 sm:h-28 object-cover rounded-2xl shadow-[0_12px_24px_rgba(0,0,0,0.35)] ring-2 ring-white/40"
+                className="w-24 sm:w-28 h-24 sm:h-28 object-cover rounded-2xl shadow-[0_12px_24px_rgba(0,0,0,0.35)] ring-2 ring-white/40 dark:ring-white/30"
               />
 
               {/* Insignia Dinámica del Ranking de Pedidos */}

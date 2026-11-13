@@ -95,7 +95,7 @@ export default function RegretButton() {
     }
 
     // Validación de teléfono celular en Ecuador
-    const cleanPhone = form.phone.replace(/[\s\-\(\)]/g, "");
+    const cleanPhone = form.phone.replace(/[\s()-]/g, "");
     if (cleanPhone.length < 9) {
       setError("Ingresa un número celular ecuatoriano válido (+593 o 09XXXXXXXX).");
       return;

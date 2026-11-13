@@ -135,6 +135,10 @@ export function OrderTrackingMap({
     };
   }, []);
 
+  useEffect(() => {
+    if (deliveryCoords) hasFittedRef.current = false;
+  }, [deliveryCoords?.lat, deliveryCoords?.lng]);
+
   const mapContainerRef = useCallback((element: HTMLDivElement | null) => {
     if (element && !mapRef.current) {
       const map = L.map(element, {
@@ -302,12 +306,12 @@ export function OrderTrackingMap({
   }, [followDriver, driverPos]);
 
   return (
-    <div className="relative">
-      <div className="h-60 sm:h-72 bg-zinc-200 relative z-0">
+    <div className="relative border-b border-zinc-200 dark:border-white/10">
+      <div className="h-60 sm:h-72 bg-zinc-200 dark:bg-[#121216] relative z-0">
         <div ref={mapContainerRef} className="absolute inset-0" />
         {geoLoading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/20 z-10 backdrop-blur-2xs">
-            <span className="text-xs font-bold text-zinc-800 bg-white/95 px-3.5 py-1.5 rounded-full shadow-md">
+          <div className="absolute inset-0 flex items-center justify-center bg-black/20 dark:bg-black/50 z-10 backdrop-blur-2xs">
+            <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200 bg-white/95 dark:bg-[#1A1A1E]/95 border border-zinc-200/80 dark:border-white/10 px-3.5 py-1.5 rounded-full shadow-md">
               Localizando destino...
             </span>
           </div>
@@ -318,7 +322,9 @@ export function OrderTrackingMap({
           <button
             onClick={onToggleFollowDriver}
             className={`absolute bottom-3 right-3 z-10 w-11 h-11 rounded-2xl flex items-center justify-center shadow-lg transition-all active:scale-90 cursor-pointer ${
-              followDriver ? "bg-brand text-white shadow-brand/40" : "bg-white text-zinc-700 hover:bg-zinc-50 border border-zinc-200"
+              followDriver
+                ? "bg-brand text-white shadow-brand/40"
+                : "bg-white dark:bg-[#1A1A1E] text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-white/10"
             }`}
             aria-label={followDriver ? "Dejar de seguir al repartidor" : "Centrar en el repartidor"}
             aria-pressed={followDriver}
@@ -330,7 +336,7 @@ export function OrderTrackingMap({
 
       {/* Franja de Información del Repartidor */}
       {order.driver && !isCancelled && (
-        <div className="bg-ink text-white px-4 py-2.5 flex items-center justify-between text-xs sm:text-sm border-t border-white/10 shadow-md">
+        <div className="bg-ink dark:bg-[#1A1A1E] text-white px-4 py-2.5 flex items-center justify-between text-xs sm:text-sm border-t border-white/10 dark:border-white/10 shadow-md">
           <div className="flex items-center gap-2 min-w-0">
             <div className="w-7 h-7 rounded-xl bg-brand/20 flex items-center justify-center text-brand shrink-0">
               <Navigation className="w-3.5 h-3.5" />
@@ -341,7 +347,7 @@ export function OrderTrackingMap({
             </span>
           </div>
           {estimatedMinutes && !isDelivered && (
-            <div className="flex items-center gap-1.5 text-brand font-black shrink-0 bg-white/5 px-2.5 py-1 rounded-lg border border-white/10">
+            <div className="flex items-center gap-1.5 text-brand font-black shrink-0 bg-white/5 dark:bg-white/10 px-2.5 py-1 rounded-lg border border-white/10">
               <Clock className="w-3.5 h-3.5" />
               <span>≈{estimatedMinutes} min</span>
             </div>

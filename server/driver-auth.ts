@@ -79,7 +79,6 @@ export async function setDriverCookies(resHeaders: Headers, reqHeaders: Headers,
     maxAge: 30 * 24 * 60 * 60,
     path: "/",
     httpOnly: true,
-    sameSite: "None",
   }));
   return result[0];
 }

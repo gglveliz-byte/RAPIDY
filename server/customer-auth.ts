@@ -7,7 +7,7 @@ import { getSessionCookieOptions } from "./lib/cookies";
 
 const JWT_ALG = "HS256";
 const ACCESS_EXPIRY = "15 minutes";
-const REFRESH_EXPIRY = "30 days";
+const REFRESH_EXPIRY = "365 days";
 const REGISTRATION_EXPIRY = "10 minutes";
 
 export interface CustomerTokenPayload {
@@ -134,10 +134,9 @@ export async function setCustomerCookies(
   }));
   resHeaders.append("Set-Cookie", serializeCookie("refresh_token", tokens.refresh, {
     ...cookieOpts,
-    maxAge: 30 * 24 * 60 * 60,
+    maxAge: 365 * 24 * 60 * 60,
     path: "/",
     httpOnly: true,
-    sameSite: "None",
   }));
   return customer;
 }
@@ -155,6 +154,5 @@ export async function clearCustomerCookies(resHeaders: Headers, reqHeaders?: Hea
     maxAge: 0,
     path: "/",
     httpOnly: true,
-    sameSite: "None",
   }));
 }

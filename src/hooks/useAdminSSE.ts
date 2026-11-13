@@ -10,7 +10,10 @@ export function useAdminSSE(onUpdate: () => void) {
   const fallbackRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
   const mountedRef = useRef(true);
   const onUpdateRef = useRef(onUpdate);
-  onUpdateRef.current = onUpdate;
+
+  useEffect(() => {
+    onUpdateRef.current = onUpdate;
+  }, [onUpdate]);
 
   useEffect(() => {
     mountedRef.current = true;

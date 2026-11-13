@@ -1,5 +1,10 @@
 # REGISTRO VIVO DE ARQUITECTURA, DEPENDENCIAS E INTEGRACIONES (LIVE LEDGER)
 
+> **NOTA (2026-11-13):** este documento es histórico y contiene versiones/decisiones
+> desactualizadas (tRPC 10, Drizzle 0.39, precios en ARS, etc.). La documentación
+> vigente y verificada del flujo Cliente está en:
+> [`docs/customer/README.md`](./customer/README.md).
+
 **Última Actualización:** 2026-11-13 16:56:00 UTC  
 **Agente / Autor de Última Modificación:** Antigravity (Google DeepMind)  
 **Estado de Integridad (<500 líneas por archivo):** VERIFICADO (100% compliant)  

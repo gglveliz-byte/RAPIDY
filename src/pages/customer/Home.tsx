@@ -2,15 +2,17 @@
  * @archivo src/pages/customer/Home.tsx
  * @modulo 02-customer-home (Panel Principal de Cliente)
  * @proposito
- *   Pantalla principal para clientes autenticados de Rapidy.
+ *   Pantalla principal para clientes autenticados de Rapidy con soporte nativo
+ *   para Modo Oscuro (Dark Velvet #0E0E12 con acento Flame Orange #FF6A00) y Modo Claro.
  *   Presenta la identidad visual oficial con el eslogan corporativo,
- *   barra de búsqueda, atajos a las 4 categorías clave (Comida, Supermercado, Farmacia, Compras),
+ *   barra de búsqueda, atajos a las categorías dinámicas,
  *   banner promocional interactivo con platillos en levitación,
  *   carrusel de restaurantes destacados y listado de comercios asociados.
  *
  * @resumen_contenido
  *   - Componente `CustomerHome`: Orquesta el encabezado, categorías, promociones y catálogo.
- *   - Componentes locales `ProductCard` y `CommerceCard`: Tarjetas de platillos y comercios.
+ *   - Componentes locales `ProductCard` y `CommerceCard`: Tarjetas táctiles dark:bg-[#1A1A1E]
+ *     con bordes sutiles dark:border-white/10 y tipografía contrastante.
  *   - Eventos SSE en tiempo real: Actualiza productos y estados mediante `useProductEvents`.
  *
  * @dependencias_internas
@@ -119,7 +121,7 @@ export default function CustomerHome() {
   };
 
   return (
-    <div className="mobile-container bg-surface min-h-screen pb-32 select-none">
+    <div className="mobile-container bg-surface dark:bg-[#0E0E12] min-h-screen pb-32 select-none transition-colors duration-200">
       {/* 1. Header with Logo, Slogan and Search */}
       <HomeHeader
         customerName={customer?.firstName}
@@ -154,7 +156,7 @@ export default function CustomerHome() {
         {(filteredProducts.length > 0 || (loadingFeatured && !searchQuery && !selectedCategory)) && (
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-base sm:text-lg font-black text-zinc-900 tracking-tight">
+              <h2 className="text-base sm:text-lg font-black text-zinc-900 dark:text-white tracking-tight">
                 {searchQuery
                   ? `Productos (${filteredProducts.length})`
                   : selectedCategory
@@ -163,7 +165,7 @@ export default function CustomerHome() {
               </h2>
               <button
                 onClick={() => navigate("/search")}
-                className="text-xs font-bold text-brand flex items-center gap-0.5 cursor-pointer"
+                className="text-xs font-bold text-brand hover:text-brand-strong flex items-center gap-0.5 cursor-pointer transition-colors"
               >
                 <span>Ver todo</span>
                 <ChevronRight className="w-3.5 h-3.5" />
@@ -173,7 +175,7 @@ export default function CustomerHome() {
             {loadingFeatured && !searchQuery && !selectedCategory ? (
               <div className="flex gap-3 overflow-x-auto no-scrollbar">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="min-w-[160px] h-48 bg-zinc-200 rounded-2xl animate-pulse" />
+                  <div key={i} className="min-w-[160px] h-48 bg-zinc-200 dark:bg-[#1A1A1E] border border-transparent dark:border-white/5 rounded-2xl animate-pulse" />
                 ))}
               </div>
             ) : (
@@ -189,7 +191,7 @@ export default function CustomerHome() {
         {/* 6. All Commerces or Search Results */}
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-base sm:text-lg font-black text-zinc-900 tracking-tight">
+            <h2 className="text-base sm:text-lg font-black text-zinc-900 dark:text-white tracking-tight">
               {selectedCategory
                 ? `Comercios (${filteredCommerces.length})`
                 : searchQuery
@@ -201,14 +203,14 @@ export default function CustomerHome() {
           {loadingCommerces ? (
             <div className="space-y-3">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="h-32 bg-zinc-200 rounded-2xl animate-pulse" />
+                <div key={i} className="h-32 bg-zinc-200 dark:bg-[#1A1A1E] border border-transparent dark:border-white/5 rounded-2xl animate-pulse" />
               ))}
             </div>
           ) : filteredCommerces.length === 0 ? (
-            <div className="text-center py-12 bg-white rounded-3xl border border-zinc-100">
-              <Search className="w-10 h-10 text-zinc-300 mx-auto mb-2" />
-              <p className="text-zinc-600 font-bold text-sm">No encontramos resultados</p>
-              <p className="text-zinc-400 text-xs mt-1">Prueba buscando otra categoría o producto</p>
+            <div className="text-center py-12 bg-white dark:bg-[#1A1A1E] rounded-3xl border border-zinc-100 dark:border-white/10 shadow-xs">
+              <Search className="w-10 h-10 text-zinc-300 dark:text-zinc-600 mx-auto mb-2" />
+              <p className="text-zinc-600 dark:text-zinc-300 font-bold text-sm">No encontramos resultados</p>
+              <p className="text-zinc-400 dark:text-zinc-500 text-xs mt-1">Prueba buscando otra categoría o producto</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -239,9 +241,9 @@ function ProductCard({ product }: { product: any }) {
   const available = product.isAvailable === "yes" && product.commerceIsOpen !== "closed";
 
   return (
-    <div className="min-w-[165px] bg-white rounded-2xl border border-zinc-100 shadow-[0_4px_16px_rgba(0,0,0,0.05)] overflow-hidden flex flex-col justify-between group">
+    <div className="min-w-[165px] bg-white dark:bg-[#1A1A1E] rounded-2xl border border-zinc-100 dark:border-white/10 shadow-[0_4px_16px_rgba(0,0,0,0.05)] dark:shadow-[0_4px_16px_rgba(0,0,0,0.35)] overflow-hidden flex flex-col justify-between group transition-colors">
       <div
-        className="h-28 bg-zinc-100 bg-cover bg-center cursor-pointer group-hover:scale-105 transition-transform duration-300 relative"
+        className="h-28 bg-zinc-100 dark:bg-zinc-800 bg-cover bg-center cursor-pointer group-hover:scale-105 transition-transform duration-300 relative"
         style={{ backgroundImage: `url(${safeImage(product.image, "product")})` }}
         onClick={() => navigate(`/commerce/${product.commerceId}`)}
       >
@@ -252,11 +254,11 @@ function ProductCard({ product }: { product: any }) {
         )}
       </div>
       <div className="p-3">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 truncate">
+        <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 truncate">
           {product.commerceName}
         </p>
-        <p className="text-xs font-bold text-zinc-900 truncate mt-0.5">{product.name}</p>
-        <div className="flex items-center justify-between mt-2 pt-1 border-t border-zinc-50">
+        <p className="text-xs font-bold text-zinc-900 dark:text-white truncate mt-0.5">{product.name}</p>
+        <div className="flex items-center justify-between mt-2 pt-1 border-t border-zinc-50 dark:border-white/5">
           <span className="text-sm font-black text-brand">${product.price}</span>
           <button
             disabled={!available}
@@ -272,7 +274,7 @@ function ProductCard({ product }: { product: any }) {
                 unitType: product.unitType,
               });
             }}
-            className="w-9 h-9 bg-brand hover:bg-brand-strong disabled:bg-zinc-300 disabled:shadow-none text-white rounded-xl flex items-center justify-center active:scale-90 transition-all shadow-sm shadow-brand/30 cursor-pointer disabled:cursor-not-allowed"
+            className="w-9 h-9 bg-brand hover:bg-brand-strong disabled:bg-zinc-300 dark:disabled:bg-zinc-700 disabled:shadow-none text-white rounded-xl flex items-center justify-center active:scale-90 transition-all shadow-sm shadow-brand/30 cursor-pointer disabled:cursor-not-allowed"
             aria-label={available ? "Agregar al carrito" : "Producto no disponible"}
           >
             <Plus className="w-4 h-4 stroke-[2.5]" />
@@ -292,9 +294,9 @@ function CommerceCard({ commerce, featuredProducts = [] }: { commerce: any; feat
   const commerceOpen = commerce.isOpen === "open";
 
   return (
-    <div className="bg-white rounded-3xl border border-zinc-100 shadow-[0_4px_20px_rgba(0,0,0,0.04)] overflow-hidden">
+    <div className="bg-white dark:bg-[#1A1A1E] rounded-3xl border border-zinc-100 dark:border-white/10 shadow-[0_4px_20px_rgba(0,0,0,0.04)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.35)] overflow-hidden transition-colors">
       <div
-        className="h-32 bg-zinc-100 bg-cover bg-center cursor-pointer relative"
+        className="h-32 bg-zinc-100 dark:bg-zinc-800 bg-cover bg-center cursor-pointer relative"
         style={{ backgroundImage: `url(${safeImage(commerce.coverImage, "cover")})` }}
         onClick={() => navigate(`/commerce/${commerce.id}`)}
       >
@@ -318,19 +320,19 @@ function CommerceCard({ commerce, featuredProducts = [] }: { commerce: any; feat
           <img
             src={safeImage(commerce.logo, "logo")}
             alt={commerce.name}
-            className="w-14 h-14 rounded-2xl object-cover -mt-10 relative z-10 border-2 border-white shadow-md bg-white shrink-0"
+            className="w-14 h-14 rounded-2xl object-cover -mt-10 relative z-10 border-2 border-white dark:border-[#1A1A1E] shadow-md bg-white dark:bg-zinc-800 shrink-0"
             onError={(e) => {
               (e.target as HTMLImageElement).src = safeImage(null, "logo");
             }}
           />
           <div className="flex-1 min-w-0">
-            <h3 className="font-bold text-zinc-900 text-sm truncate">{commerce.name}</h3>
-            <div className="flex items-center gap-3 mt-1 text-xs text-zinc-500 font-medium">
+            <h3 className="font-bold text-zinc-900 dark:text-white text-sm truncate">{commerce.name}</h3>
+            <div className="flex items-center gap-3 mt-1 text-xs text-zinc-500 dark:text-zinc-400 font-medium">
               <span className="flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5 text-zinc-400" />
+                <Clock className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500" />
                 {commerce.deliveryTime}
               </span>
-              <span className="flex items-center gap-1 font-bold text-zinc-700">
+              <span className="flex items-center gap-1 font-bold text-zinc-700 dark:text-zinc-200">
                 <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
                 {commerce.rating}
               </span>
@@ -343,21 +345,21 @@ function CommerceCard({ commerce, featuredProducts = [] }: { commerce: any; feat
       </div>
 
       {featured.length > 0 && (
-        <div className="border-t border-zinc-100 p-3 bg-zinc-50/50">
+        <div className="border-t border-zinc-100 dark:border-white/5 p-3 bg-zinc-50/50 dark:bg-black/25">
           <div className="flex gap-2.5 overflow-x-auto no-scrollbar pb-1">
             {featured.map((product: any) => {
               const productAvailable = commerceOpen && product.isAvailable === "yes";
               return (
               <div
                 key={product.id}
-                className="shrink-0 w-36 bg-white rounded-2xl p-2.5 border border-zinc-100 shadow-xs"
+                className="shrink-0 w-36 bg-white dark:bg-[#222227] rounded-2xl p-2.5 border border-zinc-100 dark:border-white/10 shadow-xs transition-colors"
               >
                 <div
-                  className="w-full h-20 bg-zinc-100 bg-cover bg-center rounded-xl mb-1.5 cursor-pointer"
+                  className="w-full h-20 bg-zinc-100 dark:bg-zinc-800 bg-cover bg-center rounded-xl mb-1.5 cursor-pointer"
                   style={{ backgroundImage: `url(${safeImage(product.image, "product")})` }}
                   onClick={() => navigate(`/commerce/${commerce.id}`)}
                 />
-                <p className="text-xs font-bold text-zinc-900 truncate">{product.name}</p>
+                <p className="text-xs font-bold text-zinc-900 dark:text-white truncate">{product.name}</p>
                 <div className="flex items-center justify-between mt-1.5">
                   <span className="text-xs font-black text-brand">${product.price}</span>
                   <button
@@ -375,7 +377,7 @@ function CommerceCard({ commerce, featuredProducts = [] }: { commerce: any; feat
                         unitType: product.unitType,
                       });
                     }}
-                    className="w-8 h-8 bg-brand disabled:bg-zinc-300 text-white rounded-lg flex items-center justify-center active:scale-90 transition-transform shadow-xs cursor-pointer disabled:cursor-not-allowed"
+                    className="w-8 h-8 bg-brand hover:bg-brand-strong disabled:bg-zinc-300 dark:disabled:bg-zinc-700 text-white rounded-lg flex items-center justify-center active:scale-90 transition-transform shadow-xs cursor-pointer disabled:cursor-not-allowed"
                     aria-label={productAvailable ? `Agregar ${product.name}` : `${product.name} no disponible`}
                   >
                     <Plus className="w-3.5 h-3.5 stroke-[2.5]" />

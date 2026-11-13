@@ -11,15 +11,18 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router";
 import { ArrowLeft, AlertCircle, Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
-import { useOrder, useUpdatePaymentReceipt } from "@/hooks/useDeliveryData";
+import { useOrder, useUpdatePaymentReceipt, useUpdateOrderStatus } from "@/hooks/useDeliveryData";
 import { useOrderEvents } from "@/hooks/useOrderEvents";
+import { useGeocode, type GeoCoords } from "@/hooks/useGeocode";
 import { trpc } from "@/providers/trpc";
 import ChatBubble from "@/components/ChatBubble";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { OrderTrackingMap } from "./components/OrderTrackingMap";
 import { OrderTrackingTimeline } from "./components/OrderTrackingTimeline";
 import { OrderTrackingDetails } from "./components/OrderTrackingDetails";
 import {
   CUSTOMER_TIMELINE_STEPS,
+  customerCanCancel,
   getOrderStatusMeta,
   isTerminalStatus,
 } from "@contracts/orderStatus";
@@ -29,11 +32,6 @@ const statusSteps = CUSTOMER_TIMELINE_STEPS.map((step) => ({
   label: step.label,
   description: getOrderStatusMeta(step.key).description,
 }));
-
-interface GeoCoords {
-  lat: number;
-  lng: number;
-}
 
 export default function OrderTracking() {
   const { id } = useParams<{ id: string }>();
@@ -45,11 +43,12 @@ export default function OrderTracking() {
   const { connected } = useOrderEvents(validId ? orderId : undefined, orderUtils);
 
   const [driverPos, setDriverPos] = useState<GeoCoords | null>(null);
-  const [deliveryCoords, setDeliveryCoords] = useState<GeoCoords | null>(null);
-  const [geoLoading, setGeoLoading] = useState(false);
+  const { coords: deliveryCoords, loading: geoLoading } = useGeocode(order?.deliveryAddress);
   const [followDriver, setFollowDriver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const updateReceipt = useUpdatePaymentReceipt();
+  const updateStatus = useUpdateOrderStatus();
+  const [cancelling, setCancelling] = useState(false);
 
   // Posición inicial conocida del repartidor (antes del primer evento SSE).
   const initialDriverPos: GeoCoords | null = (() => {
@@ -91,56 +90,31 @@ export default function OrderTracking() {
     reader.readAsDataURL(file);
   };
 
-  // Geocodificación con caché de sesión y cancelación al desmontar.
-  useEffect(() => {
-    const address = order?.deliveryAddress;
-    if (!address || deliveryCoords) return;
+  const handleCancelOrder = async () => {
+    if (!order || !customerCanCancel(order.status)) return;
+    const reason = window.prompt(
+      "¿Por qué deseas cancelar el pedido? (opcional)",
+      "",
+    );
+    if (reason === null) return;
 
-    const cacheKey = `rapidy:geo:${address}`;
+    setCancelling(true);
     try {
-      const cached = sessionStorage.getItem(cacheKey);
-      if (cached) {
-        const parsed = JSON.parse(cached) as GeoCoords;
-        if (Number.isFinite(parsed.lat) && Number.isFinite(parsed.lng)) {
-          setDeliveryCoords(parsed);
-          return;
-        }
-      }
-    } catch { /* sin acción */ }
+      await updateStatus.mutateAsync({
+        id: order.id,
+        status: "cancelled",
+        cancellationReason: reason.trim() || "Cancelado por el cliente",
+      });
+      toast.success("Pedido cancelado.");
+      await refresh();
+    } catch (err: any) {
+      toast.error(err?.message || "No pudimos cancelar el pedido.");
+    } finally {
+      setCancelling(false);
+    }
+  };
 
-    const controller = new AbortController();
-    setGeoLoading(true);
-    const query = encodeURIComponent(address);
-    fetch(
-      `https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=1&accept-language=es`,
-      { signal: controller.signal },
-    )
-      .then((response) => response.json())
-      .then((data) => {
-        if (Array.isArray(data) && data.length > 0) {
-          const coords = {
-            lat: parseFloat(data[0].lat),
-            lng: parseFloat(data[0].lon),
-          };
-          if (Number.isFinite(coords.lat) && Number.isFinite(coords.lng)) {
-            setDeliveryCoords(coords);
-            try {
-              sessionStorage.setItem(cacheKey, JSON.stringify(coords));
-            } catch { /* sin acción */ }
-          }
-        }
-      })
-      .catch((err) => {
-        if (err?.name !== "AbortError") {
-          toast.error("No pudimos ubicar la dirección en el mapa. El seguimiento sigue activo.");
-        }
-      })
-      .finally(() => setGeoLoading(false));
-
-    return () => controller.abort();
-  }, [order?.deliveryAddress, deliveryCoords]);
-
-  // SSE de ubicación del repartidor. El servidor emite eventos nombrados "update".
+  // Geocodificación delegada a TanStack Query (caché de sesión + cancelación).
   useEffect(() => {
     const driverId = order?.driver?.id;
     if (!driverId) return;
@@ -207,21 +181,21 @@ export default function OrderTracking() {
 
   if (loading) {
     return (
-      <div className="mobile-container bg-surface min-h-screen flex flex-col items-center justify-center p-6 text-center">
+      <div className="mobile-container bg-surface dark:bg-[#0E0E12] min-h-screen flex flex-col items-center justify-center p-6 text-center">
         <Loader2 className="w-9 h-9 text-brand animate-spin" />
-        <p className="mt-3 text-xs font-bold text-zinc-500">Cargando seguimiento de tu pedido...</p>
+        <p className="mt-3 text-xs font-bold text-zinc-500 dark:text-zinc-400">Cargando seguimiento de tu pedido...</p>
       </div>
     );
   }
 
   if (!order) {
     return (
-      <div className="mobile-container bg-surface min-h-screen flex flex-col items-center justify-center p-6 text-center">
-        <AlertCircle className={`w-10 h-10 ${isError ? "text-rose-400" : "text-zinc-400"}`} />
-        <p className="mt-3 text-sm font-bold text-zinc-700">
+      <div className="mobile-container bg-surface dark:bg-[#0E0E12] min-h-screen flex flex-col items-center justify-center p-6 text-center">
+        <AlertCircle className={`w-10 h-10 ${isError ? "text-rose-400" : "text-zinc-400 dark:text-zinc-600"}`} />
+        <p className="mt-3 text-sm font-bold text-zinc-700 dark:text-zinc-200">
           {isError ? "No pudimos cargar tu pedido" : "Pedido no encontrado"}
         </p>
-        <p className="mt-1 text-xs text-zinc-500 max-w-[260px]">
+        <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400 max-w-[260px]">
           {isError
             ? error?.message || "Revisa tu conexión e inténtalo de nuevo."
             : "El enlace no es válido o el pedido ya no está disponible."}
@@ -230,7 +204,7 @@ export default function OrderTracking() {
           {isError && (
             <button
               onClick={() => refresh()}
-              className="h-10 px-4 bg-brand text-white text-xs font-black rounded-xl flex items-center gap-1.5"
+              className="h-10 px-4 bg-brand text-white text-xs font-black rounded-xl flex items-center gap-1.5 hover:brightness-105 active:scale-95 transition-all cursor-pointer"
             >
               <RefreshCw className="w-3.5 h-3.5" />
               Reintentar
@@ -238,7 +212,7 @@ export default function OrderTracking() {
           )}
           <button
             onClick={() => navigate("/home")}
-            className="h-10 px-4 bg-ink text-white text-xs font-black rounded-xl"
+            className="h-10 px-4 bg-ink dark:bg-white/10 dark:hover:bg-white/15 dark:border dark:border-white/10 text-white text-xs font-black rounded-xl active:scale-95 transition-all cursor-pointer"
           >
             Volver al inicio
           </button>
@@ -254,8 +228,8 @@ export default function OrderTracking() {
     : "Reconectando";
 
   return (
-    <div className="mobile-container bg-surface min-h-screen pb-24 text-zinc-900 selection:bg-brand/20">
-      <header className="sticky top-0 z-40 bg-ink border-b border-white/10 px-4 pt-safe pb-3 flex items-center justify-between shadow-lg">
+    <div className="mobile-container bg-surface dark:bg-[#0E0E12] min-h-screen pb-24 text-zinc-900 dark:text-zinc-100 selection:bg-brand/20">
+      <header className="sticky top-0 z-40 bg-ink/95 dark:bg-ink/95 backdrop-blur-md border-b border-white/10 dark:border-white/10 px-4 pt-safe pb-3 flex items-center justify-between shadow-lg">
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate("/home")}
@@ -284,18 +258,21 @@ export default function OrderTracking() {
           </div>
         </div>
 
-        <div className="text-right" aria-live="polite">
-          <span
-            className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full border ${
-              isTerminalStatus(order.status)
-                ? "text-emerald-300 bg-emerald-500/15 border-emerald-500/30"
-                : connected
-                ? "text-brand bg-brand/15 border-brand/30"
-                : "text-amber-300 bg-amber-500/15 border-amber-500/30"
-            }`}
-          >
-            {liveLabel}
-          </span>
+        <div className="flex items-center gap-2.5">
+          <ThemeToggle size="sm" />
+          <div className="text-right" aria-live="polite">
+            <span
+              className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full border ${
+                isTerminalStatus(order.status)
+                  ? "text-emerald-300 bg-emerald-500/15 border-emerald-500/30"
+                  : connected
+                  ? "text-brand bg-brand/15 border-brand/30"
+                  : "text-amber-300 bg-amber-500/15 border-amber-500/30"
+              }`}
+            >
+              {liveLabel}
+            </span>
+          </div>
         </div>
       </header>
 
@@ -328,6 +305,9 @@ export default function OrderTracking() {
           order={order}
           isDelivered={isDelivered}
           isCancelled={isCancelled}
+          canCancel={customerCanCancel(order.status)}
+          onCancel={handleCancelOrder}
+          cancelling={cancelling}
         />
       </main>
 

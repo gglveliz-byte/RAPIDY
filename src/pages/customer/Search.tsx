@@ -3,7 +3,25 @@
  * @modulo 02-customer-search (Búsqueda y Exploración de Catálogo)
  * @proposito
  *   Búsqueda server-side de productos y comercios con filtros por categoría,
- *   URL sincronizada y protección contra productos de comercios cerrados.
+ *   URL sincronizada, selector de tema conmutador (Modo Oscuro / Claro) y
+ *   diseño responsive Dark Velvet / Flame Orange.
+ *
+ * @resumen_contenido
+ *   - Componente `CustomerSearch`: Pantalla principal de búsqueda adaptativa.
+ *   - Cabecera fija con botón de retorno, conmutador de tema `ThemeToggle`, input y selector de categorías.
+ *   - Tarjetas `ProductSearchCard` y `CommerceSearchCard` estilizadas para Dark Velvet y Light Mode.
+ *
+ * @dependencias_internas
+ *   - `useCategories`, `useCommerces`, `useFeaturedProducts`, `useCatalogProducts`, `useProductSearch` (@/hooks/useDeliveryData)
+ *   - `useCart` (@/hooks/useCart)
+ *   - `CustomerBottomNav` (@/components/CustomerBottomNav)
+ *   - `ThemeToggle` (@/components/ThemeToggle)
+ *   - `safeImage` (@/lib/imageUtils)
+ *
+ * @dependencias_externas
+ *   - `lucide-react` (`Search`, `X`, `ArrowLeft`, `Star`, `Clock`, `Plus`, `Loader2`, `AlertCircle`)
+ *   - `react-router` (`useNavigate`, `useSearchParams`)
+ *   - `react` (`useDeferredValue`)
  */
 
 import { useDeferredValue } from "react";
@@ -18,6 +36,7 @@ import {
 } from "@/hooks/useDeliveryData";
 import { useCart } from "@/hooks/useCart";
 import { CustomerBottomNav } from "@/components/CustomerBottomNav";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { safeImage } from "@/lib/imageUtils";
 
 export default function CustomerSearch() {
@@ -78,18 +97,19 @@ export default function CustomerSearch() {
   const error = searchError || catalogError;
 
   return (
-    <div className="mobile-container bg-surface min-h-screen text-zinc-900 pb-32 select-none">
-      <header className="fixed top-0 left-0 right-0 max-w-[480px] mx-auto z-40 bg-ink/95 backdrop-blur-2xl border-b border-white/10 shadow-xl px-4 pt-safe pb-3 transition-all duration-300">
-        <div className="flex items-center gap-2.5 pt-1">
+    <div className="mobile-container bg-surface dark:bg-[#0E0E12] min-h-screen text-zinc-900 dark:text-zinc-100 pb-32 select-none">
+      <header className="fixed top-0 left-0 right-0 max-w-[480px] mx-auto z-40 bg-white/95 dark:bg-[#0E0E12]/95 backdrop-blur-2xl border-b border-zinc-200/80 dark:border-white/10 shadow-xl px-4 pt-safe pb-3 transition-all duration-300">
+        <div className="flex items-center gap-2 pt-1">
           <button
             onClick={() => navigate("/home")}
-            className="w-10 h-10 rounded-xl flex items-center justify-center text-white bg-white/10 hover:bg-white/20 border border-white/10 active:scale-90 transition-all shrink-0 cursor-pointer"
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-zinc-700 dark:text-white bg-zinc-100 dark:bg-white/10 hover:bg-zinc-200 dark:hover:bg-white/20 border border-zinc-200 dark:border-white/10 active:scale-90 transition-all shrink-0 cursor-pointer"
             aria-label="Volver al inicio"
           >
-            <ArrowLeft className="w-5 h-5 text-white" />
+            <ArrowLeft className="w-5 h-5 text-zinc-700 dark:text-white" />
           </button>
+          <ThemeToggle size="sm" className="shrink-0" />
           <div className="flex-1 relative">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500 pointer-events-none" />
             <input
               type="search"
               value={query}
@@ -97,13 +117,13 @@ export default function CustomerSearch() {
               placeholder="Buscar productos o comercios..."
               autoFocus
               aria-label="Buscar productos o comercios"
-              className="w-full h-11 pl-9 pr-9 bg-white text-zinc-900 rounded-full text-xs sm:text-sm font-medium focus:ring-2 focus:ring-brand outline-none shadow-[0_4px_16px_rgba(0,0,0,0.15)] transition-all placeholder:text-zinc-400"
+              className="w-full h-10 sm:h-11 pl-9 pr-9 bg-zinc-100 dark:bg-zinc-900/90 text-zinc-900 dark:text-white border border-transparent dark:border-white/10 rounded-full text-xs sm:text-sm font-medium focus:ring-2 focus:ring-brand outline-none shadow-xs sm:shadow-[0_4px_16px_rgba(0,0,0,0.15)] transition-all placeholder:text-zinc-400 dark:placeholder-zinc-500"
             />
             {query && (
               <button
                 type="button"
                 onClick={() => updateParams({ q: null })}
-                className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center rounded-full bg-zinc-100 text-zinc-500 hover:text-zinc-800 text-xs font-bold cursor-pointer transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white text-xs font-bold cursor-pointer transition-colors"
                 aria-label="Limpiar búsqueda"
               >
                 <X className="w-3.5 h-3.5" />
@@ -118,7 +138,7 @@ export default function CustomerSearch() {
             className={`px-3.5 py-2 rounded-full text-xs whitespace-nowrap transition-all cursor-pointer font-bold ${
               !categoryNumber
                 ? "bg-brand text-white shadow-md shadow-brand/30 scale-105"
-                : "bg-white/10 text-zinc-300 hover:text-white hover:bg-white/20 border border-white/10"
+                : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-white/5"
             }`}
           >
             Todos
@@ -132,7 +152,7 @@ export default function CustomerSearch() {
               className={`px-3.5 py-2 rounded-full text-xs whitespace-nowrap transition-all cursor-pointer font-bold ${
                 categoryNumber === cat.id
                   ? "bg-brand text-white shadow-md shadow-brand/30 scale-105"
-                  : "bg-white/10 text-zinc-300 hover:text-white hover:bg-white/20 border border-white/10"
+                  : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-white/5"
               }`}
             >
               {cat.name}
@@ -151,10 +171,10 @@ export default function CustomerSearch() {
             <Loader2 className="w-8 h-8 text-brand animate-spin" />
           </div>
         ) : error ? (
-          <div className="text-center py-16 bg-white rounded-3xl border border-zinc-100 px-6">
+          <div className="text-center py-16 bg-white dark:bg-[#1A1A1E] rounded-3xl border border-zinc-100 dark:border-white/10 px-6">
             <AlertCircle className="w-9 h-9 text-rose-400 mx-auto mb-2" />
-            <h3 className="text-base font-bold text-zinc-800 mb-1">No pudimos buscar</h3>
-            <p className="text-zinc-500 text-xs mb-4">{error.message}</p>
+            <h3 className="text-base font-bold text-zinc-800 dark:text-zinc-100 mb-1">No pudimos buscar</h3>
+            <p className="text-zinc-500 dark:text-zinc-400 text-xs mb-4">{error.message}</p>
             <button
               onClick={() => window.location.reload()}
               className="h-10 px-5 rounded-xl bg-brand text-white text-xs font-bold"
@@ -165,10 +185,10 @@ export default function CustomerSearch() {
         ) : showInitial ? (
           <>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-base sm:text-lg font-black text-zinc-900 tracking-tight">
+              <h2 className="text-base sm:text-lg font-black text-zinc-900 dark:text-white tracking-tight">
                 Productos populares
               </h2>
-              <span className="text-[11px] font-semibold text-zinc-400">
+              <span className="text-[11px] font-semibold text-zinc-400 dark:text-zinc-500">
                 {initialProducts.length} sugerencias
               </span>
             </div>
@@ -188,7 +208,7 @@ export default function CustomerSearch() {
 
             {filteredProducts.length > 0 && (
               <>
-                <h2 className="text-sm font-bold text-zinc-600 uppercase tracking-wider mb-3">
+                <h2 className="text-sm font-bold text-zinc-600 dark:text-zinc-400 uppercase tracking-wider mb-3">
                   Productos ({filteredProducts.length})
                 </h2>
                 <div className="grid grid-cols-2 gap-3 mb-6">
@@ -201,7 +221,7 @@ export default function CustomerSearch() {
 
             {filteredCommerces.length > 0 && (
               <>
-                <h2 className="text-sm font-bold text-zinc-600 uppercase tracking-wider mb-3">
+                <h2 className="text-sm font-bold text-zinc-600 dark:text-zinc-400 uppercase tracking-wider mb-3">
                   Comercios ({filteredCommerces.length})
                 </h2>
                 <div className="space-y-3 mb-6">
@@ -214,11 +234,11 @@ export default function CustomerSearch() {
 
             {!loadingProducts && filteredProducts.length === 0 && filteredCommerces.length === 0 && (
               <div className="text-center py-20">
-                <div className="w-16 h-16 rounded-full bg-zinc-100 flex items-center justify-center mx-auto mb-3">
-                  <Search className="w-7 h-7 text-zinc-400" />
+                <div className="w-16 h-16 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto mb-3">
+                  <Search className="w-7 h-7 text-zinc-400 dark:text-zinc-500" />
                 </div>
-                <h3 className="text-base font-bold text-zinc-800 mb-1">Sin resultados</h3>
-                <p className="text-zinc-500 text-xs max-w-[240px] mx-auto">
+                <h3 className="text-base font-bold text-zinc-800 dark:text-zinc-100 mb-1">Sin resultados</h3>
+                <p className="text-zinc-500 dark:text-zinc-400 text-xs max-w-[240px] mx-auto">
                   No encontramos productos ni comercios que coincidan con tu búsqueda.
                 </p>
               </div>
@@ -239,11 +259,20 @@ function ProductSearchCard({ product }: { product: any }) {
 
   return (
     <div
-      className="bg-white rounded-2xl border border-zinc-100 shadow-[0_4px_16px_rgba(0,0,0,0.05)] overflow-hidden flex flex-col justify-between group hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] transition-all cursor-pointer"
+      className="bg-white dark:bg-[#1A1A1E] rounded-2xl border border-zinc-100 dark:border-white/10 shadow-[0_4px_16px_rgba(0,0,0,0.05)] dark:shadow-xs overflow-hidden flex flex-col justify-between group hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] dark:hover:border-white/20 transition-all cursor-pointer"
       onClick={() => navigate(`/commerce/${product.commerceId}`)}
+      role="button"
+      tabIndex={0}
+      aria-label={`${product.name} de ${product.commerceName}`}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          navigate(`/commerce/${product.commerceId}`);
+        }
+      }}
     >
       <div
-        className="h-28 bg-zinc-100 bg-cover bg-center group-hover:scale-105 transition-transform duration-300 relative"
+        className="h-28 bg-zinc-100 dark:bg-zinc-800 bg-cover bg-center group-hover:scale-105 transition-transform duration-300 relative"
         style={{ backgroundImage: `url(${safeImage(product.image, "product")})` }}
       >
         {!available && (
@@ -254,14 +283,14 @@ function ProductSearchCard({ product }: { product: any }) {
       </div>
       <div className="p-3 flex flex-col justify-between flex-1">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 truncate">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 truncate">
             {product.commerceName}
           </p>
-          <p className="text-xs sm:text-sm font-bold text-zinc-900 truncate mt-0.5">
+          <p className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white truncate mt-0.5">
             {product.name}
           </p>
         </div>
-        <div className="flex items-center justify-between mt-2 pt-1 border-t border-zinc-50">
+        <div className="flex items-center justify-between mt-2 pt-1 border-t border-zinc-50 dark:border-white/5">
           <span className="text-sm sm:text-base font-black text-brand">${product.price}</span>
           <button
             type="button"
@@ -279,7 +308,7 @@ function ProductSearchCard({ product }: { product: any }) {
                 unitType: product.unitType,
               });
             }}
-            className="w-9 h-9 sm:w-10 sm:h-10 bg-brand hover:bg-brand-strong disabled:bg-zinc-300 disabled:shadow-none text-white rounded-xl shadow-sm shadow-brand/30 active:scale-90 transition-all flex items-center justify-center shrink-0 cursor-pointer disabled:cursor-not-allowed"
+            className="w-9 h-9 sm:w-10 sm:h-10 bg-brand hover:bg-brand-strong disabled:bg-zinc-300 dark:disabled:bg-zinc-700 disabled:shadow-none text-white rounded-xl shadow-sm shadow-brand/30 active:scale-90 transition-all flex items-center justify-center shrink-0 cursor-pointer disabled:cursor-not-allowed"
             aria-label={
               available
                 ? `Añadir ${product.name} al carrito`
@@ -299,25 +328,34 @@ function CommerceSearchCard({ commerce }: { commerce: any }) {
 
   return (
     <div
-      className="bg-white rounded-2xl border border-zinc-100 shadow-[0_4px_16px_rgba(0,0,0,0.05)] p-3.5 flex gap-3.5 hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] transition-all cursor-pointer items-center"
+      className="bg-white dark:bg-[#1A1A1E] rounded-2xl border border-zinc-100 dark:border-white/10 shadow-[0_4px_16px_rgba(0,0,0,0.05)] dark:shadow-xs p-3.5 flex gap-3.5 hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] dark:hover:border-white/20 transition-all cursor-pointer items-center"
       onClick={() => navigate(`/commerce/${commerce.id}`)}
+      role="button"
+      tabIndex={0}
+      aria-label={`Abrir ${commerce.name}`}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          navigate(`/commerce/${commerce.id}`);
+        }
+      }}
     >
       <img
         src={safeImage(commerce.logo, "logo")}
         alt={commerce.name || "Comercio"}
-        className="w-16 h-16 rounded-2xl object-cover bg-zinc-100 shrink-0 border border-zinc-100 shadow-xs"
+        className="w-16 h-16 rounded-2xl object-cover bg-zinc-100 dark:bg-zinc-800 shrink-0 border border-zinc-100 dark:border-white/10 shadow-xs"
         onError={(e) => {
           (e.target as HTMLImageElement).src = safeImage(null, "logo");
         }}
       />
       <div className="flex-1 min-w-0">
-        <h3 className="text-zinc-900 font-bold text-sm truncate">{commerce.name}</h3>
-        <div className="flex items-center gap-2.5 mt-1 text-xs text-zinc-500">
+        <h3 className="text-zinc-900 dark:text-white font-bold text-sm truncate">{commerce.name}</h3>
+        <div className="flex items-center gap-2.5 mt-1 text-xs text-zinc-500 dark:text-zinc-400">
           <span className="flex items-center gap-1 font-medium">
-            <Clock className="w-3.5 h-3.5 text-zinc-400" />
+            <Clock className="w-3.5 h-3.5 text-zinc-400 dark:text-zinc-500" />
             {commerce.deliveryTime || "20-35 min"}
           </span>
-          <span className="flex items-center gap-1 font-bold text-zinc-700">
+          <span className="flex items-center gap-1 font-bold text-zinc-700 dark:text-zinc-300">
             <Star className="w-3.5 h-3.5 text-[#FFC107] fill-[#FFC107]" />
             {commerce.rating}
           </span>
@@ -326,7 +364,7 @@ function CommerceSearchCard({ commerce }: { commerce: any }) {
           className={`inline-flex items-center gap-1 mt-1.5 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
             commerce.isOpen === "open"
               ? "bg-[#FF6A00]/10 text-[#FF6A00] border border-[#FF6A00]/30"
-              : "bg-zinc-100 text-zinc-500 border border-zinc-200"
+              : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border border-zinc-200 dark:border-white/10"
           }`}
         >
           <span className={`w-1.5 h-1.5 rounded-full ${commerce.isOpen === "open" ? "bg-[#FF6A00] animate-pulse" : "bg-zinc-400"}`} />

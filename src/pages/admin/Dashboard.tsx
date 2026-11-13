@@ -28,7 +28,7 @@ export default function AdminDashboard() {
   const [driverEarnings, setDriverEarnings] = useState<any[]>([]);
   const [adminDeliveryEarnings, setAdminDeliveryEarnings] = useState<any>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [lastUpdate, setLastUpdate] = useState<number>(Date.now());
+  const [lastUpdate, setLastUpdate] = useState<number>(0);
   const [secondsAgo, setSecondsAgo] = useState(0);
   const prevPeriodRef = useRef<Period>(period);
 

@@ -3,12 +3,14 @@ import { httpLink, TRPCClientError } from "@trpc/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import superjson from "superjson";
+import { invalidateCustomerAuthCache } from "@/lib/customerAuthCache";
 import type { AppRouter } from "../../server/router";
 import type { ReactNode } from "react";
 
 export const trpc = createTRPCReact<AppRouter>();
 
 function handleAuthError() {
+  invalidateCustomerAuthCache()
   if (window.location.pathname === "/login" || window.location.pathname === "/customer-login") return
   fetch("/api/trpc/login.logout", {
     method: "POST",
@@ -55,6 +57,7 @@ const queryClient = new QueryClient({
     },
   },
 });
+export { queryClient };
 
 const trpcClient = trpc.createClient({
   links: [

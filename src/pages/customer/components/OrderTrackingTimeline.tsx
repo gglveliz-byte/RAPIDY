@@ -63,12 +63,12 @@ export function OrderTrackingTimeline({
     <div className="space-y-4">
       {/* Banner de Pago Rechazado o Tarjeta de Progreso Principal */}
       {isPaymentRejected ? (
-        <div className="bg-rose-50/80 rounded-3xl p-5 border border-rose-200/80 text-center shadow-xs">
-          <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto mb-3">
+        <div className="bg-rose-50/80 dark:bg-[#1A1A1E] rounded-3xl p-5 border border-rose-200/80 dark:border-rose-900/40 text-center shadow-xs">
+          <div className="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center mx-auto mb-3">
             <AlertTriangle className="w-6 h-6 stroke-[2.2]" />
           </div>
-          <h3 className="text-base font-black text-rose-900 mb-1">Pago Rechazado</h3>
-          <p className="text-xs text-rose-700/90 leading-relaxed mb-4 max-w-xs mx-auto">
+          <h3 className="text-base font-black text-rose-900 dark:text-rose-200 mb-1">Pago Rechazado</h3>
+          <p className="text-xs text-rose-700/90 dark:text-rose-300/80 leading-relaxed mb-4 max-w-xs mx-auto">
             El comprobante subido no pudo ser validado o es ilegible. Por favor, sube un nuevo comprobante para continuar con la preparación de tu pedido.
           </p>
           <input
@@ -88,18 +88,18 @@ export function OrderTrackingTimeline({
           </button>
         </div>
       ) : (
-        <div className="bg-white rounded-3xl p-5 border border-zinc-100 shadow-[0_4px_20px_rgba(0,0,0,0.03)]">
+        <div className="bg-white dark:bg-[#1A1A1E] rounded-3xl p-5 border border-zinc-100 dark:border-white/10 shadow-[0_4px_20px_rgba(0,0,0,0.03)] dark:shadow-none">
           {/* Fila superior: Etiqueta y Badge de Estado */}
           <div className="flex items-center justify-between mb-2 gap-2">
-            <span className="text-[11px] font-black text-zinc-400 uppercase tracking-wider">
+            <span className="text-[11px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
               Estado actual
             </span>
 
             <span
               className={`text-xs font-black px-3 py-1 rounded-full border shadow-2xs ${
                 isCancelled
-                  ? "text-rose-600 bg-rose-50 border-rose-200"
-                  : meta.badgeClass
+                  ? "text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-900/40"
+                  : `${meta.badgeClass} dark:bg-zinc-800 dark:border-white/10 dark:text-zinc-200`
               }`}
             >
               {showPickupCount ? `${pickedCount}/${commerceCount} recogidos` : meta.shortLabel}
@@ -110,10 +110,10 @@ export function OrderTrackingTimeline({
             <>
               {/* Título del paso actual */}
               <div className="my-2.5" aria-live="polite">
-                <p className="text-base sm:text-lg font-black text-zinc-900 tracking-tight">
+                <p className="text-base sm:text-lg font-black text-zinc-900 dark:text-white tracking-tight">
                   {meta.description}
                 </p>
-                <p className="text-xs text-zinc-500 font-semibold mt-0.5">
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 font-semibold mt-0.5">
                   {meta.step >= 0
                     ? `Paso ${Math.min(meta.step + 1, statusSteps.length)} de ${statusSteps.length}`
                     : "En revisión"}
@@ -122,7 +122,7 @@ export function OrderTrackingTimeline({
 
               {/* Barra de progreso interactiva */}
               <div
-                className="h-2 bg-zinc-100 rounded-full overflow-hidden my-3"
+                className="h-2 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden my-3"
                 role="progressbar"
                 aria-valuemin={0}
                 aria-valuemax={100}
@@ -151,13 +151,19 @@ export function OrderTrackingTimeline({
                           isPast
                             ? "bg-brand text-white shadow-xs"
                             : isCurrent
-                              ? "bg-brand text-white ring-4 ring-brand/20 scale-110 shadow-md shadow-brand/30"
-                              : "bg-zinc-100 text-zinc-400"
+                              ? "bg-brand text-white ring-4 ring-brand/20 dark:ring-brand/30 scale-110 shadow-md shadow-brand/30"
+                              : "bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-500"
                         }`}
                       >
                         {isPast ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : i + 1}
                       </div>
-                      <span className="text-[9px] font-medium text-zinc-500 mt-1 hidden sm:block max-w-[54px] text-center truncate">
+                      <span
+                        className={`text-[9px] mt-1 hidden sm:block max-w-[54px] text-center truncate ${
+                          isPast || isCurrent
+                            ? "font-bold text-zinc-700 dark:text-white"
+                            : "font-medium text-zinc-500 dark:text-zinc-500"
+                        }`}
+                      >
                         {step.label}
                       </span>
                     </div>
@@ -168,7 +174,7 @@ export function OrderTrackingTimeline({
           )}
 
           {isCancelled && (
-            <p className="text-xs text-rose-700/90 leading-relaxed mt-2">
+            <p className="text-xs text-rose-700/90 dark:text-rose-400 leading-relaxed mt-2">
               {order.cancellationReason
                 ? `Motivo: ${order.cancellationReason}`
                 : "Este pedido fue cancelado. Si tienes dudas, contáctanos."}
@@ -179,10 +185,10 @@ export function OrderTrackingTimeline({
 
       {/* Recogida en Comercios (en caso de múltiples locales) */}
       {!terminal && hasDriver && order.commerces?.some((c: any) => c.status !== "preparing") && (
-        <div className="bg-white rounded-3xl p-5 border border-zinc-100 shadow-[0_4px_20px_rgba(0,0,0,0.03)]">
+        <div className="bg-white dark:bg-[#1A1A1E] rounded-3xl p-5 border border-zinc-100 dark:border-white/10 shadow-[0_4px_20px_rgba(0,0,0,0.03)] dark:shadow-none">
           <div className="flex items-center gap-2 mb-3">
             <Store className="w-4 h-4 text-brand" />
-            <h3 className="text-sm font-black text-zinc-900">Recogida en Comercios</h3>
+            <h3 className="text-sm font-black text-zinc-900 dark:text-white">Recogida en Comercios</h3>
           </div>
           <div className="space-y-2.5">
             {order.commerces?.map((c: any) => {
@@ -191,14 +197,14 @@ export function OrderTrackingTimeline({
               const isPreparing = cStatus === "preparing";
               const statusLabel = isPreparing ? "Preparando" : isReady ? "Listo para recoger" : "Recogido";
               const statusBadgeStyle = isPreparing
-                ? "text-zinc-600 bg-zinc-100 border-zinc-200"
+                ? "text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800/80 border-zinc-200 dark:border-white/10"
                 : isReady
-                  ? "text-amber-700 bg-amber-50 border-amber-200"
-                  : "text-brand bg-orange-50 border-orange-200";
+                  ? "text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/15 border-amber-200 dark:border-amber-500/30"
+                  : "text-brand bg-orange-50 dark:bg-brand/15 border-orange-200 dark:border-brand/30";
 
               return (
-                <div key={c.id} className="flex items-center justify-between py-1.5 border-b border-zinc-50 last:border-0">
-                  <span className="text-xs sm:text-sm font-bold text-zinc-700">{c.name}</span>
+                <div key={c.id} className="flex items-center justify-between py-1.5 border-b border-zinc-50 dark:border-white/5 last:border-0">
+                  <span className="text-xs sm:text-sm font-bold text-zinc-700 dark:text-zinc-200">{c.name}</span>
                   <span className={`text-[11px] font-black px-2.5 py-0.5 rounded-full border ${statusBadgeStyle}`}>
                     {statusLabel}
                   </span>
