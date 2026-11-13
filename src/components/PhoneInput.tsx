@@ -2,31 +2,22 @@ import { useState, useRef, useEffect } from "react";
 import { ChevronDown, Phone } from "lucide-react";
 
 const countries = [
-  { code: "AR", name: "Argentina", dial: "+54" },
-  { code: "BO", name: "Bolivia", dial: "+591" },
-  { code: "CL", name: "Chile", dial: "+56" },
-  { code: "CO", name: "Colombia", dial: "+57" },
-  { code: "CR", name: "Costa Rica", dial: "+506" },
-  { code: "CU", name: "Cuba", dial: "+53" },
-  { code: "DO", name: "República Dominicana", dial: "+1-809" },
   { code: "EC", name: "Ecuador", dial: "+593" },
-  { code: "SV", name: "El Salvador", dial: "+503" },
-  { code: "GT", name: "Guatemala", dial: "+502" },
-  { code: "HN", name: "Honduras", dial: "+504" },
-  { code: "MX", name: "México", dial: "+52" },
-  { code: "NI", name: "Nicaragua", dial: "+505" },
-  { code: "PA", name: "Panamá", dial: "+507" },
-  { code: "PY", name: "Paraguay", dial: "+595" },
+  { code: "AR", name: "Argentina", dial: "+54" },
+  { code: "CO", name: "Colombia", dial: "+57" },
   { code: "PE", name: "Perú", dial: "+51" },
-  { code: "PR", name: "Puerto Rico", dial: "+1-787" },
+  { code: "CL", name: "Chile", dial: "+56" },
+  { code: "MX", name: "México", dial: "+52" },
+  { code: "BO", name: "Bolivia", dial: "+591" },
   { code: "UY", name: "Uruguay", dial: "+598" },
+  { code: "PY", name: "Paraguay", dial: "+595" },
   { code: "VE", name: "Venezuela", dial: "+58" },
-  { code: "ES", name: "España", dial: "+34" },
+  { code: "PA", name: "Panamá", dial: "+507" },
+  { code: "CR", name: "Costa Rica", dial: "+506" },
+  { code: "GT", name: "Guatemala", dial: "+502" },
+  { code: "DO", name: "República Dominicana", dial: "+1-809" },
   { code: "US", name: "Estados Unidos", dial: "+1" },
-  { code: "CA", name: "Canadá", dial: "+1" },
-  { code: "GB", name: "Reino Unido", dial: "+44" },
-  { code: "FR", name: "Francia", dial: "+33" },
-  { code: "IT", name: "Italia", dial: "+39" },
+  { code: "ES", name: "España", dial: "+34" },
   { code: "BR", name: "Brasil", dial: "+55" },
 ];
 
@@ -39,9 +30,10 @@ type PhoneInputProps = {
   value: string;
   onChange: (value: string) => void;
   error?: string;
+  dark?: boolean;
 };
 
-export default function PhoneInput({ value, onChange, error }: PhoneInputProps) {
+export default function PhoneInput({ value, onChange, error, dark = false }: PhoneInputProps) {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState(countries[0]);
   const [localNumber, setLocalNumber] = useState("");
@@ -91,47 +83,79 @@ export default function PhoneInput({ value, onChange, error }: PhoneInputProps) 
 
   return (
     <div>
-      <label className="text-sm font-medium text-gray-700 mb-1 block">Número de celular</label>
-      <div className={`relative flex border rounded-xl focus-within:border-[#2E7D32] focus-within:ring-1 focus-within:ring-[#2E7D32] ${error ? "border-red-400" : "border-gray-200"}`}>
+      <label className={`text-xs font-bold uppercase tracking-wider mb-2 block ${dark ? "text-zinc-300" : "text-gray-700"}`}>
+        Número de celular
+      </label>
+      <div
+        className={`relative flex rounded-2xl transition-all border ${
+          dark
+            ? `bg-[#242426] ${error ? "border-red-500" : "border-white/10"} focus-within:border-[#FF6A00] focus-within:ring-2 focus-within:ring-[#FF6A00]/25`
+            : `bg-white ${error ? "border-red-400" : "border-gray-200"} focus-within:border-[#FF6A00] focus-within:ring-2 focus-within:ring-[#FF6A00]/25`
+        }`}
+      >
         <div ref={dropdownRef} className="relative shrink-0">
           <button
             type="button"
             onClick={() => setOpen(!open)}
-            className="h-12 px-3 flex items-center gap-1.5 bg-gray-50 hover:bg-gray-100 transition-colors text-sm rounded-l-xl"
+            className={`h-13 sm:h-14 px-3.5 flex items-center gap-1.5 transition-colors text-sm rounded-l-2xl ${
+              dark
+                ? "bg-[#2a2a2d] hover:bg-[#333337] text-white border-r border-white/10"
+                : "bg-gray-50 hover:bg-gray-100 text-gray-800 border-r border-gray-100"
+            }`}
           >
-            <span className="text-base">{getFlagEmoji(selected.code)}</span>
-            <span className="font-medium text-gray-700">{selected.dial}</span>
-            <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`} />
+            <span className="text-lg">{getFlagEmoji(selected.code)}</span>
+            <span className="font-bold">{selected.dial}</span>
+            <ChevronDown className={`w-3.5 h-3.5 transition-transform ${dark ? "text-zinc-400" : "text-gray-400"} ${open ? "rotate-180" : ""}`} />
           </button>
+
           {open && (
-            <div className="absolute top-full left-0 mt-1 w-64 max-w-[calc(100vw-3rem)] max-h-60 overflow-y-auto bg-white border border-gray-200 rounded-xl shadow-2xl z-50">
-              {countries.map(c => (
+            <div
+              className={`absolute top-full left-0 mt-2 w-64 max-w-[calc(100vw-3rem)] max-h-60 overflow-y-auto rounded-2xl shadow-2xl z-50 border p-1 ${
+                dark
+                  ? "bg-[#1f1f22] border-white/15 text-white"
+                  : "bg-white border-gray-200 text-gray-800"
+              }`}
+            >
+              {countries.map((c) => (
                 <button
                   key={c.code}
                   type="button"
                   onClick={() => selectCountry(c)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm hover:bg-gray-50 active:bg-gray-100 transition-colors text-left ${selected.code === c.code ? "bg-green-50 text-[#2E7D32] font-semibold" : "text-gray-700"}`}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded-xl transition-colors text-left ${
+                    selected.code === c.code
+                      ? "bg-[#FF6A00]/20 text-[#FF6A00] font-bold"
+                      : dark
+                      ? "text-zinc-200 hover:bg-white/10"
+                      : "text-gray-700 hover:bg-gray-50"
+                  }`}
                 >
                   <span className="text-base">{getFlagEmoji(c.code)}</span>
                   <span className="flex-1 truncate">{c.name}</span>
-                  <span className="text-xs text-gray-400 font-mono">{c.dial}</span>
+                  <span className="text-xs text-zinc-500 font-mono">{c.dial}</span>
                 </button>
               ))}
             </div>
           )}
         </div>
+
         <div className="relative flex-1">
-          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Phone className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 ${dark ? "text-zinc-500" : "text-gray-400"}`} />
           <input
             type="tel"
             value={localNumber}
             onChange={(e) => handleNumberChange(e.target.value)}
-            placeholder="Ej: 555-123-4567"
-            className="w-full h-12 pl-9 pr-4 text-base outline-none rounded-r-xl"
+            placeholder="099 123 4567"
+            className={`w-full h-13 sm:h-14 pl-10 pr-4 text-base outline-none rounded-r-2xl font-medium ${
+              dark
+                ? "bg-transparent text-white placeholder-zinc-500"
+                : "bg-transparent text-gray-900 placeholder-gray-400"
+            }`}
           />
         </div>
       </div>
-      <p className="text-xs text-gray-400 mt-1">Seleccioná tu país y escribí tu número</p>
+      <p className={`text-[11px] mt-1.5 ${dark ? "text-zinc-400" : "text-gray-400"}`}>
+        Selecciona tu país e ingresa tu número móvil
+      </p>
     </div>
   );
 }
