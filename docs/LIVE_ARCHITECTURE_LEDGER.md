@@ -64,7 +64,7 @@
 | `src/pages/customer/Home.tsx` | Cliente | `315 / 500` | Orquesta catálogo, búsqueda y componentes modulares del Home | `HomeHeader`, `HomePromoBanner`, `HomeCategories`, `HomeFeaturedCommerces`, `CustomerBottomNav` |
 | `src/pages/customer/components/HomeHeader.tsx` | Cliente | `132 / 500` | Logotipo oficial Rapidy, eslogan, buscador flotante y saludo | `lucide-react`, `react-router` |
 | `src/pages/customer/components/HomePromoBanner.tsx` | Cliente | `82 / 500` | Banner "¡Pedidos más rápidos!" con platillos flotantes en 3D | `lucide-react`, `react-router` |
-| `src/pages/customer/components/HomeCategories.tsx` | Cliente | `145 / 500` | 4 categorías principales del mockup (Comida, Supermercado, Farmacia, Compras) | `lucide-react` |
+| `src/pages/customer/components/HomeCategories.tsx` | Cliente | `104 / 500` | Carrusel dinámico de categorías conectado a BD (eliminado bloque estático redundante) | `lucide-react` |
 | `src/pages/customer/components/HomeFeaturedCommerces.tsx` | Cliente | `118 / 500` | Carrusel de restaurantes destacados con fotos, tiempo y rating | `safeImage`, `lucide-react`, `react-router` |
 | `src/components/CustomerBottomNav.tsx` | UI Kernel | `88 / 500` | Navegación inferior flotante con acentos Rapidy Flame Orange | `framer-motion`, `lucide-react`, `react-router` |
 | `src/pages/customer/Welcome.tsx` | Identidad | `168 / 500` | Pantalla inicial de bienvenida con Hero visual y accesos principales | `react-router`, `lucide-react` |
