@@ -1,8 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router";
 import { ArrowLeft, Send, Check, CheckCheck } from "lucide-react";
+import { toast } from "sonner";
 import { useDriverSession } from "@/hooks/useDeliveryData";
 import { useChatMessages, useSendChatMessage, trpcMutate } from "@/hooks/useDeliveryData";
+import { useOrderEvents } from "@/hooks/useOrderEvents";
+import { trpc } from "@/providers/trpc";
 
 const quickMessages = [
   "Hola, ya voy en camino",
@@ -33,8 +36,11 @@ export default function DriverChat() {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
   const driverSession = useDriverSession();
-  const { data: messages, refresh } = useChatMessages(Number(orderId));
-  const sendChat = useSendChatMessage(Number(orderId));
+  const chatOrderId = Number(orderId);
+  const { data: messages, refresh } = useChatMessages(chatOrderId);
+  const sendChat = useSendChatMessage(chatOrderId);
+  const utils = trpc.useUtils();
+  const { connected } = useOrderEvents(chatOrderId || undefined, utils);
   const [text, setText] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -45,25 +51,24 @@ export default function DriverChat() {
   }, [messages]);
 
   useEffect(() => {
-    if (orderId && driverSession) {
-      trpcMutate("chat.markAsRead", { orderId: Number(orderId), readerType: "driver" }).catch(() => {});
+    if (chatOrderId && driverSession) {
+      trpcMutate("chat.markAsRead", { orderId: chatOrderId }).catch(() => {});
     }
-  }, [orderId, driverSession]);
+  }, [chatOrderId, driverSession, messages.length]);
 
   const handleSend = async (msg: string) => {
-    if (!msg.trim() || !driverSession) return;
+    const message = msg.trim();
+    if (!message || !driverSession || !chatOrderId) return;
     try {
       await sendChat.mutateAsync({
-        orderId: Number(orderId),
-        senderType: "driver",
-        senderId: driverSession.id,
-        senderName: driverSession.name || "Conductor",
-        message: msg.trim(),
+        orderId: chatOrderId,
+        message,
+        as: "driver",
       });
       setText("");
       refresh();
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      toast.error(err?.message || "No pudimos enviar el mensaje.");
     }
   };
 
@@ -85,8 +90,8 @@ export default function DriverChat() {
         <div className="flex-1">
           <h1 className="text-sm font-semibold text-white">Pedido #{orderId}</h1>
           <p className="text-xs text-white/70 flex items-center gap-1">
-            <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
-            En línea
+            <span className={`w-1.5 h-1.5 rounded-full ${connected ? "bg-green-400" : "bg-amber-400"} animate-pulse`} />
+            {connected ? "En línea" : "Reconectando..."}
           </p>
         </div>
       </div>
@@ -164,7 +169,13 @@ export default function DriverChat() {
           type="text"
           value={text}
           onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSend(text)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+              e.preventDefault();
+              handleSend(text);
+            }
+          }}
+          maxLength={2000}
           placeholder="Escribe un mensaje..."
           className="flex-1 h-11 px-4 bg-white rounded-full text-sm focus:outline-none shadow-sm"
         />

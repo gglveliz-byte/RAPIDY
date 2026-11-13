@@ -193,6 +193,31 @@
   - `src/pages/customer/Profile.tsx` (314 líneas).
   - `docs/LIVE_ARCHITECTURE_LEDGER.md` (Actualizado).
 
+### [2026-11-13 20:23 UTC] - Rediseño Oficial Rapidy del Panel del Negocio (Comercio / Restaurante) con 5 Subagentes
+- **Resumen Técnico:**
+  1. Se completó el rediseño integral de las 5 rutas del Panel del Negocio (`/commerce`, `/commerce/orders`, `/commerce/products`, `/commerce/stats`, `/commerce/profile`) más el layout maestro `CommerceLayout.tsx`.
+  2. **Preservación Estricta de Lógica:** CERO cambios a la lógica existente. Se mantuvieron al 100% todos los hooks tRPC (`useCommerceOrders`, `useUpdateOrderStatus`, `useMarkCommerceReady`, `useToggleCommerceStatus`, etc.), reactividad SSE en vivo y mutaciones.
+  3. **Erradicación Total de Verdes:** Cero clases `emerald-*` o tonos verdes obsoletos. Aplicación de la identidad visual oficial Rapidy: Dark Velvet (`#0E0E12`), Luminous Canvas (`#F7F7FA`) y Flame Orange (`#FF6A00`).
+  4. **`CommerceLayout.tsx` (257 líneas):** Sidebar desktop en Dark Velvet `#0E0E12`, avatar con gradiente Flame Orange, contador dinámico de pedidos pendientes y barra inferior móvil ergonómica con acentos luminosos.
+  5. **`Dashboard.tsx` (474 líneas):** Banner de estado de tienda abierta/cerrada con switch reactivo, tarjetas métricas en USD y botones de acceso rápido.
+  6. **`Orders.tsx` (259 líneas) & `CommerceOrderCard.tsx` (276 líneas):** Monitor de cocina en tiempo real con pestañas de estado en píldora Flame Orange, desglose de ítems, notas especiales y botón principal *"Listo para entregar al repartidor"*.
+  7. **`Products.tsx` (407 líneas), `ProductModal.tsx` (405 líneas) & `DeleteConfirmModal.tsx` (93 líneas):** Catálogo de platillos, precios en USD, venta por unidad/kilogramo, subida de fotos y modal seguro de eliminación.
+  8. **`Stats.tsx` (329 líneas):** Gráfica de barras de ventas diarias con gradiente Flame Orange (`#FF6A00`), métricas de ingresos en USD y leaderboard de productos más vendidos.
+  9. **`Profile.tsx` (440 líneas):** Portada en Dark Velvet, avatar con anillo naranja, mapa Leaflet con pin SVG Flame Orange y placeholders adaptados a Ecuador.
+  10. **Cumplimiento de Modularidad:** Todos los archivos creados y modificados se encuentran estrictamente por debajo de las 500 líneas de código.
+- **Archivos Creados:**
+  - `src/components/commerce/CommerceOrderCard.tsx` (276 líneas).
+- **Archivos Modificados:**
+  - `src/components/CommerceLayout.tsx` (257 líneas).
+  - `src/pages/commerce/Dashboard.tsx` (474 líneas).
+  - `src/pages/commerce/Orders.tsx` (259 líneas).
+  - `src/pages/commerce/Products.tsx` (407 líneas).
+  - `src/components/commerce/ProductModal.tsx` (405 líneas).
+  - `src/components/commerce/DeleteConfirmModal.tsx` (93 líneas).
+  - `src/pages/commerce/Stats.tsx` (329 líneas).
+  - `src/pages/commerce/Profile.tsx` (440 líneas).
+  - `docs/LIVE_ARCHITECTURE_LEDGER.md` (Actualizado).
+
 ### [2026-11-13 19:48 UTC] - Transformación Jurídica Integral de las 7 Rutas Legales para Ecuador 🇪🇨 con 7 Subagentes Concurrentes
 - **Resumen Técnico:**
   1. Se desplegó un equipo de 7 subagentes autónomos en simultáneo para reformar y certificar las 7 rutas del marco regulatorio de Rapidy bajo la jurisdicción exclusiva de la **República del Ecuador 🇪🇨**.

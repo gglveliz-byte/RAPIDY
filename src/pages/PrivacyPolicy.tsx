@@ -32,16 +32,12 @@ import {
   MapPin,
   Trash2,
   Eye,
-  FileText,
-  RefreshCw,
   Mail,
   ChevronDown,
   ChevronUp,
   Server,
   Building2,
-  ExternalLink,
-  CheckCircle2,
-  AlertCircle
+  CheckCircle2
 } from "lucide-react";
 
 export default function PrivacyPolicy() {

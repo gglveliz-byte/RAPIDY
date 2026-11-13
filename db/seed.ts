@@ -41,6 +41,7 @@ import {
   orderItems,
   orderStatusHistory,
 } from "../db/schema";
+import type { InsertCommerce, InsertProduct } from "../db/schema";
 import { sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
@@ -98,12 +99,12 @@ async function seed() {
       minOrder: "5.00",
       deliveryTime: "35-45 min",
       rating: "4.5",
-      status: "active",
-      isOpen: "open",
+      status: "active" as const,
+      isOpen: "open" as const,
       openHours: '{"mon-fri": "11:00-23:00", "sat-sun": "12:00-23:30"}',
       commissionRate: "12.00",
-      lat: -34.6037,
-      lng: -58.3816,
+      lat: "-34.6037",
+      lng: "-58.3816",
     },
     {
       name: "Panadería El Horno",
@@ -117,12 +118,12 @@ async function seed() {
       minOrder: "3.50",
       deliveryTime: "20-30 min",
       rating: "4.8",
-      status: "active",
-      isOpen: "open",
+      status: "active" as const,
+      isOpen: "open" as const,
       openHours: '{"mon-sat": "07:00-20:00", "sun": "08:00-13:00"}',
       commissionRate: "10.00",
-      lat: -34.5882,
-      lng: -58.3926,
+      lat: "-34.5882",
+      lng: "-58.3926",
     },
     {
       name: "Supermercado Día a Día",
@@ -136,12 +137,12 @@ async function seed() {
       minOrder: "6.00",
       deliveryTime: "40-50 min",
       rating: "4.2",
-      status: "active",
-      isOpen: "open",
+      status: "active" as const,
+      isOpen: "open" as const,
       openHours: '{"mon-sun": "08:00-22:00"}',
       commissionRate: "8.00",
-      lat: -34.5598,
-      lng: -58.4456,
+      lat: "-34.5598",
+      lng: "-58.4456",
     },
     {
       name: "Farmacia Central",
@@ -155,12 +156,12 @@ async function seed() {
       minOrder: "3.00",
       deliveryTime: "15-25 min",
       rating: "4.6",
-      status: "active",
-      isOpen: "open",
+      status: "active" as const,
+      isOpen: "open" as const,
       openHours: '{"mon-sun": "00:00-23:59"}',
       commissionRate: "15.00",
-      lat: -34.6132,
-      lng: -58.4211,
+      lat: "-34.6132",
+      lng: "-58.4211",
     },
     {
       name: "Heladería Dulce Frío",
@@ -174,48 +175,48 @@ async function seed() {
       minOrder: "4.00",
       deliveryTime: "25-35 min",
       rating: "4.9",
-      status: "active",
-      isOpen: "open",
+      status: "active" as const,
+      isOpen: "open" as const,
       openHours: '{"mon-thu": "12:00-00:00", "fri-sat": "12:00-01:00", "sun": "14:00-23:00"}',
       commissionRate: "12.00",
-      lat: -34.5978,
-      lng: -58.4273,
+      lat: "-34.5978",
+      lng: "-58.4273",
     },
-  ]).returning({ id: commerces.id });
+  ] as InsertCommerce[]).returning({ id: commerces.id });
 
   const commerceIds = commercesData.map(c => c.id);
 
   console.log("Insertando productos con precios realistas en Dólares ($ USD)...");
-  const productsData = [
+  const productsData: InsertProduct[] = [
     // La Esquina del Sabor (Comidas)
-    { commerceId: commerceIds[0], name: "Milanesa con papas fritas", description: "Milanesa de carne o pollo con papas fritas caseras", price: "7.50", image: "https://upload.wikimedia.org/wikipedia/commons/9/96/Milanesa_napolitana_con_papas_fritas_rodajas_de_tomate_y_or%C3%A9gano.jpg", category: "Principales", unitType: "unit", isFeatured: "yes", isAvailable: "yes", preparationTime: 25 },
-    { commerceId: commerceIds[0], name: "Hamburguesa completa", description: "Hamburguesa con lechuga, tomate, queso, huevo y papas", price: "6.50", image: "https://images.unsplash.com/photo-1666304927476-065fd6a18b21?w=600&h=400&fit=crop&auto=format", category: "Principales", unitType: "unit", isFeatured: "yes", isAvailable: "yes", preparationTime: 20 },
-    { commerceId: commerceIds[0], name: "Papas fritas grandes", description: "Porción grande de papas fritas caseras", price: "2.75", image: "https://images.unsplash.com/photo-1685712612098-f1461c9d2d85?w=600&h=400&fit=crop&auto=format", category: "Guarniciones", unitType: "unit", isFeatured: "no", isAvailable: "yes", preparationTime: 15 },
-    { commerceId: commerceIds[0], name: "Ensalada mixta", description: "Lechuga, tomate, cebolla, zanahoria y huevo", price: "3.50", image: "https://images.unsplash.com/photo-1569246294372-ed319c674f14?w=600&h=400&fit=crop&auto=format", category: "Entradas", unitType: "unit", isFeatured: "no", isAvailable: "yes", preparationTime: 10 },
+    { commerceId: commerceIds[0], name: "Milanesa con papas fritas", description: "Milanesa de carne o pollo con papas fritas caseras", price: "7.50", image: "https://upload.wikimedia.org/wikipedia/commons/9/96/Milanesa_napolitana_con_papas_fritas_rodajas_de_tomate_y_or%C3%A9gano.jpg", category: "Principales", unitType: "unit", isFeatured: "yes" as const, isAvailable: "yes" as const, preparationTime: 25 },
+    { commerceId: commerceIds[0], name: "Hamburguesa completa", description: "Hamburguesa con lechuga, tomate, queso, huevo y papas", price: "6.50", image: "https://images.unsplash.com/photo-1666304927476-065fd6a18b21?w=600&h=400&fit=crop&auto=format", category: "Principales", unitType: "unit", isFeatured: "yes" as const, isAvailable: "yes" as const, preparationTime: 20 },
+    { commerceId: commerceIds[0], name: "Papas fritas grandes", description: "Porción grande de papas fritas caseras", price: "2.75", image: "https://images.unsplash.com/photo-1685712612098-f1461c9d2d85?w=600&h=400&fit=crop&auto=format", category: "Guarniciones", unitType: "unit", isFeatured: "no" as const, isAvailable: "yes" as const, preparationTime: 15 },
+    { commerceId: commerceIds[0], name: "Ensalada mixta", description: "Lechuga, tomate, cebolla, zanahoria y huevo", price: "3.50", image: "https://images.unsplash.com/photo-1569246294372-ed319c674f14?w=600&h=400&fit=crop&auto=format", category: "Entradas", unitType: "unit", isFeatured: "no" as const, isAvailable: "yes" as const, preparationTime: 10 },
 
     // Panadería El Horno
-    { commerceId: commerceIds[1], name: "Docena de facturas surtidas", description: "Facturas de manteca, grasa, crema y dulce de leche", price: "4.50", image: "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=600&h=400&fit=crop&auto=format", category: "Facturas", unitType: "docena", isFeatured: "yes", isAvailable: "yes", preparationTime: 5 },
-    { commerceId: commerceIds[1], name: "Pan flauta x2", description: "Dos panes flauta recién horneados", price: "1.00", image: "https://images.unsplash.com/photo-1586511926871-deb1aca37f38?w=600&h=400&fit=crop&auto=format", category: "Pan", unitType: "pack", isFeatured: "no", isAvailable: "yes", preparationTime: 5 },
-    { commerceId: commerceIds[1], name: "Medialunas de manteca x6", description: "Media docena de medialunas de manteca", price: "2.50", image: "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=600&h=400&fit=crop&auto=format", category: "Facturas", unitType: "pack", isFeatured: "yes", isAvailable: "yes", preparationTime: 5 },
-    { commerceId: commerceIds[1], name: "Torta de cumpleaños (1kg)", description: "Torta de chocolate o vainilla con crema y dulce de leche", price: "14.00", image: "https://images.unsplash.com/photo-1763634708683-b9c5307dcaa0?w=600&h=400&fit=crop&auto=format", category: "Tortas", unitType: "unit", isFeatured: "no", isAvailable: "yes", preparationTime: 120 },
+    { commerceId: commerceIds[1], name: "Docena de facturas surtidas", description: "Facturas de manteca, grasa, crema y dulce de leche", price: "4.50", image: "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=600&h=400&fit=crop&auto=format", category: "Facturas", unitType: "docena", isFeatured: "yes" as const, isAvailable: "yes" as const, preparationTime: 5 },
+    { commerceId: commerceIds[1], name: "Pan flauta x2", description: "Dos panes flauta recién horneados", price: "1.00", image: "https://images.unsplash.com/photo-1586511926871-deb1aca37f38?w=600&h=400&fit=crop&auto=format", category: "Pan", unitType: "pack", isFeatured: "no" as const, isAvailable: "yes" as const, preparationTime: 5 },
+    { commerceId: commerceIds[1], name: "Medialunas de manteca x6", description: "Media docena de medialunas de manteca", price: "2.50", image: "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=600&h=400&fit=crop&auto=format", category: "Facturas", unitType: "pack", isFeatured: "yes" as const, isAvailable: "yes" as const, preparationTime: 5 },
+    { commerceId: commerceIds[1], name: "Torta de cumpleaños (1kg)", description: "Torta de chocolate o vainilla con crema y dulce de leche", price: "14.00", image: "https://images.unsplash.com/photo-1763634708683-b9c5307dcaa0?w=600&h=400&fit=crop&auto=format", category: "Tortas", unitType: "unit", isFeatured: "no" as const, isAvailable: "yes" as const, preparationTime: 120 },
 
     // Supermercado Día a Día
-    { commerceId: commerceIds[2], name: "Leche entera 1L", description: "Leche entera larga vida 1 litro", price: "1.25", image: "https://images.unsplash.com/photo-1553301803-768cd4a59b9c?w=600&h=400&fit=crop&auto=format", category: "Lácteos", unitType: "unit", isFeatured: "no", isAvailable: "yes", preparationTime: 2 },
-    { commerceId: commerceIds[2], name: "Pan lactal blanco", description: "Pan de molde blanco 500g", price: "1.80", image: "https://images.unsplash.com/photo-1586511926871-deb1aca37f38?w=600&h=400&fit=crop&auto=format", category: "Panadería", unitType: "unit", isFeatured: "no", isAvailable: "yes", preparationTime: 2 },
-    { commerceId: commerceIds[2], name: "Arroz 1kg", description: "Arroz blanco largo fino 1kg", price: "1.40", image: "https://images.unsplash.com/photo-1641568159866-2321c4a8fe59?w=600&h=400&fit=crop&auto=format", category: "Despensa", unitType: "unit", isFeatured: "no", isAvailable: "yes", preparationTime: 2 },
-    { commerceId: commerceIds[2], name: "Fideos tirabuzón 500g", description: "Fideos tirabuzón marca favorita 500g", price: "1.15", image: "https://images.unsplash.com/photo-1633614201174-a5172e93c21e?w=600&h=400&fit=crop&auto=format", category: "Despensa", unitType: "unit", isFeatured: "no", isAvailable: "yes", preparationTime: 2 },
+    { commerceId: commerceIds[2], name: "Leche entera 1L", description: "Leche entera larga vida 1 litro", price: "1.25", image: "https://images.unsplash.com/photo-1553301803-768cd4a59b9c?w=600&h=400&fit=crop&auto=format", category: "Lácteos", unitType: "unit", isFeatured: "no" as const, isAvailable: "yes" as const, preparationTime: 2 },
+    { commerceId: commerceIds[2], name: "Pan lactal blanco", description: "Pan de molde blanco 500g", price: "1.80", image: "https://images.unsplash.com/photo-1586511926871-deb1aca37f38?w=600&h=400&fit=crop&auto=format", category: "Panadería", unitType: "unit", isFeatured: "no" as const, isAvailable: "yes" as const, preparationTime: 2 },
+    { commerceId: commerceIds[2], name: "Arroz 1kg", description: "Arroz blanco largo fino 1kg", price: "1.40", image: "https://images.unsplash.com/photo-1641568159866-2321c4a8fe59?w=600&h=400&fit=crop&auto=format", category: "Despensa", unitType: "unit", isFeatured: "no" as const, isAvailable: "yes" as const, preparationTime: 2 },
+    { commerceId: commerceIds[2], name: "Fideos tirabuzón 500g", description: "Fideos tirabuzón marca favorita 500g", price: "1.15", image: "https://images.unsplash.com/photo-1633614201174-a5172e93c21e?w=600&h=400&fit=crop&auto=format", category: "Despensa", unitType: "unit", isFeatured: "no" as const, isAvailable: "yes" as const, preparationTime: 2 },
 
     // Farmacia Central
-    { commerceId: commerceIds[3], name: "Ibuprofeno 400mg x20", description: "Anti-inflamatorio 20 comprimidos", price: "2.50", image: "https://images.unsplash.com/photo-1550572017-4fcdbb59cc32?w=600&h=400&fit=crop&auto=format", category: "Medicamentos", unitType: "caja", isFeatured: "yes", isAvailable: "yes", preparationTime: 3 },
-    { commerceId: commerceIds[3], name: "Paracetamol 500mg x20", description: "Analgésico/antipirético 20 comprimidos", price: "1.75", image: "https://images.unsplash.com/photo-1588718889344-f7bd7a565d20?w=600&h=400&fit=crop&auto=format", category: "Medicamentos", unitType: "caja", isFeatured: "yes", isAvailable: "yes", preparationTime: 3 },
-    { commerceId: commerceIds[3], name: "Alcohol en gel 500ml", description: "Alcohol en gel antibacterial 70%", price: "2.25", image: "https://images.unsplash.com/photo-1581579897037-92e05ce7d4b5?w=600&h=400&fit=crop&auto=format", category: "Primeros auxilios", unitType: "unit", isFeatured: "no", isAvailable: "yes", preparationTime: 2 },
-    { commerceId: commerceIds[3], name: "Vitamina C 1g x30", description: "Vitamina C efervescente 30 comprimidos", price: "4.50", image: "https://plus.unsplash.com/premium_photo-1732104312846-d4feffdc5ba2?w=600&h=400&fit=crop&auto=format", category: "Suplementos", unitType: "caja", isFeatured: "no", isAvailable: "yes", preparationTime: 3 },
+    { commerceId: commerceIds[3], name: "Ibuprofeno 400mg x20", description: "Anti-inflamatorio 20 comprimidos", price: "2.50", image: "https://images.unsplash.com/photo-1550572017-4fcdbb59cc32?w=600&h=400&fit=crop&auto=format", category: "Medicamentos", unitType: "caja", isFeatured: "yes" as const, isAvailable: "yes" as const, preparationTime: 3 },
+    { commerceId: commerceIds[3], name: "Paracetamol 500mg x20", description: "Analgésico/antipirético 20 comprimidos", price: "1.75", image: "https://images.unsplash.com/photo-1588718889344-f7bd7a565d20?w=600&h=400&fit=crop&auto=format", category: "Medicamentos", unitType: "caja", isFeatured: "yes" as const, isAvailable: "yes" as const, preparationTime: 3 },
+    { commerceId: commerceIds[3], name: "Alcohol en gel 500ml", description: "Alcohol en gel antibacterial 70%", price: "2.25", image: "https://images.unsplash.com/photo-1581579897037-92e05ce7d4b5?w=600&h=400&fit=crop&auto=format", category: "Primeros auxilios", unitType: "unit", isFeatured: "no" as const, isAvailable: "yes" as const, preparationTime: 2 },
+    { commerceId: commerceIds[3], name: "Vitamina C 1g x30", description: "Vitamina C efervescente 30 comprimidos", price: "4.50", image: "https://plus.unsplash.com/premium_photo-1732104312846-d4feffdc5ba2?w=600&h=400&fit=crop&auto=format", category: "Suplementos", unitType: "caja", isFeatured: "no" as const, isAvailable: "yes" as const, preparationTime: 3 },
 
     // Heladería Dulce Frío
-    { commerceId: commerceIds[4], name: "Helado 1kg (2 sabores)", description: "Helado artesanal 1 kilo - 2 sabores a elección", price: "8.00", image: "https://images.unsplash.com/photo-1629385701021-fcd568a743e8?w=600&h=400&fit=crop&auto=format", category: "Helados", unitType: "unit", isFeatured: "yes", isAvailable: "yes", preparationTime: 10 },
-    { commerceId: commerceIds[4], name: "Helado 1/4kg (1 sabor)", description: "Helado artesanal 250g - 1 sabor a elección", price: "2.50", image: "https://images.unsplash.com/photo-1629385701021-fcd568a743e8?w=600&h=400&fit=crop&auto=format", category: "Helados", unitType: "unit", isFeatured: "no", isAvailable: "yes", preparationTime: 5 },
-    { commerceId: commerceIds[4], name: "Banana split", description: "Banana con 3 bolas de helado, crema, chocolate y nueces", price: "4.00", image: "https://images.unsplash.com/photo-1488900128323-21503983a07e?w=600&h=400&fit=crop&auto=format", category: "Postres", unitType: "unit", isFeatured: "yes", isAvailable: "yes", preparationTime: 8 },
-    { commerceId: commerceIds[4], name: "Vaso de helado 2 bolas", description: "Vaso con 2 bolas de helado a elección", price: "2.00", image: "https://images.unsplash.com/photo-1559703248-dcaaec9fab78?w=600&h=400&fit=crop&auto=format", category: "Helados", unitType: "unit", isFeatured: "no", isAvailable: "yes", preparationTime: 5 },
+    { commerceId: commerceIds[4], name: "Helado 1kg (2 sabores)", description: "Helado artesanal 1 kilo - 2 sabores a elección", price: "8.00", image: "https://images.unsplash.com/photo-1629385701021-fcd568a743e8?w=600&h=400&fit=crop&auto=format", category: "Helados", unitType: "unit", isFeatured: "yes" as const, isAvailable: "yes" as const, preparationTime: 10 },
+    { commerceId: commerceIds[4], name: "Helado 1/4kg (1 sabor)", description: "Helado artesanal 250g - 1 sabor a elección", price: "2.50", image: "https://images.unsplash.com/photo-1629385701021-fcd568a743e8?w=600&h=400&fit=crop&auto=format", category: "Helados", unitType: "unit", isFeatured: "no" as const, isAvailable: "yes" as const, preparationTime: 5 },
+    { commerceId: commerceIds[4], name: "Banana split", description: "Banana con 3 bolas de helado, crema, chocolate y nueces", price: "4.00", image: "https://images.unsplash.com/photo-1488900128323-21503983a07e?w=600&h=400&fit=crop&auto=format", category: "Postres", unitType: "unit", isFeatured: "yes" as const, isAvailable: "yes" as const, preparationTime: 8 },
+    { commerceId: commerceIds[4], name: "Vaso de helado 2 bolas", description: "Vaso con 2 bolas de helado a elección", price: "2.00", image: "https://images.unsplash.com/photo-1559703248-dcaaec9fab78?w=600&h=400&fit=crop&auto=format", category: "Helados", unitType: "unit", isFeatured: "no" as const, isAvailable: "yes" as const, preparationTime: 5 },
   ];
 
   const insertedProducts = await db.insert(products).values(productsData).returning({ id: products.id, name: products.name, price: products.price, commerceId: products.commerceId });

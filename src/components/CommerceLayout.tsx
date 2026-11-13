@@ -1,8 +1,34 @@
+/**
+ * @archivo src/components/CommerceLayout.tsx
+ * @modulo 03-commerce-panel (Layout Maestro del Panel de Negocio)
+ * @proposito
+ *   Estructura base responsiva para el panel de comercios y restaurantes aliados de Rapidy.
+ *   Diseñada con la estética oficial Rapidy (Sidebar y Topbar en Dark Velvet #0E0E12,
+ *   acentos Flame Orange #FF6A00, fondo Luminous #F7F7FA y navegación móvil ergonómica).
+ *
+ * @resumen_contenido
+ *   - Componente `CommerceLayout`: Barra lateral fija de escritorio, barra superior móvil
+ *     con indicador de tienda en línea, contador en vivo de pedidos pendientes y navegación inferior.
+ *
+ * @dependencias_internas
+ *   - `trpcMutate`, `useMerchantCommerceId`, `useCommerceOrders` (@/hooks/useDeliveryData)
+ *
+ * @dependencias_externas
+ *   - `react` (`useState`, `useEffect`)
+ *   - `react-router` (`useNavigate`, `useLocation`)
+ *   - `lucide-react` (`LayoutDashboard`, `ShoppingBag`, `Package`, `BarChart3`, `LogOut`, `User`, `Store`, `Sparkles`)
+ */
+
 import { useState, useEffect, type ReactNode } from "react";
 import { useNavigate, useLocation } from "react-router";
 import {
-  LayoutDashboard, ShoppingBag, Package, BarChart3,
-  LogOut, User, Store,
+  LayoutDashboard,
+  ShoppingBag,
+  Package,
+  BarChart3,
+  LogOut,
+  User,
+  Store,
 } from "lucide-react";
 import { trpcMutate, useMerchantCommerceId, useCommerceOrders } from "@/hooks/useDeliveryData";
 
@@ -21,8 +47,8 @@ export default function CommerceLayout({ children }: { children: ReactNode }) {
 
   const { commerceId } = useMerchantCommerceId();
   const { data: rawOrders } = useCommerceOrders(commerceId || 0);
-  
-  // Pending orders badge count (received or preparing)
+
+  // Contador dinámico de pedidos pendientes (recibidos o en preparación)
   const pendingCount = (rawOrders || []).filter(
     (o) => o.status === "received" || o.status === "preparing"
   ).length;
@@ -51,39 +77,45 @@ export default function CommerceLayout({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row text-slate-800 antialiased overflow-x-hidden">
-      
-      {/* Sidebar - Desktop */}
-      <aside className="hidden md:flex w-64 bg-white border-r border-slate-200 flex-col fixed inset-y-0 left-0 z-30 shadow-xs">
-        {/* Brand header */}
-        <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+    <div className="min-h-screen bg-[#F7F7FA] flex flex-col md:flex-row text-zinc-900 antialiased overflow-x-hidden selection:bg-[#FF6A00]/20">
+      {/* 1. SIDEBAR DESKTOP (Dark Velvet #0E0E12) */}
+      <aside className="hidden md:flex w-64 bg-[#0E0E12] border-r border-white/10 flex-col fixed inset-y-0 left-0 z-30 shadow-2xl">
+        {/* Cabecera de Marca */}
+        <div className="p-5 border-b border-white/10 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-emerald-600 rounded-xl flex items-center justify-center text-white shadow-sm shadow-emerald-600/30">
-              <Store className="w-5 h-5" />
+            <div className="w-9 h-9 bg-gradient-to-tr from-[#FF6A00] to-[#FFA040] rounded-xl flex items-center justify-center text-white shadow-md shadow-[#FF6A00]/30">
+              <Store className="w-5 h-5 stroke-[2.2]" />
             </div>
             <div className="min-w-0">
-              <h2 className="font-bold text-slate-900 text-sm truncate leading-tight">RAPIDY</h2>
-              <p className="text-[11px] text-slate-400 font-medium truncate">Panel Comercio</p>
+              <div className="flex items-center gap-1.5">
+                <h2 className="font-black text-white text-base tracking-tight leading-none">RAPIDY</h2>
+                <span className="text-[10px] bg-[#FF6A00]/20 text-[#FF6A00] border border-[#FF6A00]/30 font-black px-1.5 py-0.2 rounded-full">
+                  PRO
+                </span>
+              </div>
+              <p className="text-[10px] text-zinc-400 font-semibold tracking-wider uppercase mt-0.5">
+                Panel del Negocio
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Store badge info */}
-        <div className="px-4 py-3 mx-3 my-2 bg-slate-50 border border-slate-200/60 rounded-xl flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center text-xs flex-shrink-0">
+        {/* Tarjeta de Información de la Tienda */}
+        <div className="px-4 py-3 mx-3 my-3 bg-white/5 border border-white/10 rounded-2xl flex items-center gap-2.5 shadow-inner">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#FF6A00] to-[#FF8533] text-white font-black flex items-center justify-center text-xs shrink-0 shadow-sm shadow-[#FF6A00]/30">
             {storeName.charAt(0).toUpperCase()}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-semibold text-slate-800 truncate">{storeName}</p>
-            <span className="inline-flex items-center gap-1 text-[10px] text-emerald-600 font-medium">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              En línea
+            <p className="text-xs font-bold text-white truncate leading-snug">{storeName}</p>
+            <span className="inline-flex items-center gap-1.5 text-[10px] text-[#FF6A00] font-black">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#FF6A00] animate-ping" />
+              Operando en Vivo
             </span>
           </div>
         </div>
 
-        {/* Navigation links */}
-        <nav className="flex-1 px-3 py-2 space-y-1">
+        {/* Enlaces de Navegación Vertical */}
+        <nav className="flex-1 px-3 py-2 space-y-1.5">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
             const Icon = item.icon;
@@ -93,21 +125,22 @@ export default function CommerceLayout({ children }: { children: ReactNode }) {
                 key={item.path}
                 type="button"
                 onClick={() => navigate(item.path)}
-                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
-                  isActive
-                    ? "bg-emerald-600 text-white shadow-sm shadow-emerald-600/25"
-                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                }`}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer ${isActive
+                    ? "bg-[#FF6A00] text-white shadow-md shadow-[#FF6A00]/30"
+                    : "text-zinc-400 hover:text-white hover:bg-white/5"
+                  }`}
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? "text-white" : "text-slate-400"}`} />
+                  <Icon
+                    className={`w-4 h-4 shrink-0 transition-transform ${isActive ? "text-white scale-110" : "text-zinc-500"
+                      }`}
+                  />
                   <span className="truncate">{item.label}</span>
                 </div>
                 {isOrders && pendingCount > 0 && (
                   <span
-                    className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                      isActive ? "bg-white text-emerald-700" : "bg-emerald-100 text-emerald-800"
-                    }`}
+                    className={`text-[10px] px-2 py-0.5 rounded-full font-black ${isActive ? "bg-white text-[#FF6A00]" : "bg-[#FF6A00] text-white animate-pulse"
+                      }`}
                   >
                     {pendingCount}
                   </span>
@@ -117,58 +150,58 @@ export default function CommerceLayout({ children }: { children: ReactNode }) {
           })}
         </nav>
 
-        {/* Logout button at bottom of desktop sidebar */}
-        <div className="p-3 border-t border-slate-100">
+        {/* Botón de Cerrar Sesión */}
+        <div className="p-3 border-t border-white/10">
           <button
             type="button"
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-3.5 py-2.5 text-xs font-semibold text-red-600 hover:bg-red-50 rounded-xl transition-colors group"
+            className="w-full flex items-center gap-3 px-3.5 py-2.5 text-xs font-bold text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-2xl transition-all cursor-pointer group"
           >
-            <LogOut className="w-4 h-4 text-red-400 group-hover:text-red-600 transition-colors" />
+            <LogOut className="w-4 h-4 text-rose-500 group-hover:scale-110 transition-transform" />
             <span>Cerrar sesión</span>
           </button>
         </div>
       </aside>
 
-      {/* Mobile Top Header (Fixed so it never hides on scroll, with safe-area spacing for notch/status bar) */}
+      {/* 2. CABECERA MÓVIL SUPERIOR (Dark Velvet Fijo) */}
       <header
-        className="md:hidden fixed top-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 min-[380px]:px-5 pt-12 pb-3 flex items-center justify-between shadow-xs transition-all"
+        className="md:hidden fixed top-0 inset-x-0 z-40 bg-[#0E0E12]/95 backdrop-blur-2xl border-b border-white/10 px-4 min-[380px]:px-5 pt-12 pb-3 flex items-center justify-between shadow-xl transition-all"
         style={{
           paddingTop: "max(48px, env(safe-area-inset-top, 48px))",
           minHeight: "calc(max(48px, env(safe-area-inset-top, 48px)) + 52px)",
         }}
       >
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 min-[380px]:w-9 min-[380px]:h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-xs min-[380px]:text-sm flex-shrink-0 shadow-xs">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#FF6A00] to-[#FFA040] text-white flex items-center justify-center font-black text-xs shrink-0 shadow-md shadow-[#FF6A00]/30">
             {storeName.charAt(0).toUpperCase()}
           </div>
           <div className="min-w-0">
-            <h1 className="text-xs min-[380px]:text-sm font-bold text-slate-800 truncate leading-tight">
+            <h1 className="text-xs min-[380px]:text-sm font-black text-white truncate leading-tight">
               {storeName}
             </h1>
-            <p className="text-[10px] min-[380px]:text-[11px] text-emerald-600 font-medium flex items-center gap-1.5 mt-0.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Panel de Comercio
+            <p className="text-[10px] min-[380px]:text-[11px] text-[#FF6A00] font-black flex items-center gap-1.5 mt-0.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#FF6A00] animate-ping" />
+              Panel de Negocio
             </p>
           </div>
         </div>
 
-        {/* Mobile Quick Logout Button */}
+        {/* Botón Salir Móvil */}
         <button
           type="button"
           onClick={handleLogout}
           title="Cerrar sesión"
           aria-label="Cerrar sesión de mi comercio"
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-slate-600 hover:text-red-600 hover:bg-red-50 border border-slate-200 hover:border-red-200 active:scale-95 transition-all text-xs font-semibold flex-shrink-0 shadow-2xs"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 border border-rose-500/20 active:scale-95 transition-all text-xs font-bold shrink-0 cursor-pointer"
         >
-          <LogOut className="w-3.5 h-3.5 text-red-500" />
-          <span className="text-red-600">Salir</span>
+          <LogOut className="w-3.5 h-3.5 text-rose-400" />
+          <span>Salir</span>
         </button>
       </header>
 
-      {/* Main Content Area (with top padding to account for fixed header + elegant breathing room) */}
+      {/* 3. ÁREA PRINCIPAL DE CONTENIDO */}
       <main
-        className="flex-1 md:ml-64 pt-28 md:pt-0 pb-24 md:pb-8 overflow-x-hidden"
+        className="flex-1 md:ml-64 pt-28 md:pt-0 pb-24 md:pb-8 overflow-x-hidden min-h-screen"
         style={{
           paddingTop: "calc(max(48px, env(safe-area-inset-top, 48px)) + 56px)",
         }}
@@ -176,10 +209,10 @@ export default function CommerceLayout({ children }: { children: ReactNode }) {
         {children}
       </main>
 
-      {/* Bottom Nav - Mobile */}
+      {/* 4. NAVEGACIÓN MÓVIL INFERIOR (Dark Velvet #0E0E12) */}
       <nav
         aria-label="Navegación principal móvil"
-        className="md:hidden fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-slate-200/90 z-40 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] px-2 pt-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom,8px))]"
+        className="md:hidden fixed bottom-0 inset-x-0 bg-[#0E0E12]/95 backdrop-blur-2xl border-t border-white/10 z-40 shadow-[0_-8px_30px_rgba(0,0,0,0.6)] px-2 pt-2 pb-[max(0.6rem,env(safe-area-inset-bottom,10px))]"
       >
         <div className="flex items-center justify-around w-full max-w-lg mx-auto">
           {navItems.map((item) => {
@@ -192,23 +225,21 @@ export default function CommerceLayout({ children }: { children: ReactNode }) {
                 key={item.path}
                 type="button"
                 onClick={() => navigate(item.path)}
-                className={`relative flex-1 flex flex-col items-center justify-center py-1 px-0.5 rounded-lg transition-all active:scale-95 ${
-                  isActive
-                    ? "text-emerald-700 font-bold bg-emerald-50/80"
-                    : "text-slate-400 hover:text-slate-600 font-medium"
-                }`}
+                className={`relative flex-1 flex flex-col items-center justify-center py-1 px-0.5 rounded-xl transition-all active:scale-95 cursor-pointer ${isActive
+                    ? "text-[#FF6A00] font-black bg-[#FF6A00]/10"
+                    : "text-zinc-400 hover:text-zinc-200 font-medium"
+                  }`}
               >
                 <div className="relative">
                   <Icon
-                    className={`w-4 h-4 min-[360px]:w-5 min-[360px]:h-5 transition-transform ${
-                      isActive ? "scale-110 text-emerald-700" : ""
-                    }`}
+                    className={`w-4 h-4 min-[360px]:w-5 min-[360px]:h-5 transition-transform ${isActive ? "scale-110 text-[#FF6A00]" : ""
+                      }`}
                   />
                   {isOrders && pendingCount > 0 && (
-                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full ring-2 ring-white" />
+                    <span className="absolute -top-1 -right-1.5 min-w-[16px] h-4 bg-[#FF6A00] text-white text-[9px] font-black rounded-full flex items-center justify-center px-1 shadow-sm shadow-[#FF6A00]/40 animate-pulse" />
                   )}
                 </div>
-                <span className="text-[8px] min-[320px]:text-[9px] min-[360px]:text-[10px] mt-0.5 truncate max-w-full tracking-tight">
+                <span className="text-[9px] min-[320px]:text-[10px] mt-1 truncate max-w-full tracking-tight font-bold">
                   {item.label}
                 </span>
               </button>
@@ -216,7 +247,6 @@ export default function CommerceLayout({ children }: { children: ReactNode }) {
           })}
         </div>
       </nav>
-
     </div>
   );
 }

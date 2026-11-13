@@ -138,22 +138,22 @@ export default function CommerceDetail() {
 
   if (loadingCommerce) {
     return (
-      <div className="mobile-container bg-[#F7F7FA] min-h-screen flex items-center justify-center">
-        <div className="w-9 h-9 border-3 border-[#FF6A00] border-t-transparent rounded-full animate-spin" />
+      <div className="mobile-container bg-surface min-h-screen flex items-center justify-center">
+        <div className="w-9 h-9 border-3 border-brand border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   if (!commerce) {
     return (
-      <div className="mobile-container bg-[#F7F7FA] min-h-screen flex flex-col items-center justify-center p-6 text-center">
+      <div className="mobile-container bg-surface min-h-screen flex flex-col items-center justify-center p-6 text-center">
         <div className="w-16 h-16 rounded-3xl bg-zinc-100 flex items-center justify-center text-zinc-400 mb-3">
           <Store className="w-8 h-8 stroke-[1.5]" />
         </div>
         <p className="text-base font-bold text-zinc-800">Comercio no encontrado</p>
         <button
           onClick={() => navigate("/home")}
-          className="mt-4 px-6 py-2.5 bg-[#FF6A00] text-white font-bold text-xs rounded-xl shadow-md cursor-pointer"
+          className="mt-4 px-6 py-2.5 bg-brand text-white font-bold text-xs rounded-xl shadow-md cursor-pointer"
         >
           Volver al catálogo
         </button>
@@ -162,7 +162,7 @@ export default function CommerceDetail() {
   }
 
   return (
-    <div className="mobile-container bg-[#F7F7FA] min-h-screen pb-32 text-zinc-900 select-none">
+    <div className="mobile-container bg-surface min-h-screen pb-32 text-zinc-900 select-none">
       {/* Portada Hero con degradado y botón de retroceso */}
       <div className="relative h-52 bg-zinc-900">
         <div
@@ -217,12 +217,12 @@ export default function CommerceDetail() {
           </p>
 
           <div className="flex items-center gap-2 mt-3 text-xs text-zinc-600 font-medium">
-            <MapPin className="w-3.5 h-3.5 text-[#FF6A00] shrink-0" />
+            <MapPin className="w-3.5 h-3.5 text-brand shrink-0" />
             <span className="truncate">{commerce.address}</span>
           </div>
 
           <div className="flex items-center gap-2 mt-1.5 text-xs text-zinc-600 font-medium">
-            <Phone className="w-3.5 h-3.5 text-[#FF6A00] shrink-0" />
+            <Phone className="w-3.5 h-3.5 text-brand shrink-0" />
             <span>{commerce.phone}</span>
           </div>
 
@@ -272,7 +272,7 @@ export default function CommerceDetail() {
                       />
                       <div className="flex-1 min-w-0 flex flex-col justify-between">
                         <div>
-                          <h3 className="font-bold text-zinc-900 text-sm leading-snug group-hover:text-[#FF6A00] transition-colors">
+                          <h3 className="font-bold text-zinc-900 text-sm leading-snug group-hover:text-brand transition-colors">
                             {product.name}
                           </h3>
                           {product.description && (
@@ -283,7 +283,7 @@ export default function CommerceDetail() {
                         </div>
 
                         <div className="flex items-center justify-between mt-2.5 pt-1.5 border-t border-zinc-50">
-                          <span className="text-sm sm:text-base font-black text-[#FF6A00]">
+                          <span className="text-sm sm:text-base font-black text-brand">
                             ${product.price} {product.unitType === "kg" ? "/ kg" : ""}
                           </span>
 
@@ -296,12 +296,12 @@ export default function CommerceDetail() {
                               >
                                 <Minus className="w-3.5 h-3.5" />
                               </button>
-                              <span className="text-xs font-black text-[#FF6A00] min-w-[18px] text-center">
+                              <span className="text-xs font-black text-brand min-w-[18px] text-center">
                                 {inCartQty}
                               </span>
                               <button
                                 onClick={() => updateQuantity(product.id, inCartQty + 1)}
-                                className="w-7 h-7 rounded-lg bg-[#FF6A00] flex items-center justify-center text-white active:scale-90 transition-transform shadow-xs cursor-pointer"
+                                className="w-7 h-7 rounded-lg bg-brand flex items-center justify-center text-white active:scale-90 transition-transform shadow-xs cursor-pointer"
                                 aria-label="Aumentar"
                               >
                                 <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
@@ -310,7 +310,7 @@ export default function CommerceDetail() {
                           ) : (
                             <button
                               onClick={() => handleAddClick(product)}
-                              className="w-9 h-9 bg-[#FF6A00] hover:bg-[#e65f00] text-white rounded-xl flex items-center justify-center shadow-md shadow-[#FF6A00]/25 active:scale-90 transition-all cursor-pointer"
+                              className="w-9 h-9 bg-brand hover:bg-brand-strong text-white rounded-xl flex items-center justify-center shadow-md shadow-brand/25 active:scale-90 transition-all cursor-pointer"
                               aria-label="Agregar al carrito"
                             >
                               <Plus className="w-4 h-4 stroke-[2.5]" />
@@ -330,7 +330,7 @@ export default function CommerceDetail() {
       {/* Modal para Productos por Kilo / Importe */}
       {purchaseModal.show && purchaseModal.product && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-end sm:items-center justify-center z-[120] p-0 sm:p-4 select-none animate-in fade-in duration-150">
-          <div className="bg-[#F7F7FA] rounded-t-3xl sm:rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl animate-in slide-in-from-bottom-6 duration-200 border border-zinc-200">
+          <div className="bg-surface rounded-t-3xl sm:rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl animate-in slide-in-from-bottom-6 duration-200 border border-zinc-200">
             <div className="w-12 h-1 bg-zinc-300 rounded-full mx-auto my-3 sm:hidden" />
             
             <div className="p-4 bg-white border-b border-zinc-100 flex items-center gap-3">
@@ -342,7 +342,7 @@ export default function CommerceDetail() {
                 <h3 className="font-bold text-zinc-900 text-sm leading-tight truncate">
                   {purchaseModal.product.name}
                 </h3>
-                <p className="text-xs text-[#FF6A00] font-black mt-0.5">
+                <p className="text-xs text-brand font-black mt-0.5">
                   ${purchaseModal.product.price} / kg
                 </p>
               </div>
@@ -375,7 +375,7 @@ export default function CommerceDetail() {
                       <button
                         key={val}
                         onClick={() => setPurchaseModal({ ...purchaseModal, inputValue: val })}
-                        className="px-3 py-1.5 text-xs rounded-xl border border-zinc-200 bg-white text-zinc-700 hover:border-[#FF6A00] active:scale-95 font-bold cursor-pointer"
+                        className="px-3 py-1.5 text-xs rounded-xl border border-zinc-200 bg-white text-zinc-700 hover:border-brand active:scale-95 font-bold cursor-pointer"
                       >
                         {val} kg
                       </button>
@@ -384,7 +384,7 @@ export default function CommerceDetail() {
                       <button
                         key={val}
                         onClick={() => setPurchaseModal({ ...purchaseModal, inputValue: val })}
-                        className="px-3 py-1.5 text-xs rounded-xl border border-zinc-200 bg-white text-zinc-700 hover:border-[#FF6A00] active:scale-95 font-bold cursor-pointer"
+                        className="px-3 py-1.5 text-xs rounded-xl border border-zinc-200 bg-white text-zinc-700 hover:border-brand active:scale-95 font-bold cursor-pointer"
                       >
                         ${val} USD
                       </button>
@@ -406,7 +406,7 @@ export default function CommerceDetail() {
                     min="0.1"
                     value={purchaseModal.inputValue}
                     onChange={(e) => setPurchaseModal({ ...purchaseModal, inputValue: e.target.value })}
-                    className={`w-full h-11 bg-white border border-zinc-200 rounded-xl font-black text-zinc-900 text-lg focus:outline-none focus:border-[#FF6A00] focus:ring-1 focus:ring-[#FF6A00] ${
+                    className={`w-full h-11 bg-white border border-zinc-200 rounded-xl font-black text-zinc-900 text-lg focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand ${
                       purchaseModal.tab === "importe" ? "pl-8 pr-3" : "px-3.5 pr-10"
                     }`}
                   />
@@ -420,7 +420,7 @@ export default function CommerceDetail() {
                 <button
                   onClick={confirmPurchase}
                   disabled={!parseFloat(purchaseModal.inputValue) || parseFloat(purchaseModal.inputValue) <= 0}
-                  className="flex-1 h-12 bg-[#FF6A00] hover:bg-[#e65f00] text-white font-bold rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 active:scale-[0.98] transition-all shadow-md shadow-[#FF6A00]/25 cursor-pointer"
+                  className="flex-1 h-12 bg-brand hover:bg-brand-strong text-white font-bold rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 active:scale-[0.98] transition-all shadow-md shadow-brand/25 cursor-pointer"
                 >
                   <ShoppingCart className="w-4 h-4" /> Agregar al pedido
                 </button>

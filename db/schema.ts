@@ -9,6 +9,8 @@ import {
   integer,
   bigint,
   boolean,
+  index,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 export const roleEnum = pgEnum("role", ["user", "admin", "merchant"]);
@@ -71,7 +73,11 @@ export const customers = pgTable("customers", {
   address: text("address").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   fcmToken: text("fcm_token"),
-});
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  sessionVersion: integer("session_version").default(0).notNull(),
+}, (table) => [
+  index("customers_deleted_at_idx").on(table.deletedAt),
+]);
 
 export type Customer = typeof customers.$inferSelect;
 export type InsertCustomer = typeof customers.$inferInsert;
@@ -131,7 +137,11 @@ export const commerces = pgTable("commerces", {
   lng: numeric("lng", { precision: 11, scale: 8 }),
   merchantUserId: integer("merchant_user_id").references(() => users.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("commerces_category_id_idx").on(table.categoryId),
+  index("commerces_merchant_user_id_idx").on(table.merchantUserId),
+  index("commerces_status_open_idx").on(table.status, table.isOpen),
+]);
 
 export type Commerce = typeof commerces.$inferSelect;
 export type InsertCommerce = typeof commerces.$inferInsert;
@@ -150,7 +160,12 @@ export const products = pgTable("products", {
   isAvailable: availableEnum("is_available").default("yes").notNull(),
   preparationTime: integer("preparation_time"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("products_commerce_id_idx").on(table.commerceId),
+  index("products_available_featured_idx").on(table.isAvailable, table.isFeatured),
+  index("products_name_idx").on(table.name),
+  index("products_category_idx").on(table.category),
+]);
 
 export type Product = typeof products.$inferSelect;
 export type InsertProduct = typeof products.$inferInsert;
@@ -173,9 +188,19 @@ export const orders = pgTable("orders", {
   notes: text("notes"),
   commerceSettled: boolean("commerce_settled").default(false).notNull(),
   driverSettled: boolean("driver_settled").default(false).notNull(),
+  idempotencyKey: varchar("idempotency_key", { length: 100 }),
+  cancellationReason: text("cancellation_reason"),
+  cancelledBy: varchar("cancelled_by", { length: 20 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("orders_customer_id_idx").on(table.customerId),
+  index("orders_driver_id_idx").on(table.driverId),
+  index("orders_status_idx").on(table.status),
+  index("orders_created_at_idx").on(table.createdAt),
+  index("orders_customer_created_idx").on(table.customerId, table.createdAt),
+  uniqueIndex("orders_idempotency_key_idx").on(table.idempotencyKey),
+]);
 
 export type Order = typeof orders.$inferSelect;
 export type InsertOrder = typeof orders.$inferInsert;
@@ -191,7 +216,11 @@ export const orderItems = pgTable("order_items", {
   unitPrice: numeric("unit_price", { precision: 10, scale: 2 }).notNull(),
   total: numeric("total", { precision: 10, scale: 2 }).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("order_items_order_id_idx").on(table.orderId),
+  index("order_items_commerce_id_idx").on(table.commerceId),
+  index("order_items_product_id_idx").on(table.productId),
+]);
 
 export type OrderItem = typeof orderItems.$inferSelect;
 
@@ -205,7 +234,10 @@ export const orderStatusHistory = pgTable("order_status_history", {
   status: varchar("status", { length: 50 }).notNull(),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("order_status_history_order_id_idx").on(table.orderId),
+  index("order_status_history_created_at_idx").on(table.createdAt),
+]);
 
 // ============= ORDER COMMERCE STATUS =============
 export const orderCommerceStatus = pgTable("order_commerce_status", {
@@ -214,7 +246,10 @@ export const orderCommerceStatus = pgTable("order_commerce_status", {
   commerceId: bigint("commerce_id", { mode: "number" }).notNull().references(() => commerces.id, { onDelete: "cascade" }),
   status: orderCommerceStatusEnum("status").default("preparing").notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (table) => [
+  uniqueIndex("order_commerce_status_order_commerce_idx").on(table.orderId, table.commerceId),
+  index("order_commerce_status_commerce_id_idx").on(table.commerceId),
+]);
 
 // ============= CHAT MESSAGES =============
 export const chatMessages = pgTable("chat_messages", {
@@ -226,7 +261,10 @@ export const chatMessages = pgTable("chat_messages", {
   message: text("message").notNull(),
   isRead: readEnum("is_read").default("no").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("chat_messages_order_created_idx").on(table.orderId, table.createdAt),
+  index("chat_messages_read_idx").on(table.isRead),
+]);
 
 export type ChatMessage = typeof chatMessages.$inferSelect;
 
@@ -239,7 +277,49 @@ export const driverEarnings = pgTable("driver_earnings", {
   type: earningsTypeEnum("type").default("delivery_fee").notNull(),
   date: varchar("date", { length: 10 }).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  uniqueIndex("driver_earnings_order_type_idx").on(table.orderId, table.type),
+  index("driver_earnings_driver_id_idx").on(table.driverId),
+]);
+
+// ============= OTP VERIFICATIONS (WhatsApp / NeuroChat) =============
+export const otpVerifications = pgTable("otp_verifications", {
+  id: serial("id").primaryKey(),
+  phone: varchar("phone", { length: 20 }).notNull(),
+  otpId: varchar("otp_id", { length: 120 }),
+  codeHash: varchar("code_hash", { length: 255 }),
+  provider: varchar("provider", { length: 30 }).default("neurochat").notNull(),
+  purpose: varchar("purpose", { length: 30 }).default("login").notNull(),
+  status: varchar("status", { length: 20 }).default("pending").notNull(),
+  attempts: integer("attempts").default(0).notNull(),
+  ip: varchar("ip", { length: 64 }),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  consumedAt: timestamp("consumed_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  index("otp_verifications_phone_created_idx").on(table.phone, table.createdAt),
+  index("otp_verifications_otp_id_idx").on(table.otpId),
+  index("otp_verifications_status_expires_idx").on(table.status, table.expiresAt),
+]);
+
+export type OtpVerification = typeof otpVerifications.$inferSelect;
+
+// ============= ACCOUNT DELETION REQUESTS (LOPDP / Ley 25.326) =============
+export const accountDeletionRequests = pgTable("account_deletion_requests", {
+  id: serial("id").primaryKey(),
+  ticketId: varchar("ticket_id", { length: 40 }).notNull().unique(),
+  phone: varchar("phone", { length: 20 }).notNull(),
+  fullName: varchar("full_name", { length: 200 }).notNull(),
+  role: varchar("role", { length: 20 }).default("customer").notNull(),
+  reason: text("reason"),
+  status: varchar("status", { length: 20 }).default("pending").notNull(),
+  ip: varchar("ip", { length: 64 }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  processedAt: timestamp("processed_at", { withTimezone: true }),
+}, (table) => [
+  index("account_deletion_requests_phone_idx").on(table.phone),
+  index("account_deletion_requests_status_idx").on(table.status),
+]);
 
 // ============= APP SETTINGS =============
 export const appSettings = pgTable("app_settings", {

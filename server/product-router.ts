@@ -2,52 +2,92 @@ import { z } from "zod";
 import { createRouter, publicQuery, merchantQuery } from "./middleware";
 import { getDb } from "./queries/connection";
 import { products, commerces, orderItems } from "@db/schema";
-import { eq, like, and, sql, desc } from "drizzle-orm";
+import { eq, and, or, ilike, sql, desc } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { emit } from "./events";
+import { assertCommerceOwnership, merchantOwnsCommerce } from "./lib/order-access";
+
+const catalogProductColumns = {
+  id: products.id,
+  commerceId: products.commerceId,
+  name: products.name,
+  description: products.description,
+  price: products.price,
+  image: products.image,
+  category: products.category,
+  isFeatured: products.isFeatured,
+  isAvailable: products.isAvailable,
+  preparationTime: products.preparationTime,
+  unitType: products.unitType,
+  commerceName: commerces.name,
+  commerceLogo: commerces.logo,
+  commerceCategoryId: commerces.categoryId,
+  commerceIsOpen: commerces.isOpen,
+  commerceStatus: commerces.status,
+};
 
 export const productRouter = createRouter({
   list: publicQuery.query(async () => {
     const db = getDb();
-    return db.select().from(products).where(eq(products.isAvailable, "yes"));
+    return db
+      .select(catalogProductColumns)
+      .from(products)
+      .innerJoin(commerces, eq(products.commerceId, commerces.id))
+      .where(
+        and(
+          eq(products.isAvailable, "yes"),
+          eq(commerces.status, "active"),
+          eq(commerces.isOpen, "open"),
+        ),
+      );
   }),
 
   getById: publicQuery
-    .input(z.object({ id: z.number() }))
+    .input(z.object({ id: z.number().int().positive() }))
     .query(async ({ input }) => {
       const db = getDb();
-      const result = await db.select().from(products).where(eq(products.id, input.id));
+      const result = await db
+        .select(catalogProductColumns)
+        .from(products)
+        .innerJoin(commerces, eq(products.commerceId, commerces.id))
+        .where(
+          and(
+            eq(products.id, input.id),
+            eq(products.isAvailable, "yes"),
+            eq(commerces.status, "active"),
+            eq(commerces.isOpen, "open"),
+          ),
+        );
       return result[0] || null;
     }),
 
   getByCommerce: publicQuery
-    .input(z.object({ commerceId: z.number() }))
-    .query(async ({ input }) => {
+    .input(z.object({ commerceId: z.number().int().positive() }))
+    .query(async ({ input, ctx }) => {
       const db = getDb();
-      return db.select().from(products).where(eq(products.commerceId, input.commerceId));
+      const isOwner =
+        !!ctx.admin || (ctx.merchant ? await merchantOwnsCommerce(ctx, input.commerceId) : false);
+      const rows = await db
+        .select()
+        .from(products)
+        .where(eq(products.commerceId, input.commerceId));
+      return isOwner ? rows : rows.filter((product) => product.isAvailable === "yes");
     }),
 
   getFeatured: publicQuery.query(async () => {
     const db = getDb();
-    const rows = await db
-      .select({
-        id: products.id,
-        commerceId: products.commerceId,
-        name: products.name,
-        description: products.description,
-        price: products.price,
-        image: products.image,
-        category: products.category,
-        isFeatured: products.isFeatured,
-        isAvailable: products.isAvailable,
-        preparationTime: products.preparationTime,
-        unitType: products.unitType,
-        commerceName: commerces.name,
-      })
+    return db
+      .select(catalogProductColumns)
       .from(products)
-      .leftJoin(commerces, eq(products.commerceId, commerces.id))
-      .where(and(eq(products.isFeatured, "yes"), eq(products.isAvailable, "yes")));
-    return rows;
+      .innerJoin(commerces, eq(products.commerceId, commerces.id))
+      .where(
+        and(
+          eq(products.isFeatured, "yes"),
+          eq(products.isAvailable, "yes"),
+          eq(commerces.status, "active"),
+          eq(commerces.isOpen, "open"),
+        ),
+      );
   }),
 
   getTopOrdered: publicQuery.query(async () => {
@@ -69,23 +109,16 @@ export const productRouter = createRouter({
     });
 
     const allProducts = await db
-      .select({
-        id: products.id,
-        commerceId: products.commerceId,
-        name: products.name,
-        description: products.description,
-        price: products.price,
-        image: products.image,
-        category: products.category,
-        isFeatured: products.isFeatured,
-        isAvailable: products.isAvailable,
-        preparationTime: products.preparationTime,
-        unitType: products.unitType,
-        commerceName: commerces.name,
-      })
+      .select(catalogProductColumns)
       .from(products)
-      .leftJoin(commerces, eq(products.commerceId, commerces.id))
-      .where(eq(products.isAvailable, "yes"));
+      .innerJoin(commerces, eq(products.commerceId, commerces.id))
+      .where(
+        and(
+          eq(products.isAvailable, "yes"),
+          eq(commerces.status, "active"),
+          eq(commerces.isOpen, "open"),
+        ),
+      );
 
     const sorted = [...allProducts].sort((a, b) => {
       const salesA = countMap.get(a.id) ?? (a.isFeatured === "yes" ? 20 - a.id : 0);
@@ -97,12 +130,24 @@ export const productRouter = createRouter({
   }),
 
   search: publicQuery
-    .input(z.object({ query: z.string() }))
+    .input(z.object({ query: z.string().trim().min(1).max(100) }))
     .query(async ({ input }) => {
       const db = getDb();
-      return db.select().from(products).where(
-        and(like(products.name, `%${input.query}%`), eq(products.isAvailable, "yes"))
-      );
+      const term = `%${input.query}%`;
+      return db
+        .select(catalogProductColumns)
+        .from(products)
+        .innerJoin(commerces, eq(products.commerceId, commerces.id))
+        .where(
+          and(
+            or(ilike(products.name, term), ilike(commerces.name, term)),
+            eq(products.isAvailable, "yes"),
+            eq(commerces.status, "active"),
+            eq(commerces.isOpen, "open"),
+          ),
+        )
+        .orderBy(desc(products.isFeatured), products.name)
+        .limit(30);
     }),
 
   create: merchantQuery
@@ -120,6 +165,7 @@ export const productRouter = createRouter({
       })
     )
     .mutation(async ({ input, ctx }) => {
+      await assertCommerceOwnership(ctx, input.commerceId);
       if (!Number.isFinite(input.commerceId) || input.commerceId < 1) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "commerceId inválido" });
       }
@@ -158,7 +204,7 @@ export const productRouter = createRouter({
         unitType: z.enum(["unit", "kg"]).optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = getDb();
       const { id, ...data } = input;
 
@@ -166,6 +212,7 @@ export const productRouter = createRouter({
         const existing = await db.select({ id: products.id, commerceId: products.commerceId }).from(products).where(eq(products.id, id));
         if (!existing.length) throw new TRPCError({ code: "NOT_FOUND", message: "Producto no encontrado" });
         const commerceId = existing[0].commerceId;
+        await assertCommerceOwnership(ctx, commerceId);
 
         const updateData: Record<string, any> = {};
         for (const [key, val] of Object.entries(data)) {
@@ -194,12 +241,13 @@ export const productRouter = createRouter({
 
   delete: merchantQuery
     .input(z.object({ id: z.number() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = getDb();
       try {
         const existing = await db.select({ id: products.id, commerceId: products.commerceId }).from(products).where(eq(products.id, input.id));
         if (!existing.length) throw new TRPCError({ code: "NOT_FOUND", message: "Producto no encontrado" });
         const commerceId = existing[0].commerceId;
+        await assertCommerceOwnership(ctx, commerceId);
 
         await db.delete(products).where(eq(products.id, input.id));
 

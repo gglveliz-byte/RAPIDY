@@ -215,7 +215,6 @@ export const adminDriversProcedures = {
       commissionRate: drivers.commissionRate,
     }).from(drivers);
 
-    const driverMap = new Map(d.map(r => [r.id, r]));
     const feeMap = new Map(driverOrders.map(r => [r.driverId, parseFloat(r.totalFees || "0")]));
     
     const grouped = new Map<number, { driverId: number; name: string; commissionRate: string; deliveryFee: string; adminCommission: string; total: string }>();

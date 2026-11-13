@@ -1,10 +1,35 @@
+/**
+ * @archivo src/pages/commerce/Dashboard.tsx
+ * @modulo 03-commerce-panel (Dashboard Principal del Comercio)
+ * @proposito
+ *   Centro de control y mando operativo para comercios y restaurantes aliados en Rapidy.
+ *   Permite monitorear ventas en tiempo real, abrir o pausar la tienda,
+ *   revisar pedidos entrantes, catálogo activo y accesos directos de gestión.
+ *   Diseñado con la estética oficial Rapidy (Dark Velvet #0E0E12, Flame Orange #FF6A00,
+ *   tarjetas blancas de alto contraste y tipografía limpia).
+ *
+ * @resumen_contenido
+ *   - Componente `CommerceDashboard`: Banner de estado del local, cuadrícula métrica,
+ *     accesos rápidos operativos, lista de pedidos recientes y catálogo de productos destacados.
+ *
+ * @dependencias_internas
+ *   - `useMerchantCommerceId`, `useProductsByCommerce`, `useCommerceStats`,
+ *     `useCommerce`, `useToggleCommerceStatus`, `useCommerceOrders` (@/hooks/useDeliveryData)
+ *   - `CommerceLayout` (@/components/CommerceLayout)
+ *   - `safeImage` (@/lib/imageUtils)
+ *
+ * @dependencias_externas
+ *   - `react` (`useState`, `useEffect`)
+ *   - `react-router` (`useNavigate`)
+ *   - `lucide-react` (`ShoppingBag`, `Package`, `BarChart3`, `TrendingUp`, `ChevronRight`,
+ *     `DollarSign`, `Plus`, `Store`, `ArrowRight`, `Power`, `Flame`)
+ */
+
 import { useNavigate } from "react-router";
 import { useEffect, useState } from "react";
 import {
-  ShoppingBag, Package, BarChart3,
-  TrendingUp, ChevronRight, DollarSign,
-  Star, Plus, Store, Clock, ArrowRight,
-  Power
+  ShoppingBag, Package, BarChart3, TrendingUp, ChevronRight,
+  DollarSign, Plus, Store, ArrowRight, Power, Flame
 } from "lucide-react";
 import {
   useMerchantCommerceId,
@@ -15,6 +40,27 @@ import {
   useCommerceOrders,
 } from "@/hooks/useDeliveryData";
 import CommerceLayout from "@/components/CommerceLayout";
+import { safeImage } from "@/lib/imageUtils";
+
+const STATUS_BADGES: Record<string, { label: string; className: string }> = {
+  received: { label: "Recibido", className: "bg-blue-50 text-blue-700 border-blue-200/80" },
+  preparing: { label: "En preparación", className: "bg-amber-50 text-amber-700 border-amber-200/80" },
+  ready_for_pickup: { label: "Listo para retiro", className: "bg-purple-50 text-purple-700 border-purple-200/80" },
+  on_the_way: { label: "En camino", className: "bg-orange-50 text-orange-700 border-orange-200/80" },
+  delivered: { label: "Entregado", className: "bg-zinc-100 text-zinc-700 border-zinc-200/80" },
+  cancelled: { label: "Cancelado", className: "bg-red-50 text-red-700 border-red-200/80" },
+};
+
+function getOrderStatusBadge(status: string) {
+  return STATUS_BADGES[status] || { label: status || "Pendiente", className: "bg-zinc-100 text-zinc-700 border-zinc-200/80" };
+}
+
+const QUICK_ACTIONS = [
+  { icon: Plus, title: "Nuevo Producto", subtitle: "Añadir al catálogo", path: "/commerce/products" },
+  { icon: ShoppingBag, title: "Ver Pedidos", subtitle: "Gestionar órdenes", path: "/commerce/orders" },
+  { icon: BarChart3, title: "Estadísticas", subtitle: "Métricas y balance", path: "/commerce/stats" },
+  { icon: Store, title: "Mi Perfil", subtitle: "Datos del local", path: "/commerce/profile" },
+];
 
 export default function CommerceDashboard() {
   const navigate = useNavigate();
@@ -50,237 +96,376 @@ export default function CommerceDashboard() {
   const isOpen = commerce?.isOpen === "open";
   const featuredCount = products.filter((p: any) => p.isFeatured === "yes").length;
   const availableCount = products.filter((p: any) => p.isAvailable === "yes").length;
-  const recentOrders = (orders || []).slice(0, 3);
+  const inPrepCount = orders.filter((o: any) => o.status === "received" || o.status === "preparing").length;
+  const recentOrders = (orders || []).slice(0, 4);
+
+  // Lista de productos más vendidos / destacados para la vista previa
+  const topProducts =
+    stats?.topProducts && stats.topProducts.length > 0
+      ? stats.topProducts.slice(0, 4).map((tp: any) => {
+          const full = products.find((p: any) => p.id === tp.id);
+          return {
+            id: tp.id,
+            name: tp.name || full?.name || "Producto",
+            salesCount: tp.salesCount,
+            price: full?.price || tp.revenue || 0,
+            imageUrl: full?.imageUrl || full?.image,
+            category: full?.category || "Menú",
+          };
+        })
+      : products.slice(0, 4).map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          salesCount: null,
+          price: p.price,
+          imageUrl: p.imageUrl || p.image,
+          category: p.category || "Menú",
+        }));
 
   return (
     <CommerceLayout>
-      <div className="px-4 min-[380px]:px-6 py-4 sm:py-6 max-w-5xl mx-auto space-y-4 min-[380px]:space-y-5">
+      <div className="px-4 min-[380px]:px-6 py-4 sm:py-6 max-w-5xl mx-auto space-y-5">
         
-        {/* Welcome & Store Status Banner */}
-        <div className="bg-gradient-to-br from-emerald-800 to-emerald-950 text-white rounded-2xl min-[380px]:rounded-3xl p-4 min-[380px]:p-6 shadow-lg shadow-emerald-950/15 flex flex-col min-[480px]:flex-row min-[480px]:items-center justify-between gap-3.5">
-          <div className="space-y-1">
-            <span className="text-[10px] min-[380px]:text-xs text-emerald-300 font-bold uppercase tracking-wider">
-              Panel de Control
-            </span>
-            <h1 className="text-base min-[380px]:text-xl font-extrabold truncate">
-              {commerceName}
-            </h1>
-            <p className="text-[11px] min-[380px]:text-xs text-emerald-100/80 leading-relaxed">
-              Administra tu catálogo, pedidos y métricas en tiempo real.
-            </p>
-          </div>
+        {/* Banner de Estado del Comercio */}
+        {isOpen ? (
+          <div className="relative overflow-hidden rounded-3xl p-5 sm:p-6 border border-white/10 bg-gradient-to-br from-[#0E0E12] via-[#16161F] to-[#0E0E12] text-white shadow-xl shadow-black/15 transition-all">
+            <div className="absolute -top-12 -right-12 w-56 h-56 bg-[#FF6A00]/15 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-10 left-1/4 w-44 h-44 bg-[#FF6A00]/10 rounded-full blur-2xl pointer-events-none" />
 
-          {/* Quick Open/Close Switch */}
-          <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md rounded-2xl p-1.5 self-start min-[480px]:self-center border border-white/15">
-            <div className="flex items-center gap-1.5 px-2.5">
-              <span className={`w-2 h-2 rounded-full ${isOpen ? "bg-emerald-400 animate-pulse" : "bg-red-400"}`} />
-              <span className="text-xs font-bold">
-                {isOpen ? "Tienda Abierta" : "Tienda Cerrada"}
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={handleToggleStore}
-              disabled={togglingStatus}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all active:scale-95 flex items-center gap-1 ${
-                isOpen
-                  ? "bg-red-500 hover:bg-red-600 text-white shadow-xs"
-                  : "bg-emerald-500 hover:bg-emerald-600 text-white shadow-xs"
-              }`}
-            >
-              <Power className="w-3 h-3" />
-              {isOpen ? "Cerrar" : "Abrir"}
-            </button>
-          </div>
-        </div>
-
-        {/* Metrics Grid */}
-        <div className="grid grid-cols-1 min-[340px]:grid-cols-2 lg:grid-cols-4 gap-2.5 min-[380px]:gap-3.5">
-          
-          {/* Card: Total Sales */}
-          <div className="bg-white rounded-2xl min-[380px]:rounded-3xl border border-slate-200/80 p-3.5 min-[380px]:p-4.5 shadow-2xs hover:shadow-xs transition-shadow">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] min-[380px]:text-xs font-bold text-slate-400 uppercase tracking-wider">
-                Ventas Totales
-              </span>
-              <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
-                <DollarSign className="w-4 h-4" />
-              </div>
-            </div>
-            <p className="text-xl min-[380px]:text-2xl font-black text-slate-800 tracking-tight">
-              ${stats?.totalSales ? stats.totalSales.toFixed(2) : "0.00"}
-            </p>
-            <p className="text-[10px] text-slate-400 mt-1 truncate">
-              Ticket prom: ${stats?.avgTicket ? stats.avgTicket.toFixed(2) : "0.00"}
-            </p>
-          </div>
-
-          {/* Card: Pedidos */}
-          <div className="bg-white rounded-2xl min-[380px]:rounded-3xl border border-slate-200/80 p-3.5 min-[380px]:p-4.5 shadow-2xs hover:shadow-xs transition-shadow">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] min-[380px]:text-xs font-bold text-slate-400 uppercase tracking-wider">
-                Pedidos Totales
-              </span>
-              <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center">
-                <ShoppingBag className="w-4 h-4" />
-              </div>
-            </div>
-            <p className="text-xl min-[380px]:text-2xl font-black text-slate-800 tracking-tight">
-              {stats?.totalOrders ?? orders.length}
-            </p>
-            <p className="text-[10px] text-emerald-600 font-medium mt-1 truncate">
-              {orders.filter((o: any) => o.status === "received" || o.status === "preparing").length} en curso
-            </p>
-          </div>
-
-          {/* Card: Productos */}
-          <div className="bg-white rounded-2xl min-[380px]:rounded-3xl border border-slate-200/80 p-3.5 min-[380px]:p-4.5 shadow-2xs hover:shadow-xs transition-shadow">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] min-[380px]:text-xs font-bold text-slate-400 uppercase tracking-wider">
-                Productos Activos
-              </span>
-              <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center">
-                <Package className="w-4 h-4" />
-              </div>
-            </div>
-            <p className="text-xl min-[380px]:text-2xl font-black text-slate-800 tracking-tight">
-              {availableCount} <span className="text-xs font-normal text-slate-400">/ {products.length}</span>
-            </p>
-            <p className="text-[10px] text-amber-600 font-medium mt-1 truncate">
-              {featuredCount} destacados
-            </p>
-          </div>
-
-          {/* Card: Comisión */}
-          <div className="bg-white rounded-2xl min-[380px]:rounded-3xl border border-slate-200/80 p-3.5 min-[380px]:p-4.5 shadow-2xs hover:shadow-xs transition-shadow">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] min-[380px]:text-xs font-bold text-slate-400 uppercase tracking-wider">
-                Comisión Aplicada
-              </span>
-              <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center">
-                <TrendingUp className="w-4 h-4" />
-              </div>
-            </div>
-            <p className="text-xl min-[380px]:text-2xl font-black text-slate-800 tracking-tight">
-              ${stats?.totalCommission ? stats.totalCommission.toFixed(2) : "0.00"}
-            </p>
-            <p className="text-[10px] text-slate-400 mt-1 truncate">
-              Liquidación de plataforma
-            </p>
-          </div>
-
-        </div>
-
-        {/* Quick Actions Carousel/Grid */}
-        <div className="bg-white rounded-2xl min-[380px]:rounded-3xl border border-slate-200/80 p-4 min-[380px]:p-5 shadow-2xs">
-          <h2 className="text-xs min-[380px]:text-sm font-bold text-slate-800 mb-3">
-            Acciones Rápidas
-          </h2>
-          <div className="grid grid-cols-2 min-[480px]:grid-cols-4 gap-2.5">
-            <button
-              type="button"
-              onClick={() => navigate("/commerce/products")}
-              className="p-3 rounded-2xl bg-slate-50 hover:bg-emerald-50 hover:border-emerald-200 border border-slate-100 flex flex-col items-center text-center transition-all group"
-            >
-              <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center mb-1.5 group-hover:scale-105 transition-transform">
-                <Plus className="w-4 h-4" />
-              </div>
-              <span className="text-[11px] min-[360px]:text-xs font-bold text-slate-700 group-hover:text-emerald-800">
-                Nuevo Producto
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => navigate("/commerce/orders")}
-              className="p-3 rounded-2xl bg-slate-50 hover:bg-blue-50 hover:border-blue-200 border border-slate-100 flex flex-col items-center text-center transition-all group"
-            >
-              <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-800 flex items-center justify-center mb-1.5 group-hover:scale-105 transition-transform">
-                <ShoppingBag className="w-4 h-4" />
-              </div>
-              <span className="text-[11px] min-[360px]:text-xs font-bold text-slate-700 group-hover:text-blue-800">
-                Ver Pedidos
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => navigate("/commerce/stats")}
-              className="p-3 rounded-2xl bg-slate-50 hover:bg-purple-50 hover:border-purple-200 border border-slate-100 flex flex-col items-center text-center transition-all group"
-            >
-              <div className="w-9 h-9 rounded-xl bg-purple-100 text-purple-800 flex items-center justify-center mb-1.5 group-hover:scale-105 transition-transform">
-                <BarChart3 className="w-4 h-4" />
-              </div>
-              <span className="text-[11px] min-[360px]:text-xs font-bold text-slate-700 group-hover:text-purple-800">
-                Estadísticas
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => navigate("/commerce/profile")}
-              className="p-3 rounded-2xl bg-slate-50 hover:bg-amber-50 hover:border-amber-200 border border-slate-100 flex flex-col items-center text-center transition-all group"
-            >
-              <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center mb-1.5 group-hover:scale-105 transition-transform">
-                <Store className="w-4 h-4" />
-              </div>
-              <span className="text-[11px] min-[360px]:text-xs font-bold text-slate-700 group-hover:text-amber-800">
-                Mi Perfil
-              </span>
-            </button>
-          </div>
-        </div>
-
-        {/* Recent Orders Section */}
-        <div className="bg-white rounded-2xl min-[380px]:rounded-3xl border border-slate-200/80 p-4 min-[380px]:p-5 shadow-2xs">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-xs min-[360px]:text-sm font-bold text-slate-800">
-              Pedidos Recientes
-            </h2>
-            <button
-              type="button"
-              onClick={() => navigate("/commerce/orders")}
-              className="text-[11px] min-[360px]:text-xs text-emerald-700 hover:text-emerald-800 font-bold flex items-center gap-1"
-            >
-              Ver todos <ArrowRight className="w-3 h-3" />
-            </button>
-          </div>
-
-          {recentOrders.length === 0 ? (
-            <div className="text-center py-6 text-slate-400 text-xs">
-              No tienes pedidos recientes registrados.
-            </div>
-          ) : (
-            <div className="divide-y divide-slate-100">
-              {recentOrders.map((order: any) => (
-                <div
-                  key={order.id}
-                  onClick={() => navigate("/commerce/orders")}
-                  className="py-2.5 flex items-center justify-between hover:bg-slate-50 rounded-xl px-1.5 cursor-pointer transition-colors"
-                >
-                  <div className="min-w-0 pr-2">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-bold text-slate-800">
-                        Pedido #{order.id}
-                      </span>
-                      <span className="text-[10px] px-1.5 py-0.2 rounded-full font-semibold bg-slate-100 text-slate-700 capitalize truncate max-w-[80px]">
-                        {order.status}
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-slate-400 truncate">
-                      {order.customerName || "Cliente"} • {order.items?.length || 0} ítems
-                    </p>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <span className="text-xs min-[360px]:text-sm font-extrabold text-emerald-700">
-                      ${parseFloat(order.total || 0).toFixed(2)}
-                    </span>
-                    <ChevronRight className="w-3.5 h-3.5 text-slate-400 ml-auto inline-block" />
-                  </div>
+            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="space-y-1.5 max-w-xl">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FF6A00]/15 border border-[#FF6A00]/30 text-[#FF8533] text-[11px] font-bold uppercase tracking-wider">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FF6A00] opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-[#FF6A00]" />
+                  </span>
+                  <span>Local Abierto • Recibiendo Pedidos</span>
                 </div>
-              ))}
+                <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight truncate">{commerceName}</h1>
+                <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed">
+                  Tu comercio está activo en Rapidy. Administra tu catálogo, pedidos en vivo y métricas en tiempo real.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3 self-start md:self-center">
+                <button
+                  type="button"
+                  onClick={handleToggleStore}
+                  disabled={togglingStatus}
+                  className="group flex items-center gap-2.5 px-4.5 py-2.5 rounded-2xl bg-white/10 hover:bg-red-500/15 border border-white/15 hover:border-red-400/30 text-white hover:text-red-300 font-bold text-xs shadow-inner backdrop-blur-md transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+                >
+                  <div className="w-6 h-6 rounded-xl bg-red-500/20 text-red-400 group-hover:bg-red-500 group-hover:text-white flex items-center justify-center transition-colors">
+                    <Power className="w-3.5 h-3.5" />
+                  </div>
+                  <span>{togglingStatus ? "Actualizando..." : "Pausar / Cerrar"}</span>
+                </button>
+              </div>
             </div>
-          )}
+          </div>
+        ) : (
+          <div className="relative overflow-hidden rounded-3xl p-5 sm:p-6 border border-zinc-300/80 bg-gradient-to-br from-[#1C1818] via-[#231E1E] to-[#181414] text-white shadow-lg transition-all">
+            <div className="absolute -top-12 -right-12 w-56 h-56 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+
+            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="space-y-1.5 max-w-xl">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[11px] font-bold uppercase tracking-wider">
+                  <span className="w-2 h-2 rounded-full bg-amber-400" />
+                  <span>Local en Pausa • Fuera de Línea</span>
+                </div>
+                <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight truncate">{commerceName}</h1>
+                <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed">
+                  Tu comercio no está visible para clientes. Actívalo en cualquier momento para comenzar a recibir órdenes.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3 self-start md:self-center">
+                <button
+                  type="button"
+                  onClick={handleToggleStore}
+                  disabled={togglingStatus}
+                  className="flex items-center gap-2.5 px-5 py-2.5 rounded-2xl bg-[#FF6A00] hover:bg-[#FF7A1A] text-white font-bold text-xs shadow-lg shadow-[#FF6A00]/25 transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+                >
+                  <Power className="w-3.5 h-3.5" />
+                  <span>{togglingStatus ? "Actualizando..." : "Abrir Local Ahora"}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tarjetas de Resumen Métrico */}
+        <div className="grid grid-cols-1 min-[340px]:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          
+          {/* Métricas: Ventas Totales */}
+          <div className="bg-white border border-zinc-200/80 rounded-3xl p-5 shadow-xs hover:border-[#FF6A00]/40 transition-all flex flex-col justify-between group">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Ventas Registradas</span>
+              <div className="w-9 h-9 rounded-2xl bg-[#FF6A00]/10 text-[#FF6A00] flex items-center justify-center font-bold group-hover:scale-105 transition-transform">
+                <DollarSign className="w-4.5 h-4.5" />
+              </div>
+            </div>
+            <div>
+              <div className="flex items-baseline gap-1">
+                <span className="text-2xl sm:text-3xl font-black text-zinc-900 tracking-tight">
+                  ${stats?.totalSales ? stats.totalSales.toFixed(2) : "0.00"}
+                </span>
+                <span className="text-xs font-bold text-[#FF6A00]">USD</span>
+              </div>
+              <p className="text-[11px] text-zinc-500 font-medium mt-1 truncate">
+                Ticket prom: <span className="font-semibold text-zinc-700">${stats?.avgTicket ? stats.avgTicket.toFixed(2) : "0.00"} USD</span>
+              </p>
+            </div>
+          </div>
+
+          {/* Métricas: Pedidos Totales & En Preparación */}
+          <div className="bg-white border border-zinc-200/80 rounded-3xl p-5 shadow-xs hover:border-[#FF6A00]/40 transition-all flex flex-col justify-between group">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Pedidos Totales</span>
+              <div className="w-9 h-9 rounded-2xl bg-[#FF6A00]/10 text-[#FF6A00] flex items-center justify-center font-bold group-hover:scale-105 transition-transform">
+                <ShoppingBag className="w-4.5 h-4.5" />
+              </div>
+            </div>
+            <div>
+              <p className="text-2xl sm:text-3xl font-black text-zinc-900 tracking-tight">{stats?.totalOrders ?? orders.length}</p>
+              <p className="text-[11px] font-semibold text-[#FF6A00] mt-1 flex items-center gap-1.5 truncate">
+                <span className="w-2 h-2 rounded-full bg-[#FF6A00] animate-pulse" />
+                {inPrepCount} en preparación
+              </p>
+            </div>
+          </div>
+
+          {/* Métricas: Catálogo de Productos */}
+          <div className="bg-white border border-zinc-200/80 rounded-3xl p-5 shadow-xs hover:border-[#FF6A00]/40 transition-all flex flex-col justify-between group">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Catálogo Activo</span>
+              <div className="w-9 h-9 rounded-2xl bg-[#FF6A00]/10 text-[#FF6A00] flex items-center justify-center font-bold group-hover:scale-105 transition-transform">
+                <Package className="w-4.5 h-4.5" />
+              </div>
+            </div>
+            <div>
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-2xl sm:text-3xl font-black text-zinc-900 tracking-tight">{availableCount}</span>
+                <span className="text-xs font-medium text-zinc-400">/ {products.length} productos</span>
+              </div>
+              <p className="text-[11px] text-zinc-500 font-medium mt-1 truncate">
+                <span className="font-semibold text-zinc-700">{featuredCount}</span> destacados en tienda
+              </p>
+            </div>
+          </div>
+
+          {/* Métricas: Comisión de Plataforma */}
+          <div className="bg-white border border-zinc-200/80 rounded-3xl p-5 shadow-xs hover:border-[#FF6A00]/40 transition-all flex flex-col justify-between group">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Comisión Aplicada</span>
+              <div className="w-9 h-9 rounded-2xl bg-zinc-100 text-zinc-700 flex items-center justify-center font-bold group-hover:scale-105 transition-transform">
+                <TrendingUp className="w-4.5 h-4.5" />
+              </div>
+            </div>
+            <div>
+              <div className="flex items-baseline gap-1">
+                <span className="text-2xl sm:text-3xl font-black text-zinc-900 tracking-tight">
+                  ${stats?.totalCommission ? stats.totalCommission.toFixed(2) : "0.00"}
+                </span>
+                <span className="text-xs font-bold text-zinc-400">USD</span>
+              </div>
+              <p className="text-[11px] text-zinc-500 font-medium mt-1 truncate">Liquidación Rapidy</p>
+            </div>
+          </div>
+
+        </div>
+
+        {/* Botones de Acceso Rápido */}
+        <div>
+          <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-3 px-1">Accesos Rápidos</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+            {QUICK_ACTIONS.map((action) => {
+              const Icon = action.icon;
+              return (
+                <button
+                  key={action.path}
+                  type="button"
+                  onClick={() => navigate(action.path)}
+                  className="bg-white border border-zinc-200/80 hover:border-[#FF6A00] rounded-2xl p-4 shadow-xs hover:shadow-md transition-all active:scale-95 flex flex-col items-center text-center group cursor-pointer"
+                >
+                  <div className="w-10 h-10 rounded-2xl bg-[#FF6A00]/10 text-[#FF6A00] flex items-center justify-center mb-2.5 group-hover:bg-[#FF6A00] group-hover:text-white transition-colors">
+                    <Icon className="w-5 h-5" />
+                  </div>
+                  <span className="text-xs font-bold text-zinc-800 group-hover:text-[#FF6A00] transition-colors">{action.title}</span>
+                  <span className="text-[10px] text-zinc-400 mt-0.5 hidden sm:block">{action.subtitle}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Sección de 2 Columnas: Pedidos Recientes & Productos Destacados */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+          {/* Columna: Pedidos Recientes */}
+          <div className="bg-white rounded-3xl border border-zinc-200/80 p-5 shadow-xs flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-sm font-extrabold text-zinc-900 tracking-tight">Pedidos Recientes</h2>
+                  <p className="text-[11px] text-zinc-400">Últimas órdenes registradas en tu local</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => navigate("/commerce/orders")}
+                  className="text-xs text-[#FF6A00] hover:text-[#e05d00] font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                >
+                  Ver todos <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {recentOrders.length === 0 ? (
+                <div className="py-10 text-center space-y-2">
+                  <div className="w-12 h-12 rounded-2xl bg-zinc-100 text-zinc-400 flex items-center justify-center mx-auto">
+                    <ShoppingBag className="w-6 h-6" />
+                  </div>
+                  <p className="text-xs font-semibold text-zinc-600">No tienes pedidos recientes</p>
+                  <p className="text-[11px] text-zinc-400 max-w-xs mx-auto">
+                    Cuando un cliente ordene en Rapidy, aparecerá aquí al instante.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {recentOrders.map((order: any) => {
+                    const badge = getOrderStatusBadge(order.status);
+                    return (
+                      <div
+                        key={order.id}
+                        onClick={() => navigate("/commerce/orders")}
+                        className="p-3.5 rounded-2xl bg-zinc-50 hover:bg-zinc-100/80 border border-zinc-200/70 hover:border-[#FF6A00]/40 flex items-center justify-between gap-3 cursor-pointer transition-all group"
+                      >
+                        <div className="min-w-0 space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-extrabold text-zinc-900">Pedido #{order.id}</span>
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${badge.className}`}>
+                              {badge.label}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-zinc-500 truncate">
+                            {order.customerName || "Cliente"} • {order.items?.length || 0} productos
+                          </p>
+                        </div>
+
+                        <div className="text-right flex items-center gap-2 shrink-0">
+                          <div>
+                            <span className="text-sm font-black text-[#FF6A00] tracking-tight">
+                              ${parseFloat(order.total || 0).toFixed(2)}
+                            </span>
+                            <span className="text-[10px] font-bold text-zinc-400 ml-1">USD</span>
+                          </div>
+                          <ChevronRight className="w-4 h-4 text-zinc-400 group-hover:text-[#FF6A00] group-hover:translate-x-0.5 transition-all" />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {recentOrders.length > 0 && (
+              <button
+                type="button"
+                onClick={() => navigate("/commerce/orders")}
+                className="mt-4 w-full py-2.5 rounded-2xl border border-zinc-200/80 hover:border-[#FF6A00] text-zinc-700 hover:text-[#FF6A00] font-bold text-xs transition-colors text-center cursor-pointer"
+              >
+                Ir a la cola de pedidos completa
+              </button>
+            )}
+          </div>
+
+          {/* Columna: Productos Más Vendidos / Catálogo */}
+          <div className="bg-white rounded-3xl border border-zinc-200/80 p-5 shadow-xs flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-sm font-extrabold text-zinc-900 tracking-tight flex items-center gap-1.5">
+                    <Flame className="w-4 h-4 text-[#FF6A00]" />
+                    Más Populares
+                  </h2>
+                  <p className="text-[11px] text-zinc-400">Artículos con mayor demanda en tu menú</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => navigate("/commerce/products")}
+                  className="text-xs text-[#FF6A00] hover:text-[#e05d00] font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                >
+                  Ver catálogo <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {topProducts.length === 0 ? (
+                <div className="py-10 text-center space-y-2">
+                  <div className="w-12 h-12 rounded-2xl bg-zinc-100 text-zinc-400 flex items-center justify-center mx-auto">
+                    <Package className="w-6 h-6" />
+                  </div>
+                  <p className="text-xs font-semibold text-zinc-600">No tienes productos registrados</p>
+                  <p className="text-[11px] text-zinc-400 max-w-xs mx-auto">
+                    Crea tus primeros artículos para comenzar a recibir ventas.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => navigate("/commerce/products")}
+                    className="mt-3 px-4 py-2 rounded-xl bg-[#FF6A00] text-white text-xs font-bold hover:bg-[#FF7A1A] transition-colors cursor-pointer inline-flex items-center gap-1.5"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Añadir Producto
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {topProducts.map((prod: any) => (
+                    <div
+                      key={prod.id}
+                      onClick={() => navigate("/commerce/products")}
+                      className="p-3 rounded-2xl bg-zinc-50 hover:bg-zinc-100/80 border border-zinc-200/70 hover:border-[#FF6A00]/40 flex items-center justify-between gap-3 cursor-pointer transition-all group"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <img
+                          src={safeImage(prod.imageUrl, "product")}
+                          alt={prod.name}
+                          className="w-11 h-11 rounded-xl object-cover border border-zinc-200/60 shrink-0 bg-white"
+                        />
+                        <div className="min-w-0 space-y-0.5">
+                          <h3 className="text-xs font-extrabold text-zinc-900 truncate group-hover:text-[#FF6A00] transition-colors">
+                            {prod.name}
+                          </h3>
+                          <p className="text-[10px] text-zinc-400 truncate">
+                            {prod.salesCount
+                              ? `${prod.salesCount} vendidos en total`
+                              : prod.category || "Platillo destacado"}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="text-right flex items-center gap-2 shrink-0">
+                        <div>
+                          <span className="text-sm font-black text-[#FF6A00] tracking-tight">
+                            ${parseFloat(prod.price || 0).toFixed(2)}
+                          </span>
+                          <span className="text-[10px] font-bold text-zinc-400 ml-1">USD</span>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-zinc-400 group-hover:text-[#FF6A00] group-hover:translate-x-0.5 transition-all" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {topProducts.length > 0 && (
+              <button
+                type="button"
+                onClick={() => navigate("/commerce/products")}
+                className="mt-4 w-full py-2.5 rounded-2xl border border-zinc-200/80 hover:border-[#FF6A00] text-zinc-700 hover:text-[#FF6A00] font-bold text-xs transition-colors text-center cursor-pointer"
+              >
+                Administrar catálogo completo
+              </button>
+            )}
+          </div>
+
         </div>
 
       </div>

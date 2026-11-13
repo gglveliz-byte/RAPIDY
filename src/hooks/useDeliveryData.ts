@@ -1,6 +1,7 @@
 import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import superjson from "superjson";
 import { useState, useEffect } from "react";
+import { useDebouncedValue } from "./useDebouncedValue";
 
 const API_URL = "/api/trpc";
 
@@ -16,9 +17,14 @@ function handleAuthError() {
     body: JSON.stringify({}),
     credentials: "include",
   }).catch(() => {})
-  localStorage.removeItem("qs_session")
-  localStorage.removeItem("merchant_user")
-  localStorage.removeItem("driver_user")
+  try {
+    localStorage.removeItem("qs_session")
+    localStorage.removeItem("customer_session")
+    localStorage.removeItem("merchant_user")
+    localStorage.removeItem("driver_user")
+    localStorage.removeItem("cart")
+  } catch {}
+  window.dispatchEvent(new Event("rapidy:logout"))
   const path = window.location.pathname;
   const isBackoffice = path.startsWith("/admin") || 
                        path.startsWith("/driver") || 
@@ -28,6 +34,18 @@ function handleAuthError() {
                        path.startsWith("/commerce/stats") || 
                        path.startsWith("/commerce/profile");
   window.location.href = isBackoffice ? "/login" : "/customer-login"
+}
+
+function extractTrpcError(data: any, status: number): Error {
+  const errorJson = data?.error?.json;
+  const message =
+    errorJson?.message ||
+    data?.error?.message ||
+    (status ? `HTTP ${status}` : "Error de conexión");
+  const error = new Error(message) as Error & { code?: string; data?: unknown };
+  error.code = errorJson?.code;
+  error.data = errorJson?.data;
+  return error;
 }
 
 export async function trpcCall<T>(path: string, input?: Record<string, unknown>): Promise<T> {
@@ -45,7 +63,7 @@ export async function trpcCall<T>(path: string, input?: Record<string, unknown>)
     throw new Error("Sesión expirada")
   }
   if (!res.ok) {
-    throw new Error(`HTTP ${res.status}: ${text}`);
+    throw extractTrpcError(data, res.status);
   }
   return superjson.deserialize(data?.result?.data);
 }
@@ -66,7 +84,7 @@ export async function trpcMutate<T>(path: string, input: Record<string, unknown>
     throw new Error("Sesión expirada")
   }
   if (!res.ok) {
-    throw new Error(`HTTP ${res.status}: ${text}`);
+    throw extractTrpcError(data, res.status);
   }
   return superjson.deserialize(data?.result?.data);
 }
@@ -158,6 +176,27 @@ export function useFeaturedProducts() {
   return { data: query.data ?? [], loading: query.isLoading };
 }
 
+export function useCatalogProducts() {
+  const query = useQuery({
+    queryKey: ["product.list"],
+    queryFn: () => trpcCall<any[]>("product.list"),
+    staleTime: 60_000,
+  });
+  return { data: query.data ?? [], loading: query.isLoading, error: query.error as Error | null };
+}
+
+export function useProductSearch(searchTerm: string) {
+  const debouncedTerm = useDebouncedValue(searchTerm, 300);
+  const term = debouncedTerm.trim();
+  const query = useQuery({
+    queryKey: ["product.search", term],
+    queryFn: () => trpcCall<any[]>("product.search", { query: term }),
+    enabled: term.length >= 2,
+    staleTime: 30_000,
+  });
+  return { data: query.data ?? [], loading: query.isFetching, error: query.error as Error | null };
+}
+
 export function useTopOrderedProducts() {
   const query = useQuery({
     queryKey: ["product.getTopOrdered"],
@@ -226,25 +265,39 @@ export function useOrder(id: number) {
     queryKey: ["order.getById", id],
     queryFn: () => trpcCall<any>("order.getById", { id }),
     enabled: Boolean(id),
+    // SSE es la fuente primaria; este polling es solo un fallback lento.
     refetchInterval: (q) => {
       const status = q.state.data?.status;
       if (status === "delivered" || status === "cancelled") {
         return false;
       }
-      return 4000;
+      return 30_000;
     },
     refetchIntervalInBackground: false,
+    retry: 1,
   });
-  return { data: query.data ?? null, loading: query.isLoading, refresh: query.refetch };
+  return {
+    data: query.data ?? null,
+    loading: query.isLoading,
+    error: query.error as Error | null,
+    isError: query.isError,
+    refresh: query.refetch,
+  };
 }
 
 export function useCustomerOrders(customerId: number) {
   const query = useQuery({
     queryKey: ["order.getByCustomer", customerId],
-    queryFn: () => trpcCall<any[]>("order.getByCustomer", { customerId }),
+    queryFn: () => trpcCall<any[]>("order.getByCustomer", { limit: 20 }),
     enabled: Boolean(customerId),
+    staleTime: 30_000,
   });
-  return { data: query.data ?? [], loading: query.isLoading };
+  return {
+    data: query.data ?? [],
+    loading: query.isLoading,
+    error: query.error as Error | null,
+    refresh: query.refetch,
+  };
 }
 
 export function useCommerceOrders(commerceId: number) {
@@ -252,7 +305,7 @@ export function useCommerceOrders(commerceId: number) {
     queryKey: ["order.getCommerceOrders", commerceId],
     queryFn: () => trpcCall<any[]>("order.getCommerceOrders", { commerceId }),
     enabled: Boolean(commerceId),
-    refetchInterval: 5000,
+    refetchInterval: 30_000,
   });
   return { data: query.data ?? [], loading: query.isLoading };
 }
@@ -272,6 +325,24 @@ export function useCreateOrder() {
   });
 }
 
+export function useOrderQuote(items: Array<{ productId: number; quantity: number }>) {
+  const payload = items.map((item) => ({
+    productId: item.productId,
+    quantity: item.quantity,
+  }));
+  const query = useQuery({
+    queryKey: ["order.quote", JSON.stringify(payload)],
+    queryFn: () => trpcCall<any>("order.quote", { items: payload }),
+    enabled: payload.length > 0,
+    staleTime: 15_000,
+  });
+  return {
+    data: query.data ?? null,
+    loading: query.isFetching,
+    error: query.error as Error | null,
+  };
+}
+
 export function useUpdateOrderStatus(commerceId?: number) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -287,7 +358,7 @@ export function useUpdatePaymentReceipt() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: { orderId: number; receipt: string }) => trpcMutate<any>("order.updatePaymentReceipt", input),
-    onSuccess: (result: any, variables: any) => {
+    onSuccess: (_result: any, variables: any) => {
       queryClient.invalidateQueries({ queryKey: ["order.getById", variables.orderId] });
     },
   });
@@ -308,11 +379,16 @@ export function useMarkCommerceReady(commerceId?: number) {
 export function useChatMessages(orderId: number) {
   const query = useQuery({
     queryKey: ["chat.getByOrder", orderId],
-    queryFn: () => trpcCall<any[]>("chat.getByOrder", { orderId }),
+    queryFn: () => trpcCall<any[]>("chat.getByOrder", { orderId, limit: 50 }),
     enabled: Boolean(orderId),
-    refetchInterval: 5000,
+    refetchInterval: 30_000,
   });
-  return { data: query.data ?? [], loading: query.isLoading, refresh: query.refetch };
+  return {
+    data: query.data ?? [],
+    loading: query.isLoading,
+    error: query.error as Error | null,
+    refresh: query.refetch,
+  };
 }
 
 export function useSendChatMessage(orderId: number) {

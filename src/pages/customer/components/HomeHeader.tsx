@@ -60,12 +60,12 @@ export function HomeHeader({
     <header
       className={`fixed top-0 left-0 right-0 max-w-[480px] mx-auto z-40 transition-all duration-300 select-none ${
         isScrolled
-          ? "bg-[#0E0E12]/95 backdrop-blur-2xl border-b border-white/10 shadow-[0_12px_30px_rgba(0,0,0,0.65)] pt-safe px-4 pb-2.5"
+          ? "bg-ink/95 backdrop-blur-2xl border-b border-white/10 shadow-[0_12px_30px_rgba(0,0,0,0.65)] pt-safe px-4 pb-2.5"
           : "bg-gradient-to-b from-[#0E0E12] via-[#141419] to-[#0E0E12] border-b border-white/5 pt-safe px-4 pb-3 shadow-xl"
       }`}
     >
       {/* Background Subtle Flare */}
-      <div className="absolute top-0 right-8 w-48 h-20 bg-[#FF6A00]/15 rounded-full blur-2xl pointer-events-none" />
+      <div className="absolute top-0 right-8 w-48 h-20 bg-brand/15 rounded-full blur-2xl pointer-events-none" />
 
       {/* Row 1 Split: Left = Cliente | Right = Rapidy Brand */}
       <div className="relative z-10 flex items-center justify-between gap-2 pt-1 mb-2">
@@ -74,7 +74,7 @@ export function HomeHeader({
           onClick={() => navigate("/profile")}
           className="flex items-center gap-2 group cursor-pointer text-left min-w-0 flex-1"
         >
-          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-[#FF6A00] group-hover:bg-white/10 transition-colors shadow-xs shrink-0">
+          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-brand group-hover:bg-white/10 transition-colors shadow-xs shrink-0">
             <User className="w-4 h-4 text-white" />
           </div>
           <div className="min-w-0">
@@ -83,9 +83,9 @@ export function HomeHeader({
               <span className="text-xs font-bold text-white tracking-tight truncate">
                 {customerName || "Invitado"}
               </span>
-              <Sparkles className="w-3 h-3 text-[#FF6A00] shrink-0" />
+              <Sparkles className="w-3 h-3 text-brand shrink-0" />
             </div>
-            <div className="flex items-center gap-1 text-[10px] sm:text-[11px] text-[#FF6A00] font-semibold truncate max-w-[150px] sm:max-w-[200px]">
+            <div className="flex items-center gap-1 text-[10px] sm:text-[11px] text-brand font-semibold truncate max-w-[150px] sm:max-w-[200px]">
               <MapPin className="w-3 h-3 shrink-0" />
               <span className="truncate">{customerAddress || "Seleccionar ubicación"}</span>
             </div>
@@ -100,7 +100,7 @@ export function HomeHeader({
           <div className="flex flex-col items-end">
             <div className="text-base sm:text-lg font-black tracking-tight leading-none text-white flex items-baseline">
               <span>RAPID</span>
-              <span className="text-[#FF6A00]">Y</span>
+              <span className="text-brand">Y</span>
             </div>
             <span className="text-[7.5px] font-black tracking-widest uppercase text-zinc-400 block mt-0.5">
               DELIVERY & MÁS
@@ -110,7 +110,7 @@ export function HomeHeader({
             <img
               src="/image.png"
               alt="Rapidy Emblem"
-              className="w-8 h-8 rounded-full object-cover shadow-[0_0_14px_rgba(255,106,0,0.5)] ring-2 ring-[#FF6A00]/40 group-hover:scale-105 transition-transform shrink-0"
+              className="w-8 h-8 rounded-full object-cover shadow-[0_0_14px_rgba(255,106,0,0.5)] ring-2 ring-brand/40 group-hover:scale-105 transition-transform shrink-0"
             />
           </div>
         </div>
@@ -118,7 +118,7 @@ export function HomeHeader({
 
       {/* Row 2: Full-width Floating Search Bar */}
       <div className="relative z-10">
-        <div className="relative flex items-center h-10 sm:h-11 bg-white rounded-full shadow-[0_4px_16px_rgba(0,0,0,0.2)] px-3.5 gap-2 transition-all focus-within:ring-2 focus-within:ring-[#FF6A00]">
+        <div className="relative flex items-center h-10 sm:h-11 bg-white rounded-full shadow-[0_4px_16px_rgba(0,0,0,0.2)] px-3.5 gap-2 transition-all focus-within:ring-2 focus-within:ring-brand">
           <Search className="w-4 h-4 text-zinc-500 shrink-0" />
           <input
             type="text"

@@ -10,7 +10,7 @@ type GuardRole = "customer" | "admin" | "merchant" | "driver"
 
 export default function SessionGuard({ role, children }: { role: GuardRole; children: ReactNode }) {
   const navigate = useNavigate()
-  const { isAuthenticated } = useCustomerSession()
+  const { isAuthenticated, login } = useCustomerSession()
   const [checking, setChecking] = useState(() => {
     const session = getSession()
     if (role === "customer") {
@@ -28,8 +28,10 @@ export default function SessionGuard({ role, children }: { role: GuardRole; chil
     if (redirected.current) return
     redirected.current = true
     clearSession()
+    localStorage.removeItem("customer_session")
     localStorage.removeItem("merchant_user")
     localStorage.removeItem("driver_user")
+    window.dispatchEvent(new Event("rapidy:logout"))
     if (role === "customer") navigate("/customer-login", { replace: true })
     else navigate("/login", { replace: true })
   }, [role, navigate])
@@ -50,14 +52,29 @@ export default function SessionGuard({ role, children }: { role: GuardRole; chil
     }
 
     if (role === "customer") {
-      if (isAuthenticated) {
+      let cancelled = false
+      if (isAuthenticated && localStorage.getItem("customer_session")) {
         setChecking(false)
-        return
       }
-      const timer = setTimeout(() => {
-        setChecking(false)
-      }, 600)
-      return () => clearTimeout(timer)
+
+      // Verificación real contra el backend: localStorage por sí solo no autentica.
+      trpcCall<{ customer: any | null }>("customer.checkAuth")
+        .then((result) => {
+          if (cancelled) return
+          if (result?.customer) {
+            login(result.customer)
+            setChecking(false)
+          } else {
+            redirectOut()
+          }
+        })
+        .catch(() => {
+          if (!cancelled) redirectOut()
+        })
+
+      return () => {
+        cancelled = true
+      }
     }
 
     // For non-customer roles: verify with backend
@@ -78,7 +95,7 @@ export default function SessionGuard({ role, children }: { role: GuardRole; chil
     }
     verify()
     return () => { cancelled = true }
-  }, [role, isAuthenticated, redirectOut])
+  }, [role, isAuthenticated, login, redirectOut])
 
   useEffect(() => {
     if (role === "customer" && isAuthenticated) setChecking(false)

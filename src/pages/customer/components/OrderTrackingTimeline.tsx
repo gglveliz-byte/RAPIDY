@@ -16,6 +16,7 @@
 
 import React from "react";
 import { AlertTriangle, Upload, Check, Store } from "lucide-react";
+import { getOrderStatusMeta, isTerminalStatus } from "@contracts/orderStatus";
 
 interface StatusStep {
   key: string;
@@ -47,6 +48,16 @@ export function OrderTrackingTimeline({
   isUpdatingReceipt,
 }: OrderTrackingTimelineProps) {
   const hasDriver = !!order?.driver;
+  const meta = getOrderStatusMeta(order?.status);
+  const terminal = isTerminalStatus(order?.status);
+  const pickedCount = order?.commerces?.filter((c: any) => c.status === "picked_up").length ?? 0;
+  const commerceCount = order?.commerces?.length ?? 0;
+  const showPickupCount =
+    hasDriver &&
+    !terminal &&
+    commerceCount > 0 &&
+    ["picked_up", "on_the_way"].includes(order?.status) &&
+    pickedCount > 0;
 
   return (
     <div className="space-y-4">
@@ -62,7 +73,7 @@ export function OrderTrackingTimeline({
           </p>
           <input
             type="file"
-            accept="image/*"
+            accept="image/jpeg,image/png,image/webp"
             className="hidden"
             ref={fileInputRef}
             onChange={handleReuploadReceipt}
@@ -70,7 +81,7 @@ export function OrderTrackingTimeline({
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={isUpdatingReceipt}
-            className="w-full h-12 bg-gradient-to-r from-[#FF6A00] to-[#FF8533] text-white font-black text-sm rounded-2xl hover:brightness-105 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-md shadow-[#FF6A00]/30 cursor-pointer disabled:opacity-50"
+            className="w-full min-h-[48px] bg-gradient-to-r from-brand to-[#FF8533] text-white font-black text-sm rounded-2xl hover:brightness-105 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-md shadow-brand/30 cursor-pointer disabled:opacity-50"
           >
             <Upload className="w-4 h-4 stroke-[2.5]" />
             {isUpdatingReceipt ? "Subiendo comprobante..." : "Reenviar nuevo comprobante"}
@@ -79,46 +90,47 @@ export function OrderTrackingTimeline({
       ) : (
         <div className="bg-white rounded-3xl p-5 border border-zinc-100 shadow-[0_4px_20px_rgba(0,0,0,0.03)]">
           {/* Fila superior: Etiqueta y Badge de Estado */}
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between mb-2 gap-2">
             <span className="text-[11px] font-black text-zinc-400 uppercase tracking-wider">
               Estado actual
             </span>
 
-            {!isCancelled && (
-              <span className="text-xs font-black text-[#FF6A00] bg-orange-50/90 border border-orange-200/50 px-3 py-1 rounded-full shadow-2xs">
-                {hasDriver && order.commerces?.some((c: any) => c.status !== "preparing")
-                  ? `${order.commerces.filter((c: any) => c.status === "picked_up").length}/${order.commerces.length} recogidos`
-                  : currentStepIndex >= 0
-                    ? statusSteps[currentStepIndex]?.label
-                    : order.status === "pending_payment"
-                      ? "Revisando pago"
-                      : order.status.replace(/_/g, " ")}
-              </span>
-            )}
-
-            {isCancelled && (
-              <span className="text-xs font-black text-rose-600 bg-rose-50 border border-rose-200 px-3 py-1 rounded-full">
-                Cancelado
-              </span>
-            )}
+            <span
+              className={`text-xs font-black px-3 py-1 rounded-full border shadow-2xs ${
+                isCancelled
+                  ? "text-rose-600 bg-rose-50 border-rose-200"
+                  : meta.badgeClass
+              }`}
+            >
+              {showPickupCount ? `${pickedCount}/${commerceCount} recogidos` : meta.shortLabel}
+            </span>
           </div>
 
           {!isCancelled && (
             <>
               {/* Título del paso actual */}
-              <div className="my-2.5">
+              <div className="my-2.5" aria-live="polite">
                 <p className="text-base sm:text-lg font-black text-zinc-900 tracking-tight">
-                  {currentStepIndex >= 0 ? statusSteps[currentStepIndex]?.description : "Procesando pedido..."}
+                  {meta.description}
                 </p>
-                <p className="text-xs text-zinc-400 font-semibold mt-0.5">
-                  Paso {Math.max(1, currentStepIndex + 1)} de {statusSteps.length}
+                <p className="text-xs text-zinc-500 font-semibold mt-0.5">
+                  {meta.step >= 0
+                    ? `Paso ${Math.min(meta.step + 1, statusSteps.length)} de ${statusSteps.length}`
+                    : "En revisión"}
                 </p>
               </div>
 
               {/* Barra de progreso interactiva */}
-              <div className="h-2 bg-zinc-100 rounded-full overflow-hidden my-3">
+              <div
+                className="h-2 bg-zinc-100 rounded-full overflow-hidden my-3"
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={Math.round(Math.min(progress, 100))}
+                aria-label="Progreso del pedido"
+              >
                 <div
-                  className="h-full bg-gradient-to-r from-[#FF6A00] to-[#FFA040] rounded-full transition-all duration-700 ease-out shadow-[0_0_12px_rgba(255,106,0,0.4)]"
+                  className="h-full bg-gradient-to-r from-brand to-[#FFA040] rounded-full transition-all duration-700 ease-out shadow-[0_0_12px_rgba(255,106,0,0.4)]"
                   style={{ width: `${Math.min(progress, 100)}%` }}
                 />
               </div>
@@ -129,19 +141,23 @@ export function OrderTrackingTimeline({
                   const isPast = i < currentStepIndex;
                   const isCurrent = i === currentStepIndex;
                   return (
-                    <div key={step.key} className="flex flex-col items-center">
+                    <div
+                      key={step.key}
+                      className="flex flex-col items-center"
+                      aria-label={`${step.label}${isCurrent ? ", paso actual" : isPast ? ", completado" : ""}`}
+                    >
                       <div
-                        className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black transition-all ${
+                        className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black transition-all ${
                           isPast
-                            ? "bg-[#FF6A00] text-white shadow-xs"
+                            ? "bg-brand text-white shadow-xs"
                             : isCurrent
-                              ? "bg-[#FF6A00] text-white ring-4 ring-[#FF6A00]/20 scale-110 shadow-md shadow-[#FF6A00]/30"
+                              ? "bg-brand text-white ring-4 ring-brand/20 scale-110 shadow-md shadow-brand/30"
                               : "bg-zinc-100 text-zinc-400"
                         }`}
                       >
                         {isPast ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : i + 1}
                       </div>
-                      <span className="text-[9px] font-medium text-zinc-400 mt-1 hidden sm:block max-w-[50px] text-center truncate">
+                      <span className="text-[9px] font-medium text-zinc-500 mt-1 hidden sm:block max-w-[54px] text-center truncate">
                         {step.label}
                       </span>
                     </div>
@@ -150,14 +166,22 @@ export function OrderTrackingTimeline({
               </div>
             </>
           )}
+
+          {isCancelled && (
+            <p className="text-xs text-rose-700/90 leading-relaxed mt-2">
+              {order.cancellationReason
+                ? `Motivo: ${order.cancellationReason}`
+                : "Este pedido fue cancelado. Si tienes dudas, contáctanos."}
+            </p>
+          )}
         </div>
       )}
 
       {/* Recogida en Comercios (en caso de múltiples locales) */}
-      {hasDriver && order.commerces?.some((c: any) => c.status !== "preparing") && (
+      {!terminal && hasDriver && order.commerces?.some((c: any) => c.status !== "preparing") && (
         <div className="bg-white rounded-3xl p-5 border border-zinc-100 shadow-[0_4px_20px_rgba(0,0,0,0.03)]">
           <div className="flex items-center gap-2 mb-3">
-            <Store className="w-4 h-4 text-[#FF6A00]" />
+            <Store className="w-4 h-4 text-brand" />
             <h3 className="text-sm font-black text-zinc-900">Recogida en Comercios</h3>
           </div>
           <div className="space-y-2.5">
@@ -170,7 +194,7 @@ export function OrderTrackingTimeline({
                 ? "text-zinc-600 bg-zinc-100 border-zinc-200"
                 : isReady
                   ? "text-amber-700 bg-amber-50 border-amber-200"
-                  : "text-[#FF6A00] bg-orange-50 border-orange-200";
+                  : "text-brand bg-orange-50 border-orange-200";
 
               return (
                 <div key={c.id} className="flex items-center justify-between py-1.5 border-b border-zinc-50 last:border-0">

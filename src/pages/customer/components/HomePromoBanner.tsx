@@ -70,7 +70,7 @@ const fallbackProducts = [
 
 export function HomePromoBanner() {
   const navigate = useNavigate();
-  const { data: topProductsData, loading } = useTopOrderedProducts();
+  const { data: topProductsData } = useTopOrderedProducts();
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const topList = topProductsData.length > 0 ? topProductsData : fallbackProducts;
@@ -171,7 +171,7 @@ export function HomePromoBanner() {
                   rankNumber === 1
                     ? "bg-[#FF2D55] ring-2 ring-white/50"
                     : rankNumber === 2
-                    ? "bg-[#FF6A00] ring-1 ring-white/40"
+                    ? "bg-brand ring-1 ring-white/40"
                     : rankNumber === 3
                     ? "bg-amber-600 ring-1 ring-white/40"
                     : "bg-zinc-800 ring-1 ring-white/30"

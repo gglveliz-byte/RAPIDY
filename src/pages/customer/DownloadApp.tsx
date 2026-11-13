@@ -52,7 +52,7 @@ export default function DownloadApp() {
           alt="Rapidy"
           className="w-32 h-32 object-contain mb-6 rounded-3xl shadow-sm"
         />
-        <h1 className="text-3xl font-bold text-[#2E7D32] mb-3 tracking-tight">
+        <h1 className="text-3xl font-bold text-brand mb-3 tracking-tight">
           RAPIDY
         </h1>
         
@@ -72,7 +72,7 @@ export default function DownloadApp() {
             
             <button
               onClick={handleInstall}
-              className="w-full h-14 bg-[#2E7D32] flex items-center justify-center gap-3 text-white font-semibold text-lg rounded-2xl shadow-lg hover:bg-[#1B5E20] active:scale-[0.98] transition-all touch-target"
+              className="w-full h-14 bg-brand flex items-center justify-center gap-3 text-white font-semibold text-lg rounded-2xl shadow-lg hover:bg-brand-strong active:scale-[0.98] transition-all touch-target"
             >
               <Download className="w-6 h-6" />
               Descargar App

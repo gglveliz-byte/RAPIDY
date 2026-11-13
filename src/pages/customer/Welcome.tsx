@@ -5,7 +5,7 @@ export default function Welcome() {
   const navigate = useNavigate();
 
   return (
-    <div className="fixed inset-0 w-full h-[100dvh] max-h-[100dvh] bg-[#121212] overflow-hidden flex items-center justify-center">
+    <div className="fixed inset-0 w-full h-[100dvh] max-h-[100dvh] bg-ink-soft overflow-hidden flex items-center justify-center">
       <div className="relative w-full h-full max-w-md mx-auto bg-[#1C1C1C] flex flex-col justify-between overflow-hidden select-none">
         {/* Background Hero Image (Motorcycle rider + city, fading seamlessly to #1C1C1C) */}
         <div className="absolute inset-0 z-0 pointer-events-none">
@@ -28,7 +28,7 @@ export default function Welcome() {
             <span className="text-2xl sm:text-3xl lg:text-4xl font-black italic text-white tracking-wider">
               RAPID
             </span>
-            <span className="text-2xl sm:text-3xl lg:text-4xl font-black italic text-[#FF6A00] tracking-wider">
+            <span className="text-2xl sm:text-3xl lg:text-4xl font-black italic text-brand tracking-wider">
               Y
             </span>
           </div>

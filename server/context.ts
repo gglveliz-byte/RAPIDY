@@ -1,6 +1,6 @@
 import type { FetchCreateContextFnOptions } from "@trpc/server/adapters/fetch";
 import type { Customer, User, Driver } from "@db/schema";
-import { verifyAccessToken } from "./customer-auth";
+import { verifyAccessTokenPayload, verifyRefreshTokenPayload, setCustomerCookies } from "./customer-auth";
 import { verifyAdminToken, verifyAdminRefreshToken, setAdminCookie } from "./admin-auth";
 import { verifyDriverToken, refreshDriverAccessToken } from "./driver-auth";
 import { verifyMerchantToken, verifyMerchantRefreshToken } from "./merchant-auth";
@@ -36,24 +36,33 @@ async function getCustomerFromCookie(headers: Headers, resHeaders: Headers): Pro
   const refreshToken = cookies["refresh_token"];
   
   let customerId: number | null = null;
-  
+  let expectedSessionVersion: number | null = null;
+
   if (token) {
-    customerId = await verifyAccessToken(token);
+    const payload = await verifyAccessTokenPayload(token);
+    customerId = payload?.customerId ?? null;
+    expectedSessionVersion = payload?.sessionVersion ?? null;
   }
 
   if (!customerId && refreshToken) {
-    const { verifyRefreshToken, setCustomerCookies } = await import("./customer-auth");
-    customerId = await verifyRefreshToken(refreshToken);
+    const payload = await verifyRefreshTokenPayload(refreshToken);
+    customerId = payload?.customerId ?? null;
+    expectedSessionVersion = payload?.sessionVersion ?? null;
     if (customerId) {
       await setCustomerCookies(resHeaders, headers, customerId);
     }
   }
-  
+
   if (!customerId) return null;
-  
+
   const db = getDb();
   const result = await db.select().from(customers).where(eq(customers.id, customerId));
-  return result[0] || null;
+  const customer = result[0];
+  if (!customer || customer.deletedAt) return null;
+  if (expectedSessionVersion !== null && (customer.sessionVersion ?? 0) !== expectedSessionVersion) {
+    return null;
+  }
+  return customer;
 }
 
 async function getAdminFromCookie(headers: Headers, resHeaders?: Headers): Promise<User | null> {
@@ -151,6 +160,8 @@ export async function createContext(
     ctx.admin = await getAdminFromCookie(opts.req.headers, opts.resHeaders) ?? undefined;
     ctx.driver = await getDriverFromCookie(opts.req.headers, opts.resHeaders) ?? undefined;
     ctx.merchant = await getMerchantFromCookie(opts.req.headers, opts.resHeaders) ?? undefined;
-  } catch {}
+  } catch (err) {
+    console.warn("[context] No se pudo resolver la sesión:", (err as Error)?.message);
+  }
   return ctx;
 }

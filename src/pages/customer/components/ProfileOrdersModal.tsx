@@ -24,7 +24,7 @@
  *   - PostgreSQL (Neon): `orders`, `order_items`
  */
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import {
   X,
@@ -38,6 +38,7 @@ import {
   XCircle,
   PackageCheck,
 } from "lucide-react";
+import { getOrderStatusMeta } from "@contracts/orderStatus";
 
 export interface OrderItemDetail {
   productName: string;
@@ -63,53 +64,14 @@ interface ProfileOrdersModalProps {
 // Traductor canónico de estados a español con estilos visuales
 function getOrderStatusConfig(status: string) {
   const normalized = (status || "").toLowerCase().trim();
-  switch (normalized) {
-    case "delivered":
-      return {
-        label: "Entregado",
-        icon: CheckCircle2,
-        badgeClass: "bg-emerald-50 text-emerald-700 border-emerald-200",
-      };
-    case "in_transit":
-    case "picked_up":
-      return {
-        label: "En camino",
-        icon: Bike,
-        badgeClass: "bg-sky-50 text-sky-700 border-sky-200",
-      };
-    case "in_preparation":
-    case "preparing":
-      return {
-        label: "En preparación",
-        icon: Clock,
-        badgeClass: "bg-amber-50 text-amber-800 border-amber-200",
-      };
-    case "pending_payment":
-      return {
-        label: "Revisando pago",
-        icon: AlertCircle,
-        badgeClass: "bg-yellow-50 text-yellow-800 border-yellow-200",
-      };
-    case "received":
-    case "confirmed":
-      return {
-        label: "Confirmado",
-        icon: PackageCheck,
-        badgeClass: "bg-blue-50 text-blue-700 border-blue-200",
-      };
-    case "cancelled":
-      return {
-        label: "Cancelado",
-        icon: XCircle,
-        badgeClass: "bg-rose-50 text-rose-700 border-rose-200",
-      };
-    default:
-      return {
-        label: normalized ? normalized.replace(/_/g, " ") : "Procesando",
-        icon: Clock,
-        badgeClass: "bg-zinc-100 text-zinc-700 border-zinc-200",
-      };
-  }
+  const meta = getOrderStatusMeta(normalized);
+  let icon = Clock;
+  if (normalized === "delivered") icon = CheckCircle2;
+  else if (["picked_up", "on_the_way"].includes(normalized)) icon = Bike;
+  else if (["received", "accepted", "preparing"].includes(normalized)) icon = PackageCheck;
+  else if (normalized === "cancelled") icon = XCircle;
+  else if (["pending_payment", "payment_rejected"].includes(normalized)) icon = AlertCircle;
+  return { label: meta.shortLabel, icon, badgeClass: meta.badgeClass };
 }
 
 export function ProfileOrdersModal({
@@ -120,6 +82,22 @@ export function ProfileOrdersModal({
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "delivered" | "active">("all");
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", onKeyDown);
+    dialogRef.current?.focus();
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [isOpen, onClose]);
 
   // Filtrado reactivo de pedidos para soportar grandes volúmenes de historial
   const filteredOrders = useMemo(() => {
@@ -152,12 +130,19 @@ export function ProfileOrdersModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center bg-black/75 backdrop-blur-sm select-none animate-in fade-in duration-200">
+    <div
+      className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center bg-black/75 backdrop-blur-sm select-none animate-in fade-in duration-200"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="orders-history-title"
+      tabIndex={-1}
+      ref={dialogRef}
+    >
       {/* Fondo oscuro cerrable */}
       <div className="absolute inset-0" onClick={onClose} />
 
       {/* Contenedor del Modal Bottom Sheet */}
-      <div className="relative bg-[#F7F7FA] w-full max-w-[500px] rounded-t-[32px] sm:rounded-3xl shadow-2xl flex flex-col max-h-[90dvh] min-h-[50dvh] border border-zinc-200/80 overflow-hidden text-zinc-900 z-[121] animate-in slide-in-from-bottom-8 duration-200">
+      <div className="relative bg-surface w-full max-w-[500px] rounded-t-[32px] sm:rounded-3xl shadow-2xl flex flex-col max-h-[90dvh] min-h-[50dvh] border border-zinc-200/80 overflow-hidden text-zinc-900 z-[121] animate-in slide-in-from-bottom-8 duration-200">
         
         {/* Handle táctil para dispositivos móviles */}
         <div className="w-12 h-1.5 bg-zinc-300 rounded-full mx-auto my-2.5 shrink-0" />
@@ -166,11 +151,11 @@ export function ProfileOrdersModal({
         <div className="px-5 pb-3 border-b border-zinc-200/80 shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-2xl bg-[#FF6A00]/10 border border-[#FF6A00]/20 flex items-center justify-center text-[#FF6A00] shrink-0">
+              <div className="w-9 h-9 rounded-2xl bg-brand/10 border border-brand/20 flex items-center justify-center text-brand shrink-0">
                 <ShoppingBag className="w-4 h-4 stroke-[2.4]" />
               </div>
               <div>
-                <h2 className="text-base sm:text-lg font-black text-zinc-900 tracking-tight leading-none">
+                <h2 id="orders-history-title" className="text-base sm:text-lg font-black text-zinc-900 tracking-tight leading-none">
                   Historial de pedidos
                 </h2>
                 <p className="text-[11px] text-zinc-500 font-medium mt-1">
@@ -181,7 +166,7 @@ export function ProfileOrdersModal({
 
             <button
               onClick={onClose}
-              className="w-8 h-8 rounded-full bg-zinc-200/70 hover:bg-zinc-200 active:scale-95 flex items-center justify-center text-zinc-600 hover:text-zinc-900 transition-all cursor-pointer"
+              className="w-11 h-11 rounded-full bg-zinc-200/70 hover:bg-zinc-200 active:scale-95 flex items-center justify-center text-zinc-600 hover:text-zinc-900 transition-all cursor-pointer"
               aria-label="Cerrar modal"
             >
               <X className="w-4 h-4" />
@@ -197,7 +182,7 @@ export function ProfileOrdersModal({
                 placeholder="Buscar por # de orden o producto..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full h-9 pl-9 pr-3 text-xs bg-white rounded-xl border border-zinc-200 focus:outline-none focus:border-[#FF6A00] focus:ring-1 focus:ring-[#FF6A00]/20 text-zinc-800 placeholder-zinc-400 shadow-2xs"
+                className="w-full h-9 pl-9 pr-3 text-xs bg-white rounded-xl border border-zinc-200 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/20 text-zinc-800 placeholder-zinc-400 shadow-2xs"
               />
               {searchQuery && (
                 <button
@@ -227,7 +212,7 @@ export function ProfileOrdersModal({
                 onClick={() => setStatusFilter("delivered")}
                 className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   statusFilter === "delivered"
-                    ? "bg-[#FF6A00] text-white shadow-xs shadow-[#FF6A00]/25"
+                    ? "bg-brand text-white shadow-xs shadow-brand/25"
                     : "bg-white text-zinc-600 border border-zinc-200/70 hover:bg-zinc-100"
                 }`}
               >
@@ -274,12 +259,21 @@ export function ProfileOrdersModal({
                     onClose();
                     navigate(`/order/${order.id}`);
                   }}
-                  className="w-full bg-white rounded-2xl border border-zinc-200/80 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-4 hover:border-[#FF6A00]/50 hover:shadow-md transition-all group cursor-pointer text-left"
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      onClose();
+                      navigate(`/order/${order.id}`);
+                    }
+                  }}
+                  className="w-full bg-white rounded-2xl border border-zinc-200/80 shadow-[0_2px_12px_rgba(0,0,0,0.03)] p-4 hover:border-brand/50 hover:shadow-md transition-all group cursor-pointer text-left"
                 >
                   {/* Fila Superior: ID del Pedido + Estado en Español */}
                   <div className="flex items-center justify-between gap-2 pb-2 border-b border-zinc-100">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-black text-zinc-900 group-hover:text-[#FF6A00] transition-colors">
+                      <span className="text-sm font-black text-zinc-900 group-hover:text-brand transition-colors">
                         Pedido #{order.id}
                       </span>
                       <span
@@ -290,7 +284,7 @@ export function ProfileOrdersModal({
                       </span>
                     </div>
 
-                    <span className="text-sm sm:text-base font-black text-[#FF6A00] shrink-0">
+                    <span className="text-sm sm:text-base font-black text-brand shrink-0">
                       ${parseFloat(order.total || "0").toFixed(2)}
                     </span>
                   </div>
@@ -321,7 +315,7 @@ export function ProfileOrdersModal({
                     <div className="flex items-center gap-1.5 text-zinc-400">
                       <Clock className="w-3.5 h-3.5" />
                       <span>
-                        {new Date(order.createdAt).toLocaleDateString("es-ES", {
+                        {new Date(order.createdAt).toLocaleString("es-ES", {
                           day: "numeric",
                           month: "short",
                           year: "numeric",
@@ -331,7 +325,7 @@ export function ProfileOrdersModal({
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-1 text-xs font-bold text-[#FF6A00] group-hover:translate-x-0.5 transition-transform">
+                    <div className="flex items-center gap-1 text-xs font-bold text-brand group-hover:translate-x-0.5 transition-transform">
                       <span>Ver detalle</span>
                       <ChevronRight className="w-3.5 h-3.5" />
                     </div>

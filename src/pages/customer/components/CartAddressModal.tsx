@@ -23,7 +23,7 @@
  *   - Ninguna (UI y estado de checkout)
  */
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   X,
   MapPin,
@@ -69,6 +69,7 @@ interface CartAddressModalProps {
   loading: boolean;
   canConfirm: boolean;
   onConfirmOrder: () => void;
+  error?: string;
 }
 
 export function CartAddressModal({
@@ -93,8 +94,25 @@ export function CartAddressModal({
   loading,
   canConfirm,
   onConfirmOrder,
+  error,
 }: CartAddressModalProps) {
   const [copiedBank, setCopiedBank] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !loading) onClose();
+    };
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", onKeyDown);
+    dialogRef.current?.focus();
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [isOpen, loading, onClose]);
 
   if (!isOpen) return null;
 
@@ -108,32 +126,38 @@ export function CartAddressModal({
   const hasValidAddress = Boolean(resolvedAddress.trim());
   const needsReceipt = paymentMethod === "transfer" && !paymentReceipt;
 
-  const defaultBankDetails =
-    bankTransferInfo ||
-    "Banco Pichincha • Cta. Corriente: 2100894567\nTitular: Rapidy Express S.A.\nEmail: pagos@rapidy.com";
+  const bankDetails = (bankTransferInfo || "").trim();
 
   const handleCopyBank = () => {
-    navigator.clipboard.writeText(defaultBankDetails).then(() => {
+    if (!bankDetails || !navigator.clipboard?.writeText) return;
+    navigator.clipboard.writeText(bankDetails).then(() => {
       setCopiedBank(true);
       setTimeout(() => setCopiedBank(false), 2000);
     });
   };
 
   return (
-    <div className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center bg-black/75 backdrop-blur-sm select-none animate-in fade-in duration-200">
+    <div
+      className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center bg-black/75 backdrop-blur-sm select-none animate-in fade-in duration-200"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="checkout-title"
+      tabIndex={-1}
+      ref={dialogRef}
+    >
       {/* Fondo oscuro para cerrar */}
-      <div className="absolute inset-0" onClick={onClose} />
+      <div className="absolute inset-0" onClick={() => !loading && onClose()} />
 
       {/* Contenedor Bottom Sheet */}
-      <div className="relative bg-[#F7F7FA] w-full max-w-[500px] rounded-t-[32px] sm:rounded-3xl shadow-2xl flex flex-col max-h-[92dvh] min-h-[55dvh] border border-zinc-200/80 overflow-hidden text-zinc-900 z-[121] animate-in slide-in-from-bottom-8 duration-200">
+      <div className="relative bg-surface w-full max-w-[500px] rounded-t-[32px] sm:rounded-3xl shadow-2xl flex flex-col max-h-[92dvh] min-h-[55dvh] border border-zinc-200/80 overflow-hidden text-zinc-900 z-[121] animate-in slide-in-from-bottom-8 duration-200">
         
         {/* Handle de arrastre móvil */}
         <div className="w-12 h-1.5 bg-zinc-300 rounded-full mx-auto my-2.5 shrink-0" />
 
         {/* Encabezado fijo del modal */}
-        <div className="px-5 pb-3 border-b border-zinc-200/80 flex items-center justify-between shrink-0 bg-[#F7F7FA]">
+        <div className="px-5 pb-3 border-b border-zinc-200/80 flex items-center justify-between shrink-0 bg-surface">
           <div>
-            <h2 className="text-base sm:text-lg font-black text-zinc-900 tracking-tight leading-none">
+            <h2 id="checkout-title" className="text-base sm:text-lg font-black text-zinc-900 tracking-tight leading-none">
               Confirmar pedido y entrega
             </h2>
             <p className="text-[11px] text-zinc-500 font-medium mt-1">
@@ -164,12 +188,12 @@ export function CartAddressModal({
                 onClick={() => onSelectAddressMode("profile")}
                 className={`w-full flex items-start gap-3 p-3.5 rounded-2xl border-2 text-left transition-all cursor-pointer ${
                   addressMode === "profile"
-                    ? "border-[#FF6A00] bg-orange-50/70 shadow-xs"
+                    ? "border-brand bg-orange-50/70 shadow-xs"
                     : "border-zinc-200/80 bg-white hover:border-zinc-300"
                 }`}
               >
                 <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
-                  addressMode === "profile" ? "bg-[#FF6A00] text-white" : "bg-zinc-100 text-zinc-500"
+                  addressMode === "profile" ? "bg-brand text-white" : "bg-zinc-100 text-zinc-500"
                 }`}>
                   <MapPin className="w-4 h-4" />
                 </div>
@@ -185,7 +209,7 @@ export function CartAddressModal({
               <div
                 className={`w-full p-3.5 rounded-2xl border-2 transition-all ${
                   addressMode === "custom"
-                    ? "border-[#FF6A00] bg-orange-50/70 shadow-xs"
+                    ? "border-brand bg-orange-50/70 shadow-xs"
                     : "border-zinc-200/80 bg-white hover:border-zinc-300"
                 }`}
               >
@@ -194,7 +218,7 @@ export function CartAddressModal({
                   className="w-full flex items-center gap-3 text-left cursor-pointer"
                 >
                   <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
-                    addressMode === "custom" ? "bg-[#FF6A00] text-white" : "bg-zinc-100 text-zinc-500"
+                    addressMode === "custom" ? "bg-brand text-white" : "bg-zinc-100 text-zinc-500"
                   }`}>
                     <Pencil className="w-4 h-4" />
                   </div>
@@ -210,7 +234,7 @@ export function CartAddressModal({
                     value={customAddress}
                     onChange={(e) => onChangeCustomAddress(e.target.value)}
                     placeholder="Calle principal, número y referencia..."
-                    className="w-full h-10 px-3 mt-2.5 text-xs border border-zinc-200 rounded-xl focus:border-[#FF6A00] focus:ring-1 focus:ring-[#FF6A00] outline-none bg-white font-medium text-zinc-800"
+                    className="w-full h-10 px-3 mt-2.5 text-xs border border-zinc-200 rounded-xl focus:border-brand focus:ring-1 focus:ring-brand outline-none bg-white font-medium text-zinc-800"
                     autoFocus
                   />
                 )}
@@ -222,12 +246,12 @@ export function CartAddressModal({
                 disabled={geoLoading}
                 className={`w-full flex items-start gap-3 p-3.5 rounded-2xl border-2 text-left transition-all cursor-pointer ${
                   addressMode === "current"
-                    ? "border-[#FF6A00] bg-orange-50/70 shadow-xs"
+                    ? "border-brand bg-orange-50/70 shadow-xs"
                     : "border-zinc-200/80 bg-white hover:border-zinc-300"
                 }`}
               >
                 <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
-                  addressMode === "current" ? "bg-[#FF6A00] text-white" : "bg-zinc-100 text-blue-600"
+                  addressMode === "current" ? "bg-brand text-white" : "bg-zinc-100 text-blue-600"
                 }`}>
                   <Navigation className={`w-4 h-4 ${geoLoading ? "animate-spin" : ""}`} />
                 </div>
@@ -244,7 +268,7 @@ export function CartAddressModal({
 
             {/* Teléfono de confirmación */}
             <div className="flex items-center gap-2 mt-2 px-3 py-2 bg-zinc-100/80 rounded-xl text-xs text-zinc-600">
-              <Phone className="w-3.5 h-3.5 text-[#FF6A00] shrink-0" />
+              <Phone className="w-3.5 h-3.5 text-brand shrink-0" />
               <span>Teléfono de entrega: <strong className="text-zinc-800">{customer.phone}</strong></span>
             </div>
           </div>
@@ -259,7 +283,7 @@ export function CartAddressModal({
                 onClick={() => onSelectPaymentMethod("cash")}
                 className={`h-12 flex items-center justify-center gap-2 rounded-2xl border-2 text-xs font-bold transition-all cursor-pointer ${
                   paymentMethod === "cash"
-                    ? "border-[#FF6A00] bg-orange-50 text-[#FF6A00] shadow-xs"
+                    ? "border-brand bg-orange-50 text-brand shadow-xs"
                     : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300"
                 }`}
               >
@@ -271,7 +295,7 @@ export function CartAddressModal({
                 onClick={() => onSelectPaymentMethod("transfer")}
                 className={`h-12 flex items-center justify-center gap-2 rounded-2xl border-2 text-xs font-bold transition-all cursor-pointer ${
                   paymentMethod === "transfer"
-                    ? "border-[#FF6A00] bg-orange-50 text-[#FF6A00] shadow-xs"
+                    ? "border-brand bg-orange-50 text-brand shadow-xs"
                     : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300"
                 }`}
               >
@@ -297,18 +321,26 @@ export function CartAddressModal({
                   <span className="text-[11px] font-black uppercase tracking-wider text-zinc-700">
                     Datos Bancarios Oficiales
                   </span>
-                  <button
-                    onClick={handleCopyBank}
-                    className="flex items-center gap-1 text-[11px] font-bold text-[#FF6A00] bg-white px-2.5 py-1 rounded-lg border border-orange-200 shadow-2xs hover:bg-orange-50 active:scale-95 transition-all cursor-pointer"
-                  >
-                    {copiedBank ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
-                    <span>{copiedBank ? "¡Copiado!" : "Copiar datos"}</span>
-                  </button>
+                  {bankDetails && (
+                    <button
+                      onClick={handleCopyBank}
+                      className="flex items-center gap-1 text-[11px] font-bold text-brand bg-white px-2.5 py-1 rounded-lg border border-orange-200 shadow-2xs hover:bg-orange-50 active:scale-95 transition-all cursor-pointer"
+                    >
+                      {copiedBank ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                      <span>{copiedBank ? "¡Copiado!" : "Copiar datos"}</span>
+                    </button>
+                  )}
                 </div>
 
-                <div className="p-2.5 bg-white rounded-xl border border-orange-100/80 text-xs text-zinc-700 font-mono whitespace-pre-wrap leading-relaxed shadow-2xs">
-                  {defaultBankDetails}
-                </div>
+                {bankDetails ? (
+                  <div className="p-2.5 bg-white rounded-xl border border-orange-100/80 text-xs text-zinc-700 font-mono whitespace-pre-wrap leading-relaxed shadow-2xs">
+                    {bankDetails}
+                  </div>
+                ) : (
+                  <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-800 leading-relaxed">
+                    Los datos bancarios aún no están configurados. Contacta al comercio antes de transferir.
+                  </div>
+                )}
 
                 {/* Subida y Previsualización de Comprobante */}
                 <div className="pt-1">
@@ -333,7 +365,7 @@ export function CartAddressModal({
                         </div>
                       </div>
 
-                      <label className="text-[11px] font-bold text-[#FF6A00] hover:underline cursor-pointer px-2 py-1 bg-orange-50 rounded-lg shrink-0">
+                      <label className="text-[11px] font-bold text-brand hover:underline cursor-pointer px-2 py-1 bg-orange-50 rounded-lg shrink-0">
                         Cambiar
                         <input
                           type="file"
@@ -345,7 +377,7 @@ export function CartAddressModal({
                     </div>
                   ) : (
                     <label className="w-full p-4 border-2 border-dashed border-orange-200 bg-white hover:bg-orange-50/40 rounded-2xl flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-colors text-center">
-                      <div className="w-10 h-10 rounded-full bg-orange-50 text-[#FF6A00] flex items-center justify-center">
+                      <div className="w-10 h-10 rounded-full bg-orange-50 text-brand flex items-center justify-center">
                         <Upload className="w-5 h-5" />
                       </div>
                       <span className="text-xs font-bold text-zinc-800">
@@ -379,7 +411,7 @@ export function CartAddressModal({
             </div>
             <div className="flex justify-between text-sm sm:text-base font-black text-zinc-900 pt-2 border-t border-zinc-100">
               <span>Total final a pagar:</span>
-              <span className="text-[#FF6A00] font-black">${total} USD</span>
+              <span className="text-brand font-black">${total} USD</span>
             </div>
           </div>
 
@@ -397,6 +429,16 @@ export function CartAddressModal({
               <span>Adjunta la foto del comprobante de transferencia para confirmar el pedido.</span>
             </div>
           )}
+
+          {error && (
+            <div
+              role="alert"
+              className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2 text-xs text-rose-700"
+            >
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 mt-0.5" />
+              <span>{error}</span>
+            </div>
+          )}
         </div>
 
         {/* PIE STICKY FIJO CON BOTÓN DE ACCIÓN (Siempre visible y accesible) */}
@@ -404,7 +446,7 @@ export function CartAddressModal({
           <button
             onClick={onConfirmOrder}
             disabled={loading || !canConfirm}
-            className="w-full h-13 bg-[#FF6A00] hover:bg-[#e65f00] text-white font-black text-sm sm:text-base rounded-2xl shadow-lg shadow-[#FF6A00]/30 transition-all flex items-center justify-between px-5 disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.99] cursor-pointer"
+            className="w-full min-h-[52px] h-14 bg-brand hover:bg-brand-strong text-white font-black text-sm sm:text-base rounded-2xl shadow-lg shadow-brand/30 transition-all flex items-center justify-between px-5 disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.99] cursor-pointer"
           >
             <span>{loading ? "Procesando orden..." : "Confirmar y pedir ahora"}</span>
             <span className="font-black text-base sm:text-lg">${total}</span>

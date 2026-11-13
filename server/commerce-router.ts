@@ -2,13 +2,36 @@ import { z } from "zod";
 import { createRouter, publicQuery, merchantQuery } from "./middleware";
 import { getDb } from "./queries/connection";
 import { commerces, products, orderItems, orders, orderCommerceStatus, drivers, orderStatusHistory, users } from "@db/schema";
-import { eq, and, like } from "drizzle-orm";
+import { eq, and, ilike } from "drizzle-orm";
 import { emit } from "./events";
+import { assertCommerceOwnership, merchantOwnsCommerce } from "./lib/order-access";
+
+const publicCommerceColumns = {
+  id: commerces.id,
+  name: commerces.name,
+  description: commerces.description,
+  logo: commerces.logo,
+  coverImage: commerces.coverImage,
+  categoryId: commerces.categoryId,
+  address: commerces.address,
+  phone: commerces.phone,
+  minOrder: commerces.minOrder,
+  deliveryTime: commerces.deliveryTime,
+  rating: commerces.rating,
+  status: commerces.status,
+  isOpen: commerces.isOpen,
+  openHours: commerces.openHours,
+  lat: commerces.lat,
+  lng: commerces.lng,
+};
 
 export const commerceRouter = createRouter({
   list: publicQuery.query(async () => {
     const db = getDb();
-    return db.select().from(commerces).where(eq(commerces.status, "active"));
+    return db
+      .select(publicCommerceColumns)
+      .from(commerces)
+      .where(eq(commerces.status, "active"));
   }),
 
   // Returns the commerce owned by the currently authenticated merchant
@@ -19,31 +42,45 @@ export const commerceRouter = createRouter({
   }),
 
   getById: publicQuery
-    .input(z.object({ id: z.number() }))
-    .query(async ({ input }) => {
+    .input(z.object({ id: z.number().int().positive() }))
+    .query(async ({ input, ctx }) => {
       const db = getDb();
-      const commerce = await db.select().from(commerces).where(eq(commerces.id, input.id));
+      const commerce = await db
+        .select(publicCommerceColumns)
+        .from(commerces)
+        .where(eq(commerces.id, input.id));
       if (commerce.length === 0) return null;
+      const isOwner =
+        !!ctx.admin || (ctx.merchant ? await merchantOwnsCommerce(ctx, input.id) : false);
       const prods = await db.select().from(products).where(eq(products.commerceId, input.id));
-      return { ...commerce[0], products: prods };
+      return {
+        ...commerce[0],
+        products: isOwner ? prods : prods.filter((product) => product.isAvailable === "yes"),
+      };
     }),
 
   getByCategory: publicQuery
-    .input(z.object({ categoryId: z.number() }))
+    .input(z.object({ categoryId: z.number().int().positive() }))
     .query(async ({ input }) => {
       const db = getDb();
-      return db.select().from(commerces).where(
-        and(eq(commerces.categoryId, input.categoryId), eq(commerces.status, "active"))
-      );
+      return db
+        .select(publicCommerceColumns)
+        .from(commerces)
+        .where(
+          and(eq(commerces.categoryId, input.categoryId), eq(commerces.status, "active")),
+        );
     }),
 
   search: publicQuery
-    .input(z.object({ query: z.string() }))
+    .input(z.object({ query: z.string().trim().min(1).max(100) }))
     .query(async ({ input }) => {
       const db = getDb();
-      return db.select().from(commerces).where(
-        and(like(commerces.name, `%${input.query}%`), eq(commerces.status, "active"))
-      );
+      return db
+        .select(publicCommerceColumns)
+        .from(commerces)
+        .where(
+          and(ilike(commerces.name, `%${input.query}%`), eq(commerces.status, "active")),
+        );
     }),
 
   update: merchantQuery
@@ -106,9 +143,10 @@ export const commerceRouter = createRouter({
       return { ...commerce[0], isOpen: newStatus };
     }),
 
-  getStats: publicQuery
-    .input(z.object({ id: z.number() }))
-    .query(async ({ input }) => {
+  getStats: merchantQuery
+    .input(z.object({ id: z.number().int().positive() }))
+    .query(async ({ input, ctx }) => {
+      await assertCommerceOwnership(ctx, input.id);
       const db = getDb();
       const [commerce] = await db.select().from(commerces).where(eq(commerces.id, input.id));
       const prods = await db.select().from(products).where(eq(products.commerceId, input.id));
@@ -178,64 +216,68 @@ export const commerceRouter = createRouter({
     }),
 
   markReady: merchantQuery
-    .input(z.object({ orderId: z.number(), commerceId: z.number() }))
+    .input(z.object({ orderId: z.number().int().positive(), commerceId: z.number().int().positive() }))
     .mutation(async ({ input, ctx }) => {
+      await assertCommerceOwnership(ctx, input.commerceId);
       const db = getDb();
 
-      // Verify the commerce owns items in this order
       const orderItemsResult = await db
-        .select()
+        .select({ id: orderItems.id })
         .from(orderItems)
-        .where(and(eq(orderItems.orderId, input.orderId), eq(orderItems.commerceId, input.commerceId)));
+        .where(and(eq(orderItems.orderId, input.orderId), eq(orderItems.commerceId, input.commerceId)))
+        .limit(1);
 
       if (orderItemsResult.length === 0) {
         throw new Error("Este comercio no tiene items en este pedido");
       }
 
-      // Update the commerce status to ready_for_pickup
       const result = await db.transaction(async (tx) => {
         await tx
           .update(orderCommerceStatus)
           .set({ status: "ready_for_pickup", updatedAt: new Date() })
           .where(and(eq(orderCommerceStatus.orderId, input.orderId), eq(orderCommerceStatus.commerceId, input.commerceId)));
 
-        // Check if all commerces for this order are ready
         const allStatuses = await tx
           .select()
           .from(orderCommerceStatus)
           .where(eq(orderCommerceStatus.orderId, input.orderId));
 
-        const allReady = allStatuses.every(s => s.status === "ready_for_pickup");
+        const allReady = allStatuses.length > 0 && allStatuses.every(s => s.status === "ready_for_pickup");
 
         if (allReady) {
-          // Update order status to ready_for_pickup
-          await tx
-            .update(orders)
-            .set({ status: "ready_for_pickup", updatedAt: new Date() })
-            .where(eq(orders.id, input.orderId));
+          const current = await tx.select().from(orders).where(eq(orders.id, input.orderId)).limit(1);
+          if (current[0] && current[0].status !== "ready_for_pickup") {
+            await tx
+              .update(orders)
+              .set({ status: "ready_for_pickup", updatedAt: new Date() })
+              .where(eq(orders.id, input.orderId));
 
-          await tx.insert(orderStatusHistory).values({
-            orderId: input.orderId,
-            status: "ready_for_pickup",
-            notes: "Todos los comercios listos para retirar",
-          });
-
-          // Notify online drivers
-          const onlineDrivers = await tx.select({ id: drivers.id }).from(drivers).where(eq(drivers.status, "online"));
-          onlineDrivers.forEach((driver) => {
-            emit(`driver:${driver.id}`, { type: "new_available", orderId: input.orderId });
-          });
-
-          emit(`order:${input.orderId}`, { type: "status_update", status: "ready_for_pickup" });
+            await tx.insert(orderStatusHistory).values({
+              orderId: input.orderId,
+              status: "ready_for_pickup",
+              notes: "Todos los comercios listos para retirar",
+            });
+          }
         }
-
-        // Emit commerce ready event
-        emit(`commerce:${input.commerceId}`, { type: "commerce_ready", orderId: input.orderId });
-        emit(`order:${input.orderId}`, { type: "commerce_ready", commerceId: input.commerceId });
-        emit("admin:dashboard", { type: "dashboard_update" });
 
         return { allReady };
       });
+
+      // Eventos fuera de la transacción: nunca emitir estados que puedan revertirse.
+      emit(`commerce:${input.commerceId}`, { type: "commerce_ready", orderId: input.orderId });
+      emit(`order:${input.orderId}`, { type: "commerce_ready", commerceId: input.commerceId });
+      emit("admin:dashboard", { type: "dashboard_update" });
+
+      if (result.allReady) {
+        const onlineDrivers = await db
+          .select({ id: drivers.id })
+          .from(drivers)
+          .where(eq(drivers.status, "online"));
+        onlineDrivers.forEach((driver) => {
+          emit(`driver:${driver.id}`, { type: "new_available", orderId: input.orderId });
+        });
+        emit(`order:${input.orderId}`, { type: "status_update", status: "ready_for_pickup" });
+      }
 
       return result;
     }),

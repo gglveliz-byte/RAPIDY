@@ -91,7 +91,7 @@ export default function AdminSettings() {
         const rows: Record<string, unknown>[] = Array.isArray(data?.rows) ? data.rows : [];
         const headers = Array.isArray(data?.columns) ? data.columns : (rows.length > 0 ? Object.keys(rows[0]) : ["Sin datos"]);
         const body = rows.map((row) =>
-          headers.map((h) => {
+          headers.map((h: string) => {
             const val = (row as Record<string, unknown>)[h];
             return val === null || val === undefined ? "" : String(val);
           }),

@@ -27,6 +27,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
+import { trpcMutate } from "@/hooks/useDeliveryData";
 
 interface DeletionRecord {
   ticketId: string;
@@ -54,6 +55,7 @@ export default function DeleteAccount() {
 
   const [ticketResult, setTicketResult] = useState<DeletionRecord | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
   const [showFaq, setShowFaq] = useState<string | null>("sri");
 
@@ -62,38 +64,48 @@ export default function DeleteAccount() {
     return /^(?:(?:\+?593)|0)?9\d{8}$/.test(cleaned);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.fullName.trim() || !form.phone.trim() || !form.confirmCheck) return;
 
     setLoading(true);
-    const year = new Date().getFullYear();
-    const randomCode = Math.floor(100000 + Math.random() * 900000);
-    const generatedTicket = `BAJA-EC-${year}-${randomCode}`;
+    setError("");
+    try {
+      const result = await trpcMutate<{
+        success: boolean;
+        ticketId?: string;
+        sla?: string;
+        requestedAt?: string;
+      }>("customer.requestDeletion", {
+        phone: form.phone.trim(),
+        fullName: form.fullName.trim(),
+        role: form.role,
+        reason: `${form.reasonCategory}${
+          form.reasonDetails ? `: ${form.reasonDetails.trim()}` : ""
+        }`,
+      });
 
-    const newRecord: DeletionRecord = {
-      ticketId: generatedTicket,
-      fullName: form.fullName.trim(),
-      phone: form.phone.trim(),
-      role: form.role,
-      reason: `${form.reasonCategory}${form.reasonDetails ? `: ${form.reasonDetails.trim()}` : ""}`,
-      requestedAt: new Date().toISOString(),
-      sla: "48 horas hábiles",
-      status: "pendiente",
-      legalBasis: "LOPDP Ecuador (Arts. 15 y 16) & Google Play Data Deletion Policy",
-    };
-
-    setTimeout(() => {
-      try {
-        const stored = JSON.parse(localStorage.getItem("rapidy_account_deletions") || "[]");
-        stored.push(newRecord);
-        localStorage.setItem("rapidy_account_deletions", JSON.stringify(stored));
-      } catch (err) {
-        console.error("Error al persistir baja en localStorage:", err);
-      }
-      setLoading(false);
+      const newRecord: DeletionRecord = {
+        ticketId:
+          result?.ticketId ??
+          `BAJA-EC-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`,
+        fullName: form.fullName.trim(),
+        phone: form.phone.trim(),
+        role: form.role,
+        reason: `${form.reasonCategory}${
+          form.reasonDetails ? `: ${form.reasonDetails.trim()}` : ""
+        }`,
+        requestedAt: result?.requestedAt ?? new Date().toISOString(),
+        sla: result?.sla ?? "48 horas hábiles",
+        status: "pendiente",
+        legalBasis: "LOPDP Ecuador (Arts. 15 y 16) & Google Play Data Deletion Policy",
+      };
       setTicketResult(newRecord);
-    }, 500);
+    } catch (err: any) {
+      setError(err?.message || "No pudimos registrar la solicitud. Inténtalo de nuevo.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCopyTicket = (ticket: string) => {
@@ -105,9 +117,9 @@ export default function DeleteAccount() {
   };
 
   return (
-    <div className="mobile-container max-w-2xl mx-auto bg-[#F7F7FA] min-h-screen pb-16 font-sans">
+    <div className="mobile-container max-w-2xl mx-auto bg-surface min-h-screen pb-16 font-sans">
       {/* Cabecera Fija Dark Velvet */}
-      <header className="sticky top-0 z-30 bg-[#0E0E12] border-b border-white/10 px-4 pt-4 pb-4 shadow-md">
+      <header className="sticky top-0 z-30 bg-ink border-b border-white/10 px-4 pt-4 pb-4 shadow-md">
         <div className="flex items-center justify-between mb-2">
           <button
             type="button"
@@ -119,14 +131,14 @@ export default function DeleteAccount() {
             <span className="text-xs font-semibold">Volver</span>
           </button>
           <div className="inline-flex items-center gap-1.5 bg-white/10 border border-white/15 px-2.5 py-1 rounded-full">
-            <span className="w-2 h-2 rounded-full bg-[#FF6A00] animate-pulse" />
+            <span className="w-2 h-2 rounded-full bg-brand animate-pulse" />
             <span className="text-[11px] font-bold text-white tracking-wide">
               LOPDP Ecuador 🇪🇨 & Google Play
             </span>
           </div>
         </div>
         <h1 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
-          <Trash2 className="w-5 h-5 text-[#FF6A00]" />
+          <Trash2 className="w-5 h-5 text-brand" />
           Eliminación de Cuenta y Supresión de Datos
         </h1>
         <p className="text-white/70 text-xs mt-0.5">
@@ -152,11 +164,11 @@ export default function DeleteAccount() {
             </div>
           </div>
           <div className="mt-3 pt-3 border-t border-gray-100 grid grid-cols-2 gap-2 text-[11px]">
-            <div className="bg-[#F7F7FA] p-2.5 rounded-2xl border border-gray-200/60">
+            <div className="bg-surface p-2.5 rounded-2xl border border-gray-200/60">
               <span className="font-bold text-gray-900 block mb-0.5">⏱️ Tiempo de Respuesta</span>
               <span className="text-gray-600">Máximo <strong>48 horas hábiles</strong>.</span>
             </div>
-            <div className="bg-[#F7F7FA] p-2.5 rounded-2xl border border-gray-200/60">
+            <div className="bg-surface p-2.5 rounded-2xl border border-gray-200/60">
               <span className="font-bold text-gray-900 block mb-0.5">🔒 Salvedad SRI</span>
               <span className="text-gray-600">Facturación fiscal por 7 años.</span>
             </div>
@@ -179,10 +191,10 @@ export default function DeleteAccount() {
             </p>
 
             {/* Código de Ticket */}
-            <div className="mt-4 p-3.5 bg-[#0E0E12] rounded-2xl text-left border border-white/10">
+            <div className="mt-4 p-3.5 bg-ink rounded-2xl text-left border border-white/10">
               <div className="flex items-center justify-between text-[11px] text-white/60 mb-1">
                 <span>Código de Trámite Oficial (Ecuador)</span>
-                <span className="text-[#FF6A00] font-mono font-semibold">SLA: 48h</span>
+                <span className="text-brand font-mono font-semibold">SLA: 48h</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="font-mono text-base font-bold text-white tracking-wider">
@@ -195,8 +207,8 @@ export default function DeleteAccount() {
                 >
                   {copied ? (
                     <>
-                      <Check className="w-3.5 h-3.5 text-[#FF6A00]" />
-                      <span className="text-[#FF6A00]">Copiado</span>
+                      <Check className="w-3.5 h-3.5 text-brand" />
+                      <span className="text-brand">Copiado</span>
                     </>
                   ) : (
                     <>
@@ -209,7 +221,7 @@ export default function DeleteAccount() {
             </div>
 
             {/* Resumen */}
-            <div className="mt-4 bg-[#F7F7FA] rounded-2xl p-3 text-left border border-gray-200/60 space-y-1.5 text-xs">
+            <div className="mt-4 bg-surface rounded-2xl p-3 text-left border border-gray-200/60 space-y-1.5 text-xs">
               <div className="flex justify-between text-gray-700">
                 <span className="text-gray-500">Titular:</span>
                 <span className="font-semibold">{ticketResult.fullName}</span>
@@ -233,7 +245,7 @@ export default function DeleteAccount() {
             <button
               type="button"
               onClick={() => navigate("/home")}
-              className="mt-5 w-full h-11 bg-[#0E0E12] hover:bg-black text-white text-xs font-semibold rounded-2xl transition-all shadow-xs"
+              className="mt-5 w-full h-11 bg-ink hover:bg-black text-white text-xs font-semibold rounded-2xl transition-all shadow-xs"
             >
               Volver a la App
             </button>
@@ -242,7 +254,7 @@ export default function DeleteAccount() {
           <section className="bg-white rounded-3xl p-5 border border-gray-200/80 shadow-xs">
             <div className="border-b border-gray-100 pb-3 mb-4">
               <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
-                <Lock className="w-4 h-4 text-[#FF6A00]" />
+                <Lock className="w-4 h-4 text-brand" />
                 Formulario de Solicitud de Supresión
               </h3>
               <p className="text-[11px] text-gray-500 mt-0.5">
@@ -260,7 +272,7 @@ export default function DeleteAccount() {
                   <select
                     value={form.role}
                     onChange={(e) => setForm({ ...form, role: e.target.value })}
-                    className="w-full h-11 px-3.5 pr-8 bg-white border border-gray-200 rounded-2xl text-xs text-gray-900 focus:border-[#FF6A00] focus:ring-1 focus:ring-[#FF6A00] outline-none appearance-none cursor-pointer"
+                    className="w-full h-11 px-3.5 pr-8 bg-white border border-gray-200 rounded-2xl text-xs text-gray-900 focus:border-brand focus:ring-1 focus:ring-brand outline-none appearance-none cursor-pointer"
                   >
                     <option value="customer">Cliente Consumidor (Comprador)</option>
                     <option value="driver">Repartidor Asociado (Driver / Courier)</option>
@@ -282,7 +294,7 @@ export default function DeleteAccount() {
                     value={form.fullName}
                     onChange={(e) => setForm({ ...form, fullName: e.target.value })}
                     placeholder="Ej. Carlos Patricio Mendoza Vera"
-                    className="w-full h-11 pl-10 pr-3.5 border border-gray-200 rounded-2xl text-xs text-gray-900 focus:border-[#FF6A00] focus:ring-1 focus:ring-[#FF6A00] outline-none"
+                    className="w-full h-11 pl-10 pr-3.5 border border-gray-200 rounded-2xl text-xs text-gray-900 focus:border-brand focus:ring-1 focus:ring-brand outline-none"
                   />
                   <User className="w-4 h-4 text-gray-400 absolute left-3.5 top-3.5" />
                 </div>
@@ -305,7 +317,7 @@ export default function DeleteAccount() {
                     value={form.phone}
                     onChange={(e) => setForm({ ...form, phone: e.target.value })}
                     placeholder="0991234567 o +593991234567"
-                    className="w-full h-11 pl-10 pr-3.5 border border-gray-200 rounded-2xl text-xs text-gray-900 focus:border-[#FF6A00] focus:ring-1 focus:ring-[#FF6A00] outline-none font-mono"
+                    className="w-full h-11 pl-10 pr-3.5 border border-gray-200 rounded-2xl text-xs text-gray-900 focus:border-brand focus:ring-1 focus:ring-brand outline-none font-mono"
                   />
                   <Phone className="w-4 h-4 text-gray-400 absolute left-3.5 top-3.5" />
                 </div>
@@ -326,7 +338,7 @@ export default function DeleteAccount() {
                   <select
                     value={form.reasonCategory}
                     onChange={(e) => setForm({ ...form, reasonCategory: e.target.value })}
-                    className="w-full h-11 px-3.5 pr-8 bg-white border border-gray-200 rounded-2xl text-xs text-gray-900 focus:border-[#FF6A00] focus:ring-1 focus:ring-[#FF6A00] outline-none appearance-none cursor-pointer"
+                    className="w-full h-11 px-3.5 pr-8 bg-white border border-gray-200 rounded-2xl text-xs text-gray-900 focus:border-brand focus:ring-1 focus:ring-brand outline-none appearance-none cursor-pointer"
                   >
                     <option value="privacy">Privacidad y supresión de datos (LOPDP)</option>
                     <option value="inactive">Ya no utilizo la aplicación</option>
@@ -341,7 +353,7 @@ export default function DeleteAccount() {
                   value={form.reasonDetails}
                   onChange={(e) => setForm({ ...form, reasonDetails: e.target.value })}
                   placeholder="Detalles adicionales (opcional)..."
-                  className="w-full p-3 border border-gray-200 rounded-2xl text-xs text-gray-900 focus:border-[#FF6A00] focus:ring-1 focus:ring-[#FF6A00] outline-none resize-none"
+                  className="w-full p-3 border border-gray-200 rounded-2xl text-xs text-gray-900 focus:border-brand focus:ring-1 focus:ring-brand outline-none resize-none"
                 />
               </div>
 
@@ -365,6 +377,11 @@ export default function DeleteAccount() {
               </div>
 
               {/* Botón de Eliminación */}
+              {error && (
+                <div className="rounded-2xl border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-xs font-semibold text-rose-700">
+                  {error}
+                </div>
+              )}
               <button
                 type="submit"
                 disabled={loading || !form.confirmCheck}
@@ -380,7 +397,7 @@ export default function DeleteAccount() {
         {/* Políticas de Transparencia de Datos Google Play y SRI */}
         <section className="bg-white rounded-3xl p-4 border border-gray-200/80 shadow-xs space-y-2">
           <div className="flex items-center gap-2 mb-2 px-1">
-            <HelpCircle className="w-4 h-4 text-[#FF6A00]" />
+            <HelpCircle className="w-4 h-4 text-brand" />
             <h3 className="text-xs font-bold text-gray-900">
               Política de Transparencia de Datos • Ecuador
             </h3>
@@ -394,7 +411,7 @@ export default function DeleteAccount() {
               className="w-full p-3 bg-gray-50/80 hover:bg-gray-100/80 flex items-center justify-between text-left transition-colors"
             >
               <span className="text-xs font-semibold text-gray-800 flex items-center gap-2">
-                <Layers className="w-3.5 h-3.5 text-[#FF6A00]" />
+                <Layers className="w-3.5 h-3.5 text-brand" />
                 ¿Qué datos se eliminan de inmediato?
               </span>
               {showFaq === "deleted" ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
@@ -416,7 +433,7 @@ export default function DeleteAccount() {
               className="w-full p-3 bg-gray-50/80 hover:bg-gray-100/80 flex items-center justify-between text-left transition-colors"
             >
               <span className="text-xs font-semibold text-gray-800 flex items-center gap-2">
-                <FileSpreadsheet className="w-3.5 h-3.5 text-[#FF6A00]" />
+                <FileSpreadsheet className="w-3.5 h-3.5 text-brand" />
                 Salvedad Tributaria Obligatoria (SRI Ecuador - 7 Años)
               </span>
               {showFaq === "sri" ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
@@ -444,7 +461,7 @@ export default function DeleteAccount() {
               className="w-full p-3 bg-gray-50/80 hover:bg-gray-100/80 flex items-center justify-between text-left transition-colors"
             >
               <span className="text-xs font-semibold text-gray-800 flex items-center gap-2">
-                <Clock className="w-3.5 h-3.5 text-[#FF6A00]" />
+                <Clock className="w-3.5 h-3.5 text-brand" />
                 Plazos de Tramitación y Revocatoria (LOPDP)
               </span>
               {showFaq === "sla" ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
@@ -454,7 +471,7 @@ export default function DeleteAccount() {
                 <p>
                   El trámite se ejecuta en un plazo máximo de <strong>48 horas hábiles</strong>.
                   Para cualquier consulta o desistimiento formal, puedes escribir a{" "}
-                  <a href="mailto:privacidad@rapidy.ec" className="text-[#FF6A00] font-semibold underline">
+                  <a href="mailto:privacidad@rapidy.ec" className="text-brand font-semibold underline">
                     privacidad@rapidy.ec
                   </a>{" "}
                   indicando tu número de ticket.
@@ -467,7 +484,7 @@ export default function DeleteAccount() {
         {/* Footer Google Play Policy */}
         <footer className="text-center pt-2 pb-6">
           <div className="inline-flex items-center gap-2 text-xs text-gray-500 bg-white/80 border border-gray-200/80 px-3.5 py-1.5 rounded-full shadow-xs">
-            <ShieldCheck className="w-4 h-4 text-[#FF6A00]" />
+            <ShieldCheck className="w-4 h-4 text-brand" />
             <span>URL pública de eliminación conforme a Google Play Data Safety • Rapidy Ecuador</span>
           </div>
         </footer>

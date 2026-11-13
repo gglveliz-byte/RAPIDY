@@ -61,7 +61,19 @@ const requireMerchantAuth = t.middleware(async (opts) => {
   return next({ ctx: { ...ctx, merchant: ctx.merchant } });
 });
 
+const requireAnyAuth = t.middleware(async (opts) => {
+  const { ctx, next } = opts;
+  if (!ctx.customer && !ctx.driver && !ctx.merchant && !ctx.admin) {
+    throw new TRPCError({
+      code: "UNAUTHORIZED",
+      message: "Authentication required",
+    });
+  }
+  return next();
+});
+
 export const customerQuery = t.procedure.use(requireCustomerAuth);
 export const adminQuery = t.procedure.use(requireAdminAuth);
 export const driverQuery = t.procedure.use(requireDriverAuth);
 export const merchantQuery = t.procedure.use(requireMerchantAuth);
+export const participantQuery = t.procedure.use(requireAnyAuth);

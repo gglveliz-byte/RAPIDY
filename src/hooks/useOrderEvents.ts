@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { trpc } from "@/providers/trpc";
 
@@ -6,7 +6,11 @@ const MAX_RECONNECT_DELAY = 30000;
 const BASE_RECONNECT_DELAY = 1500;
 const MAX_CONSECUTIVE_FAILURES = 10;
 
-function createReconnectingEventSource(url: string, onMessage: (data: unknown) => void): { close: () => void } {
+function createReconnectingEventSource(
+  url: string,
+  onMessage: (data: unknown) => void,
+  onStatus?: (status: "connecting" | "connected" | "offline") => void,
+): { close: () => void } {
   let eventSource: EventSource | null = null;
   let reconnectAttempts = 0;
   let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -25,6 +29,7 @@ function createReconnectingEventSource(url: string, onMessage: (data: unknown) =
     if (isClosed) return;
     if (reconnectAttempts >= MAX_CONSECUTIVE_FAILURES) {
       console.warn(`[SSE] Giving up reconnecting to ${url} after ${reconnectAttempts} failures`);
+      onStatus?.("offline");
       return;
     }
     // Don't open a connection when the tab is hidden — avoids QUIC idle-timeout spam
@@ -37,22 +42,31 @@ function createReconnectingEventSource(url: string, onMessage: (data: unknown) =
       return;
     }
 
+    onStatus?.("connecting");
     try {
       eventSource = new EventSource(url);
     } catch (err) {
       console.error("[SSE] EventSource constructor failed:", err);
+      onStatus?.("offline");
       return;
     }
+
+    eventSource.onopen = () => {
+      reconnectAttempts = 0;
+      onStatus?.("connected");
+    };
 
     eventSource.addEventListener("update", (event) => {
       try {
         const data = JSON.parse((event as MessageEvent).data);
         if (data && data.type === "ping") {
           reconnectAttempts = 0;
+          onStatus?.("connected");
           return;
         }
         onMessage(data);
         reconnectAttempts = 0;
+        onStatus?.("connected");
       } catch (err) {
         console.error("[SSE] Error parsing event:", err);
       }
@@ -77,12 +91,14 @@ function createReconnectingEventSource(url: string, onMessage: (data: unknown) =
         return;
       }
       console.warn("[SSE] Connection error on", url);
+      onStatus?.("connecting");
 
       closeSource();
 
       reconnectAttempts++;
       if (reconnectAttempts > MAX_CONSECUTIVE_FAILURES) {
         console.warn(`[SSE] Max failures reached for ${url}, stopping.`);
+        onStatus?.("offline");
         return;
       }
 
@@ -105,12 +121,14 @@ function createReconnectingEventSource(url: string, onMessage: (data: unknown) =
         reconnectTimeout = null;
       }
       closeSource();
+      onStatus?.("offline");
     }
   };
 }
 
 export function useOrderEvents(orderId: number | undefined, utils: ReturnType<typeof trpc.useUtils>) {
   const queryClient = useQueryClient();
+  const [connected, setConnected] = useState(false);
   useEffect(() => {
     if (!orderId) return;
 
@@ -121,11 +139,14 @@ export function useOrderEvents(orderId: number | undefined, utils: ReturnType<ty
         utils.chat.getByOrder.invalidate({ orderId });
         queryClient.invalidateQueries({ queryKey: ["order.getById", orderId] });
         queryClient.invalidateQueries({ queryKey: ["chat.getByOrder", orderId] });
-      }
+      },
+      (status) => setConnected(status === "connected"),
     );
 
     return () => connection.close();
   }, [orderId, utils, queryClient]);
+
+  return { connected };
 }
 
 export function useCommerceEvents(commerceId: number | undefined, utils: ReturnType<typeof trpc.useUtils>) {

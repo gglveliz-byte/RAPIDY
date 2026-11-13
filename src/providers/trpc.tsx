@@ -1,6 +1,7 @@
 import { createTRPCReact } from "@trpc/react-query";
 import { httpLink, TRPCClientError } from "@trpc/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import superjson from "superjson";
 import type { AppRouter } from "../../server/router";
 import type { ReactNode } from "react";
@@ -15,10 +16,19 @@ function handleAuthError() {
     body: JSON.stringify({}),
     credentials: "include",
   }).catch(() => {})
-  localStorage.removeItem("qs_session")
-  localStorage.removeItem("merchant_user")
-  localStorage.removeItem("driver_user")
-  window.location.href = "/login"
+  try {
+    localStorage.removeItem("qs_session")
+    localStorage.removeItem("customer_session")
+    localStorage.removeItem("merchant_user")
+    localStorage.removeItem("driver_user")
+    localStorage.removeItem("cart")
+  } catch {}
+  window.dispatchEvent(new Event("rapidy:logout"))
+  const isBackoffice =
+    window.location.pathname.startsWith("/admin") ||
+    window.location.pathname.startsWith("/driver") ||
+    window.location.pathname.startsWith("/commerce")
+  window.location.href = isBackoffice ? "/login" : "/customer-login"
 }
 
 const queryClient = new QueryClient({
@@ -66,6 +76,7 @@ export function TRPCProvider({ children }: { children: ReactNode }) {
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
         {children}
+        {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-left" />}
       </QueryClientProvider>
     </trpc.Provider>
   );

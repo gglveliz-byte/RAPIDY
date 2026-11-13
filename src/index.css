@@ -24,7 +24,7 @@ input, textarea {
     --card-foreground: 0 0% 13%;
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 13%;
-    --primary: 122 39% 33%;
+    --primary: 24 100% 50%;
     --primary-foreground: 0 0% 100%;
     --secondary: 0 0% 96%;
     --secondary-foreground: 0 0% 13%;
@@ -36,16 +36,22 @@ input, textarea {
     --destructive-foreground: 0 0% 100%;
     --border: 0 0% 88%;
     --input: 0 0% 88%;
-    --ring: 122 39% 33%;
+    --ring: 24 100% 50%;
     --radius: 1.25rem;
+    --brand: 24 100% 50%;
+    --brand-strong: 21 90% 40%;
+    --brand-soft: 24 100% 96%;
+    --surface: 240 20% 98%;
+    --ink: 240 5% 6%;
+    --ink-soft: 0 0% 7%;
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 0 0% 13%;
-    --sidebar-primary: 122 39% 33%;
+    --sidebar-primary: 24 100% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 0 0% 96%;
     --sidebar-accent-foreground: 0 0% 13%;
     --sidebar-border: 0 0% 88%;
-    --sidebar-ring: 122 39% 33%;
+    --sidebar-ring: 24 100% 50%;
   }
 
   .dark {
@@ -55,7 +61,7 @@ input, textarea {
     --card-foreground: 0 0% 98%;
     --popover: 0 0% 10%;
     --popover-foreground: 0 0% 98%;
-    --primary: 122 39% 45%;
+    --primary: 24 100% 55%;
     --primary-foreground: 0 0% 4%;
     --secondary: 0 0% 15%;
     --secondary-foreground: 0 0% 98%;
@@ -67,15 +73,21 @@ input, textarea {
     --destructive-foreground: 0 0% 98%;
     --border: 0 0% 25%;
     --input: 0 0% 25%;
-    --ring: 122 39% 45%;
+    --ring: 24 100% 55%;
+    --brand: 24 100% 55%;
+    --brand-strong: 24 100% 62%;
+    --brand-soft: 24 60% 12%;
+    --surface: 240 5% 8%;
+    --ink: 240 5% 4%;
+    --ink-soft: 0 0% 5%;
     --sidebar-background: 0 0% 4%;
     --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 122 39% 45%;
+    --sidebar-primary: 24 100% 55%;
     --sidebar-primary-foreground: 0 0% 4%;
     --sidebar-accent: 0 0% 15%;
     --sidebar-accent-foreground: 0 0% 98%;
     --sidebar-border: 0 0% 25%;
-    --sidebar-ring: 122 39% 45%;
+    --sidebar-ring: 24 100% 55%;
   }
 }
 
@@ -181,7 +193,7 @@ input, textarea {
   @apply h-1 bg-gray-200 rounded-full overflow-hidden;
 }
 .progress-fill {
-  @apply h-full bg-[#2E7D32] rounded-full transition-all duration-500;
+  @apply h-full bg-brand rounded-full transition-all duration-500;
 }
 
 /* Card shadows */
@@ -203,7 +215,7 @@ input, textarea {
   @apply flex flex-col items-center gap-0.5 text-gray-400 transition-colors;
 }
 .bottom-nav-item.active {
-  @apply text-[#2E7D32];
+  @apply text-brand;
 }
 
 /* Touch targets */

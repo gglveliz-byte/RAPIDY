@@ -75,7 +75,7 @@ export function HomeCategories({
           <button
             type="button"
             onClick={onClearCategory}
-            className="text-xs font-bold text-[#FF6A00] hover:underline cursor-pointer"
+            className="text-xs font-bold text-brand hover:underline cursor-pointer"
           >
             Ver todas
           </button>
@@ -92,11 +92,11 @@ export function HomeCategories({
               onClick={() => onSelectCategory(cat.id)}
               className={`flex items-center gap-1.5 px-3.5 py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
                 isSelected
-                  ? "bg-[#FF6A00] text-white shadow-md shadow-[#FF6A00]/30 scale-105"
+                  ? "bg-brand text-white shadow-md shadow-brand/30 scale-105"
                   : "bg-white text-zinc-700 border border-zinc-200/80 hover:bg-zinc-50 shadow-xs"
               }`}
             >
-              <span className={isSelected ? "text-white" : "text-[#FF6A00]"}>
+              <span className={isSelected ? "text-white" : "text-brand"}>
                 {iconRegistry[cat.icon] || <MoreHorizontal className="w-4 h-4" />}
               </span>
               <span>{cat.name}</span>

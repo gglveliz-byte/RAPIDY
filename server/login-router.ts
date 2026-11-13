@@ -1,14 +1,14 @@
 import { z } from "zod";
 import { createRouter, publicQuery } from "./middleware";
 import { getDb } from "./queries/connection";
-import { users, drivers, commerces } from "@db/schema";
+import { users, drivers, commerces, customers } from "@db/schema";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { env } from "./lib/env";
 import { setAdminCookie, clearAdminCookie, verifyAdminRefreshToken } from "./admin-auth";
 import { setDriverCookies, clearDriverCookies, verifyDriverRefreshToken } from "./driver-auth";
 import { setMerchantCookie, clearMerchantCookie, verifyMerchantRefreshToken } from "./merchant-auth";
-import { clearCustomerCookies, setCustomerCookies, verifyRefreshToken } from "./customer-auth";
+import { clearCustomerCookies, setCustomerCookies, verifyRefreshTokenPayload } from "./customer-auth";
 
 export async function seedAdminUser() {
   if (!env.adminEmail || !env.adminPassword) return;
@@ -126,7 +126,7 @@ export const loginRouter = createRouter({
     clearAdminCookie(ctx.resHeaders);
     clearDriverCookies(ctx.resHeaders);
     clearMerchantCookie(ctx.resHeaders);
-    clearCustomerCookies(ctx.resHeaders);
+    clearCustomerCookies(ctx.resHeaders, ctx.req.headers);
     return { success: true };
   }),
 
@@ -172,10 +172,19 @@ export const loginRouter = createRouter({
     // Try customer refresh
     const customerRefresh = cookies["refresh_token"];
     if (customerRefresh) {
-      const customerId = await verifyRefreshToken(customerRefresh);
-      if (customerId) {
-        await setCustomerCookies(ctx.resHeaders, ctx.req.headers, customerId);
-        return { success: true, role: "customer" };
+      const payload = await verifyRefreshTokenPayload(decodeURIComponent(customerRefresh));
+      if (payload) {
+        const db = getDb();
+        const rows = await db.select().from(customers).where(eq(customers.id, payload.customerId));
+        const customer = rows[0];
+        if (
+          customer &&
+          !customer.deletedAt &&
+          (customer.sessionVersion ?? 0) === payload.sessionVersion
+        ) {
+          await setCustomerCookies(ctx.resHeaders, ctx.req.headers, customer.id);
+          return { success: true, role: "customer" };
+        }
       }
     }
 

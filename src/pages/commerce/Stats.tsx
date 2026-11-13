@@ -1,7 +1,31 @@
+/**
+ * @archivo src/pages/commerce/Stats.tsx
+ * @modulo 06-commerce (Métricas y Rendimiento Financiero del Comercio)
+ * @proposito
+ *   Visualización integral del balance financiero, volumen de ventas diarias y
+ *   clasificación de productos más vendidos para el comercio autenticado en la plataforma Rapidy.
+ *
+ * @resumen_contenido
+ *   - Componente `CommerceStats`:
+ *       * Consulta reactiva de métricas del comercio (`useCommerceStats`, `useMerchantCommerceId`).
+ *       * Tarjetas KPI de ventas totales ($ USD), pedidos despachados, ticket promedio y catálogo activo.
+ *       * Gráfico de barras interactivo con gradiente Flame Orange (`#FF6A00`) para ventas de los últimos 7 días.
+ *       * Leaderboard de productos más exitosos con medallas y barras de progreso proporcionales en Flame Orange.
+ *
+ * @dependencias_internas
+ *   - `useCommerceStats`, `useMerchantCommerceId` (@/hooks/useDeliveryData)
+ *   - `CommerceLayout` (@/components/CommerceLayout)
+ */
+
 import { useNavigate } from "react-router";
 import {
-  ArrowLeft, TrendingUp, ShoppingBag, DollarSign, Star,
-  Award, BarChart2
+  ArrowLeft,
+  TrendingUp,
+  ShoppingBag,
+  DollarSign,
+  Star,
+  Award,
+  BarChart2,
 } from "lucide-react";
 import { useCommerceStats, useMerchantCommerceId } from "@/hooks/useDeliveryData";
 import CommerceLayout from "@/components/CommerceLayout";
@@ -14,8 +38,9 @@ export default function CommerceStats() {
   if (loading) {
     return (
       <CommerceLayout>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
+          <div className="w-10 h-10 border-4 border-[#FF6A00] border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs font-semibold text-zinc-400">Cargando métricas financieras...</p>
         </div>
       </CommerceLayout>
     );
@@ -24,8 +49,14 @@ export default function CommerceStats() {
   if (!stats) {
     return (
       <CommerceLayout>
-        <div className="flex items-center justify-center min-h-[60vh] text-center p-4">
-          <p className="text-xs text-slate-500">No se pudieron cargar las estadísticas del comercio.</p>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6">
+          <div className="w-12 h-12 rounded-2xl bg-zinc-100 flex items-center justify-center text-zinc-400 mb-3">
+            <BarChart2 className="w-6 h-6" />
+          </div>
+          <h2 className="text-sm font-bold text-zinc-800 mb-1">Sin datos de rendimiento</h2>
+          <p className="text-xs text-zinc-500 max-w-xs">
+            No se pudieron cargar las estadísticas del comercio o aún no hay datos disponibles.
+          </p>
         </div>
       </CommerceLayout>
     );
@@ -41,127 +72,162 @@ export default function CommerceStats() {
     <CommerceLayout>
       <div className="px-4 min-[380px]:px-6 py-4 sm:py-6 max-w-5xl mx-auto space-y-4 min-[380px]:space-y-5">
         
-        {/* Header */}
-        <div className="flex items-center justify-between gap-2 bg-white rounded-2xl min-[380px]:rounded-3xl p-3 min-[380px]:p-4.5 border border-slate-200/80 shadow-2xs">
-          <div className="flex items-center gap-2 min-w-0">
+        {/* Encabezado */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white rounded-3xl p-4 sm:p-5 border border-zinc-200/80 shadow-xs">
+          <div className="flex items-center gap-3 min-w-0">
             <button
               type="button"
               onClick={() => navigate("/commerce")}
-              className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors flex-shrink-0"
-              aria-label="Volver"
+              className="w-10 h-10 rounded-2xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 hover:text-zinc-900 flex items-center justify-center transition-all flex-shrink-0 active:scale-95 cursor-pointer"
+              aria-label="Volver al panel principal"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="w-5 h-5" />
             </button>
             <div className="min-w-0">
-              <h1 className="text-sm min-[360px]:text-base font-extrabold text-slate-800 truncate">
-                Rendimiento & Métricas
-              </h1>
-              <p className="text-[10px] text-slate-400 truncate">
-                Balance de ventas y productos destacados
+              <div className="flex items-center gap-2">
+                <h1 className="text-base sm:text-lg font-black text-zinc-900 tracking-tight truncate">
+                  Rendimiento & Métricas
+                </h1>
+                <span className="hidden min-[480px]:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#FF6A00]/10 text-[#FF6A00] border border-[#FF6A00]/20">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#FF6A00] animate-pulse" />
+                  En Vivo
+                </span>
+              </div>
+              <p className="text-xs text-zinc-500 font-medium truncate">
+                Balance de ingresos, pedidos y catálogo del comercio
               </p>
             </div>
           </div>
         </div>
 
-        {/* 4 KPI Cards */}
-        <div className="grid grid-cols-1 min-[340px]:grid-cols-2 lg:grid-cols-4 gap-2.5 min-[380px]:gap-3.5">
+        {/* 4 Tarjetas KPI Principales */}
+        <div className="grid grid-cols-1 min-[340px]:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           
-          <div className="bg-white rounded-2xl min-[380px]:rounded-3xl border border-slate-200/80 p-3.5 min-[380px]:p-4.5 shadow-2xs">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[10px] min-[360px]:text-xs font-bold text-slate-400 uppercase tracking-wider">
+          {/* KPI 1: Ventas Totales */}
+          <div className="bg-white rounded-3xl border border-zinc-200/80 p-5 shadow-xs hover:border-[#FF6A00]/30 transition-all duration-200">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
                 Ventas Totales
               </span>
-              <div className="w-7 h-7 min-[360px]:w-8 min-[360px]:h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
-                <DollarSign className="w-4 h-4" />
+              <div className="w-9 h-9 rounded-2xl bg-[#FF6A00]/10 text-[#FF6A00] flex items-center justify-center">
+                <DollarSign className="w-5 h-5" />
               </div>
             </div>
-            <p className="text-lg min-[360px]:text-2xl font-black text-slate-800 tracking-tight">
+            <p className="text-2xl sm:text-3xl font-black text-zinc-900 tracking-tight">
               ${stats.totalSales ? parseFloat(stats.totalSales).toFixed(2) : "0.00"}
+              <span className="text-xs font-bold text-zinc-400 ml-1.5 tracking-normal">USD</span>
             </p>
-            <p className="text-[10px] text-emerald-600 font-medium mt-0.5">Ingresos brutos</p>
+            <p className="text-[11px] text-zinc-500 font-medium mt-1">Ingresos brutos acumulados</p>
           </div>
 
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-3 min-[360px]:p-4 shadow-2xs">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[10px] min-[360px]:text-xs font-bold text-slate-400 uppercase tracking-wider">
-                Pedidos Entregados
+          {/* KPI 2: Pedidos Despachados */}
+          <div className="bg-white rounded-3xl border border-zinc-200/80 p-5 shadow-xs hover:border-[#FF6A00]/30 transition-all duration-200">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
+                Pedidos Despachados
               </span>
-              <div className="w-7 h-7 min-[360px]:w-8 min-[360px]:h-8 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center">
-                <ShoppingBag className="w-4 h-4" />
+              <div className="w-9 h-9 rounded-2xl bg-[#FF6A00]/10 text-[#FF6A00] flex items-center justify-center">
+                <ShoppingBag className="w-5 h-5" />
               </div>
             </div>
-            <p className="text-lg min-[360px]:text-2xl font-black text-slate-800 tracking-tight">
+            <p className="text-2xl sm:text-3xl font-black text-zinc-900 tracking-tight">
               {stats.totalOrders || 0}
+              <span className="text-xs font-bold text-zinc-400 ml-1.5 tracking-normal">órdenes</span>
             </p>
-            <p className="text-[10px] text-blue-600 font-medium mt-0.5">Completados con éxito</p>
+            <p className="text-[11px] text-zinc-500 font-medium mt-1">Completados con éxito</p>
           </div>
 
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-3 min-[360px]:p-4 shadow-2xs">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[10px] min-[360px]:text-xs font-bold text-slate-400 uppercase tracking-wider">
+          {/* KPI 3: Ticket Promedio */}
+          <div className="bg-white rounded-3xl border border-zinc-200/80 p-5 shadow-xs hover:border-[#FF6A00]/30 transition-all duration-200">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
                 Ticket Promedio
               </span>
-              <div className="w-7 h-7 min-[360px]:w-8 min-[360px]:h-8 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center">
-                <TrendingUp className="w-4 h-4" />
+              <div className="w-9 h-9 rounded-2xl bg-[#FF6A00]/10 text-[#FF6A00] flex items-center justify-center">
+                <TrendingUp className="w-5 h-5" />
               </div>
             </div>
-            <p className="text-lg min-[360px]:text-2xl font-black text-slate-800 tracking-tight">
+            <p className="text-2xl sm:text-3xl font-black text-zinc-900 tracking-tight">
               ${stats.avgTicket ? parseFloat(stats.avgTicket).toFixed(2) : "0.00"}
+              <span className="text-xs font-bold text-zinc-400 ml-1.5 tracking-normal">USD</span>
             </p>
-            <p className="text-[10px] text-purple-600 font-medium mt-0.5">Por cada pedido</p>
+            <p className="text-[11px] text-zinc-500 font-medium mt-1">Promedio por orden</p>
           </div>
 
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-3 min-[360px]:p-4 shadow-2xs">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[10px] min-[360px]:text-xs font-bold text-slate-400 uppercase tracking-wider">
-                Catálogo
+          {/* KPI 4: Catálogo Activo */}
+          <div className="bg-white rounded-3xl border border-zinc-200/80 p-5 shadow-xs hover:border-[#FF6A00]/30 transition-all duration-200">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
+                Catálogo Activo
               </span>
-              <div className="w-7 h-7 min-[360px]:w-8 min-[360px]:h-8 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center">
-                <Star className="w-4 h-4" />
+              <div className="w-9 h-9 rounded-2xl bg-[#FF6A00]/10 text-[#FF6A00] flex items-center justify-center">
+                <Star className="w-5 h-5" />
               </div>
             </div>
-            <p className="text-lg min-[360px]:text-2xl font-black text-slate-800 tracking-tight">
+            <p className="text-2xl sm:text-3xl font-black text-zinc-900 tracking-tight">
               {stats.totalProducts || 0}
+              <span className="text-xs font-bold text-zinc-400 ml-1.5 tracking-normal">ítems</span>
             </p>
-            <p className="text-[10px] text-amber-600 font-medium mt-0.5">Productos en carta</p>
+            <p className="text-[11px] text-zinc-500 font-medium mt-1">Productos en carta</p>
           </div>
 
         </div>
 
-        {/* Daily Sales Bar Chart */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 p-3 min-[360px]:p-4 shadow-2xs">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-xs min-[360px]:text-sm font-bold text-slate-800 flex items-center gap-1.5">
-              <BarChart2 className="w-4 h-4 text-emerald-600" />
-              Ventas por Día (Entregados)
-            </h2>
-            <span className="text-[10px] text-slate-400 font-medium">Últimos 7 días</span>
+        {/* Gráfico de Barras de Ventas Diarias */}
+        <div className="bg-white rounded-3xl border border-zinc-200/80 p-5 sm:p-6 shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-2xl bg-[#FF6A00]/10 text-[#FF6A00] flex items-center justify-center flex-shrink-0">
+                <BarChart2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-sm sm:text-base font-bold text-zinc-900">
+                  Ventas por Día (Entregados)
+                </h2>
+                <p className="text-xs text-zinc-500">Histórico de facturación diaria reciente</p>
+              </div>
+            </div>
+            <div className="inline-flex items-center gap-1.5 self-start sm:self-auto bg-zinc-100 px-3 py-1 rounded-full text-xs font-semibold text-zinc-600 border border-zinc-200/60">
+              <span className="w-2 h-2 rounded-full bg-[#FF6A00]" />
+              Últimos 7 días
+            </div>
           </div>
 
-          <div className="flex items-end justify-between gap-1.5 min-[360px]:gap-2 h-36 pt-4 pb-2 border-b border-slate-100">
+          <div className="flex items-end justify-between gap-2 sm:gap-4 h-48 pt-6 pb-2 border-b border-zinc-200/70">
             {(stats.dailySales || []).map((d: any) => {
-              const heightPercent = Math.max((d.sales / maxSales) * 100, 4);
+              const heightPercent = Math.max((d.sales / maxSales) * 100, 5);
               const hasSales = d.sales > 0;
+              const formattedSales = typeof d.sales === "number" ? d.sales.toFixed(2) : d.sales;
 
               return (
-                <div key={d.day} className="flex-1 flex flex-col items-center justify-end h-full group">
-                  {/* Amount label */}
-                  <span className="text-[8px] min-[360px]:text-[9px] font-bold text-slate-500 mb-1 truncate max-w-full">
-                    {hasSales ? `$${d.sales}` : "-"}
+                <div key={d.day} className="flex-1 flex flex-col items-center justify-end h-full relative group">
+                  {/* Tooltip flotante en hover */}
+                  <div className="absolute -top-10 opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none bg-zinc-900 text-white text-[10px] font-bold py-1 px-2.5 rounded-lg shadow-lg whitespace-nowrap z-20 transform -translate-y-1 group-hover:translate-y-0">
+                    {hasSales ? `$${formattedSales} USD` : "Sin ventas"}
+                    <div className="absolute left-1/2 -bottom-1 transform -translate-x-1/2 w-2 h-2 bg-zinc-900 rotate-45" />
+                  </div>
+
+                  {/* Etiqueta de monto estática limpia */}
+                  <span className={`text-[10px] sm:text-xs font-bold mb-1.5 truncate max-w-full ${
+                    hasSales ? "text-zinc-800" : "text-zinc-400"
+                  }`}>
+                    {hasSales ? `$${d.sales}` : "—"}
                   </span>
                   
-                  {/* Bar */}
-                  <div className="w-full max-w-[28px] min-[360px]:max-w-[36px] bg-slate-100 rounded-t-lg overflow-hidden flex items-end justify-center h-full">
+                  {/* Columna de barra con gradiente Flame Orange */}
+                  <div className="w-full max-w-[32px] sm:max-w-[42px] bg-zinc-100 rounded-t-xl overflow-hidden flex items-end justify-center h-full">
                     <div
-                      className={`w-full rounded-t-lg transition-all duration-300 ${
-                        hasSales ? "bg-emerald-600 group-hover:bg-emerald-700" : "bg-slate-200"
+                      className={`w-full rounded-t-xl transition-all duration-500 ease-out ${
+                        hasSales
+                          ? "bg-gradient-to-t from-[#FF6A00] to-[#FFA040] group-hover:brightness-110 shadow-xs"
+                          : "bg-zinc-100"
                       }`}
                       style={{ height: `${heightPercent}%` }}
                     />
                   </div>
 
-                  {/* Day label */}
-                  <span className="text-[9px] min-[360px]:text-[10px] font-semibold text-slate-600 mt-1.5 truncate">
+                  {/* Etiqueta de día */}
+                  <span className="text-[11px] sm:text-xs font-semibold text-zinc-600 mt-2 truncate capitalize">
                     {d.day}
                   </span>
                 </div>
@@ -170,54 +236,83 @@ export default function CommerceStats() {
           </div>
         </div>
 
-        {/* Top Selling Products List */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 p-3 min-[360px]:p-4 shadow-2xs">
-          <div className="flex items-center justify-between mb-2.5">
-            <h2 className="text-xs min-[360px]:text-sm font-bold text-slate-800 flex items-center gap-1.5">
-              <Award className="w-4 h-4 text-amber-500" />
-              Productos Más Vendidos
-            </h2>
+        {/* Ranking de Productos Más Vendidos (Leaderboard) */}
+        <div className="bg-white rounded-3xl border border-zinc-200/80 p-5 sm:p-6 shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-2xl bg-[#FF6A00]/10 text-[#FF6A00] flex items-center justify-center flex-shrink-0">
+                <Award className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-sm sm:text-base font-bold text-zinc-900">
+                  Ranking de Productos Más Vendidos
+                </h2>
+                <p className="text-xs text-zinc-500">Líderes de facturación y volumen del catálogo</p>
+              </div>
+            </div>
+
+            {totalTopRevenue > 0 && (
+              <span className="self-start sm:self-auto text-xs font-bold text-zinc-600 bg-zinc-100 px-3 py-1 rounded-full border border-zinc-200/60">
+                Total Top: <span className="text-zinc-900 font-black">${totalTopRevenue.toFixed(2)} USD</span>
+              </span>
+            )}
           </div>
 
           {(!stats.topProducts || stats.topProducts.length === 0) ? (
-            <div className="py-6 text-center text-slate-400 text-xs">
-              Aún no registras ventas entregadas para generar el ranking.
+            <div className="py-10 text-center flex flex-col items-center justify-center">
+              <div className="w-12 h-12 rounded-2xl bg-zinc-100 flex items-center justify-center text-zinc-400 mb-2">
+                <ShoppingBag className="w-6 h-6" />
+              </div>
+              <p className="text-xs font-semibold text-zinc-500">
+                Aún no registras ventas entregadas para generar el ranking.
+              </p>
+              <p className="text-[11px] text-zinc-400 mt-0.5">
+                Las órdenes completadas nutrirán automáticamente esta tabla.
+              </p>
             </div>
           ) : (
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-zinc-100">
               {stats.topProducts.map((product: any, i: number) => {
                 const medals = ["🥇", "🥈", "🥉"];
+                const isMedalist = i < 3;
                 const revenue = parseFloat(product.revenue) || 0;
                 const percentage = totalTopRevenue > 0 ? (revenue / totalTopRevenue) * 100 : 0;
 
                 return (
-                  <div key={product.name} className="py-2.5 first:pt-0 last:pb-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-sm font-bold w-5 text-center flex-shrink-0">
-                          {medals[i] || `${i + 1}°`}
-                        </span>
+                  <div key={product.name} className="py-3.5 first:pt-1 last:pb-1">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        {isMedalist ? (
+                          <span className="text-lg w-7 text-center flex-shrink-0">
+                            {medals[i]}
+                          </span>
+                        ) : (
+                          <span className="w-7 h-7 rounded-full bg-zinc-100 text-zinc-600 font-bold text-xs flex items-center justify-center flex-shrink-0">
+                            {i + 1}
+                          </span>
+                        )}
                         <div className="min-w-0">
-                          <p className="text-xs min-[360px]:text-sm font-bold text-slate-800 truncate">
+                          <p className="text-xs sm:text-sm font-bold text-zinc-900 truncate">
                             {product.name}
                           </p>
-                          <p className="text-[10px] text-slate-400 font-medium">
-                            {product.sales} unidades vendidas
+                          <p className="text-[11px] text-zinc-500 font-medium">
+                            {product.sales} {product.sales === 1 ? "unidad vendida" : "unidades vendidas"}
                           </p>
                         </div>
                       </div>
 
                       <div className="text-right flex-shrink-0">
-                        <span className="text-xs min-[360px]:text-sm font-black text-emerald-700">
+                        <span className="text-xs sm:text-sm font-black text-zinc-900">
                           ${revenue.toFixed(2)}
                         </span>
+                        <span className="text-[10px] text-zinc-400 font-bold block">USD</span>
                       </div>
                     </div>
 
-                    {/* Progress bar */}
-                    <div className="w-full bg-slate-100 rounded-full h-1.5 mt-1.5 overflow-hidden">
+                    {/* Barra de progreso en Flame Orange */}
+                    <div className="w-full bg-zinc-100 rounded-full h-2 mt-2 overflow-hidden">
                       <div
-                        className="bg-emerald-500 h-full rounded-full transition-all duration-300"
+                        className="bg-gradient-to-r from-[#FF6A00] to-[#FFA040] h-full rounded-full transition-all duration-500"
                         style={{ width: `${Math.min(percentage, 100)}%` }}
                       />
                     </div>

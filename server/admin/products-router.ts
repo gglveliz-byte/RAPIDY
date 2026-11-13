@@ -111,10 +111,10 @@ export const adminProductsProcedures = {
       const prod = await db.select().from(products).where(eq(products.id, input.id));
       if (!prod[0]) throw new Error("Producto no encontrado");
 
-      const newAvailability = !prod[0].isAvailable;
+      const newAvailability = prod[0].isAvailable === "yes" ? "no" : "yes";
       await db
         .update(products)
-        .set({ isAvailable: newAvailability, updatedAt: new Date() })
+        .set({ isAvailable: newAvailability })
         .where(eq(products.id, input.id));
 
       emit(`commerce:${prod[0].commerceId}`, { type: "catalog_update" });

@@ -29,6 +29,7 @@
 
 import { useState } from "react";
 import { useNavigate } from "react-router";
+import { toast } from "sonner";
 import {
   User,
   Phone,
@@ -51,16 +52,7 @@ import { useCustomerOrders, useUpdateCustomerProfile } from "@/hooks/useDelivery
 import { CustomerBottomNav } from "@/components/CustomerBottomNav";
 import { getAddressFromCoords } from "@/lib/locationUtils";
 import { ProfileOrdersModal } from "./components/ProfileOrdersModal";
-
-function getStatusBadge(status: string) {
-  const s = (status || "").toLowerCase().trim();
-  if (s === "delivered") return { label: "Entregado", cls: "bg-emerald-50 text-emerald-700 border-emerald-200" };
-  if (s === "in_transit" || s === "picked_up") return { label: "En camino", cls: "bg-sky-50 text-sky-700 border-sky-200" };
-  if (s === "in_preparation" || s === "preparing") return { label: "En preparación", cls: "bg-amber-50 text-amber-800 border-amber-200" };
-  if (s === "pending_payment") return { label: "Revisando pago", cls: "bg-yellow-50 text-yellow-800 border-yellow-200" };
-  if (s === "cancelled") return { label: "Cancelado", cls: "bg-rose-50 text-rose-700 border-rose-200" };
-  return { label: s ? s.replace(/_/g, " ") : "Confirmado", cls: "bg-blue-50 text-blue-700 border-blue-200" };
-}
+import { getOrderStatusMeta } from "@contracts/orderStatus";
 
 export default function CustomerProfile() {
   const navigate = useNavigate();
@@ -72,14 +64,15 @@ export default function CustomerProfile() {
   const [showAllOrdersModal, setShowAllOrdersModal] = useState(false);
 
   const customerId = customer?.id ?? 0;
-  const { data: orders, loading: ordersLoading } = useCustomerOrders(customerId);
+  const { data: orders, loading: ordersLoading, error: ordersError, refresh: refreshOrders } =
+    useCustomerOrders(customerId);
   const updateCustomerProfile = useUpdateCustomerProfile();
 
   if (!isAuthenticated || !customer) {
     return (
-      <div className="mobile-container bg-[#F7F7FA] min-h-screen flex flex-col items-center justify-center px-6 text-center select-none pb-safe-nav">
+      <div className="mobile-container bg-surface min-h-screen flex flex-col items-center justify-center px-6 text-center select-none pb-safe-nav">
         <div className="w-20 h-20 rounded-full bg-orange-50 border border-orange-100 flex items-center justify-center mb-4 shadow-xs">
-          <User className="w-10 h-10 text-[#FF6A00]" />
+          <User className="w-10 h-10 text-brand" />
         </div>
         <h2 className="text-xl font-black text-zinc-900 mb-2">Inicia sesión en Rapidy</h2>
         <p className="text-zinc-500 text-sm max-w-[260px] mb-6">
@@ -87,7 +80,7 @@ export default function CustomerProfile() {
         </p>
         <button
           onClick={() => navigate("/register")}
-          className="h-12 px-8 bg-[#FF6A00] hover:bg-[#e65f00] text-white font-bold rounded-2xl shadow-md shadow-[#FF6A00]/30 active:scale-95 transition-all cursor-pointer"
+          className="h-12 px-8 bg-brand hover:bg-brand-strong text-white font-bold rounded-2xl shadow-md shadow-brand/30 active:scale-95 transition-all cursor-pointer"
         >
           Crear cuenta
         </button>
@@ -98,7 +91,10 @@ export default function CustomerProfile() {
   }
 
   const handleGetLocation = async () => {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation) {
+      toast.error("Tu navegador no soporta geolocalización.");
+      return;
+    }
     setGeoLoading(true);
     try {
       const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
@@ -106,7 +102,9 @@ export default function CustomerProfile() {
       );
       const addr = await getAddressFromCoords(pos.coords.latitude, pos.coords.longitude);
       setEditAddress(addr);
-    } catch {} finally {
+    } catch {
+      toast.error("No pudimos obtener tu ubicación. Escríbela manualmente.");
+    } finally {
       setGeoLoading(false);
     }
   };
@@ -122,42 +120,48 @@ export default function CustomerProfile() {
   };
 
   const saveAddress = async () => {
-    if (!editAddress.trim()) return;
+    if (!editAddress.trim()) {
+      toast.error("Ingresa una dirección válida.");
+      return;
+    }
     setSaving(true);
     try {
       await updateCustomerProfile.mutateAsync({ address: editAddress.trim() });
       login({ ...customer, address: editAddress.trim() });
       setEditingAddress(false);
-    } catch {} finally {
+      toast.success("Dirección actualizada.");
+    } catch (err: any) {
+      toast.error(err?.message || "No pudimos guardar la dirección.");
+    } finally {
       setSaving(false);
     }
   };
 
   const handleLogout = () => {
     logout();
-    navigate("/customer-login");
+    navigate("/customer-login", { replace: true });
   };
 
   const ordersList = orders || [];
   const previewOrders = ordersList.slice(0, 2);
 
   return (
-    <div className="mobile-container bg-[#F7F7FA] min-h-screen text-zinc-900 pb-32 select-none">
+    <div className="mobile-container bg-surface min-h-screen text-zinc-900 pb-32 select-none">
       {/* 1. Cabecera Fija Dark Velvet (Fixed Top Header con datos del cliente y salir) */}
-      <header className="fixed top-0 left-0 right-0 max-w-[480px] mx-auto z-40 bg-[#0E0E12]/95 backdrop-blur-2xl border-b border-white/10 shadow-xl px-4 pt-safe pb-2.5 transition-all flex items-center justify-between">
+      <header className="fixed top-0 left-0 right-0 max-w-[480px] mx-auto z-40 bg-ink/95 backdrop-blur-2xl border-b border-white/10 shadow-xl px-4 pt-safe pb-2.5 transition-all flex items-center justify-between">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-9 h-9 rounded-2xl bg-white/10 border border-white/15 flex items-center justify-center text-[#FF6A00] ring-1 ring-[#FF6A00]/40 shadow-xs shrink-0">
-            <User className="w-4 h-4 text-[#FF6A00]" />
+          <div className="w-9 h-9 rounded-2xl bg-white/10 border border-white/15 flex items-center justify-center text-brand ring-1 ring-brand/40 shadow-xs shrink-0">
+            <User className="w-4 h-4 text-brand" />
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-1">
               <span className="text-xs sm:text-sm font-black text-white tracking-tight truncate">
                 {customer.firstName} {customer.lastName}
               </span>
-              <Sparkles className="w-3 h-3 text-[#FF6A00] shrink-0" />
+              <Sparkles className="w-3 h-3 text-brand shrink-0" />
             </div>
             <div className="flex items-center gap-1 text-[10px] sm:text-[11px] text-zinc-400 font-medium truncate">
-              <Phone className="w-3 h-3 text-[#FF6A00] shrink-0" />
+              <Phone className="w-3 h-3 text-brand shrink-0" />
               <span className="truncate">{customer.phone}</span>
             </div>
           </div>
@@ -196,12 +200,12 @@ export default function CustomerProfile() {
           {editingAddress ? (
             <div>
               <div className="flex items-start gap-2">
-                <MapPin className="w-4 h-4 text-[#FF6A00] mt-1 shrink-0" />
+                <MapPin className="w-4 h-4 text-brand mt-1 shrink-0" />
                 <textarea
                   value={editAddress}
                   onChange={(e) => setEditAddress(e.target.value)}
                   rows={2}
-                  className="flex-1 text-xs sm:text-sm bg-zinc-50 border border-zinc-200 rounded-xl p-2.5 focus:border-[#FF6A00] focus:ring-1 focus:ring-[#FF6A00] outline-none resize-none text-zinc-900"
+                  className="flex-1 text-xs sm:text-sm bg-zinc-50 border border-zinc-200 rounded-xl p-2.5 focus:border-brand focus:ring-1 focus:ring-brand outline-none resize-none text-zinc-900"
                   placeholder="Ingresa tu dirección completa"
                 />
               </div>
@@ -211,14 +215,14 @@ export default function CustomerProfile() {
                 disabled={geoLoading}
                 className="mt-2 w-full h-8 border border-zinc-200 bg-white rounded-xl text-xs text-zinc-700 font-semibold flex items-center justify-center gap-2 hover:bg-zinc-50 active:scale-[0.98] transition-all disabled:opacity-50 cursor-pointer shadow-xs"
               >
-                <Navigation className="w-3.5 h-3.5 text-[#FF6A00]" />
+                <Navigation className="w-3.5 h-3.5 text-brand" />
                 {geoLoading ? "Obteniendo ubicación..." : "Usar mi ubicación GPS actual"}
               </button>
               <div className="flex gap-2 mt-2">
                 <button
                   onClick={saveAddress}
                   disabled={saving}
-                  className="flex-1 h-8 bg-[#FF6A00] hover:bg-[#e65f00] text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1 shadow-sm shadow-[#FF6A00]/30 transition-all cursor-pointer disabled:opacity-50"
+                  className="flex-1 h-8 bg-brand hover:bg-brand-strong text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1 shadow-sm shadow-brand/30 transition-all cursor-pointer disabled:opacity-50"
                 >
                   <Check className="w-3.5 h-3.5" />
                   {saving ? "Guardando..." : "Guardar"}
@@ -234,7 +238,7 @@ export default function CustomerProfile() {
             </div>
           ) : (
             <div className="flex items-start gap-2 text-xs sm:text-sm text-zinc-700">
-              <MapPin className="w-4 h-4 text-[#FF6A00] mt-0.5 shrink-0" />
+              <MapPin className="w-4 h-4 text-brand mt-0.5 shrink-0" />
               <span className="font-semibold">{customer.address || "Sin dirección guardada"}</span>
             </div>
           )}
@@ -249,7 +253,7 @@ export default function CustomerProfile() {
             {ordersList.length > 0 && (
               <button
                 onClick={() => setShowAllOrdersModal(true)}
-                className="text-xs font-bold text-[#FF6A00] hover:underline flex items-center gap-0.5 cursor-pointer"
+                className="text-xs font-bold text-brand hover:underline flex items-center gap-0.5 cursor-pointer"
               >
                 <span>Ver todos ({ordersList.length})</span>
                 <ChevronRight className="w-3.5 h-3.5" />
@@ -261,6 +265,17 @@ export default function CustomerProfile() {
             <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm p-5">
               <div className="h-14 bg-zinc-100 rounded-xl animate-pulse" />
             </div>
+          ) : ordersError ? (
+            <div className="bg-white rounded-2xl border border-rose-100 shadow-sm p-5 text-center">
+              <p className="text-sm font-bold text-zinc-700">No pudimos cargar tus pedidos</p>
+              <p className="text-xs text-zinc-500 mt-1">{ordersError.message}</p>
+              <button
+                onClick={() => refreshOrders()}
+                className="mt-3 h-10 px-4 bg-brand text-white text-xs font-bold rounded-xl"
+              >
+                Reintentar
+              </button>
+            </div>
           ) : ordersList.length === 0 ? (
             <div className="bg-white rounded-2xl border border-zinc-100 shadow-[0_2px_12px_rgba(0,0,0,0.04)] p-6 text-center">
               <ShoppingBag className="w-10 h-10 text-zinc-300 mx-auto mb-2" />
@@ -269,20 +284,20 @@ export default function CustomerProfile() {
           ) : (
             <div className="space-y-2.5">
               {previewOrders.map((order: any) => {
-                const statusInfo = getStatusBadge(order.status);
+                const meta = getOrderStatusMeta(order.status);
                 return (
                   <button
                     key={order.id}
                     onClick={() => navigate(`/order/${order.id}`)}
-                    className="w-full bg-white rounded-2xl border border-zinc-100 shadow-[0_2px_12px_rgba(0,0,0,0.04)] p-3.5 flex items-center justify-between text-left hover:border-[#FF6A00]/40 hover:shadow-md transition-all group cursor-pointer"
+                    className="w-full bg-white rounded-2xl border border-zinc-100 shadow-[0_2px_12px_rgba(0,0,0,0.04)] p-3.5 flex items-center justify-between text-left hover:border-brand/40 hover:shadow-md transition-all group cursor-pointer"
                   >
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold text-zinc-900 group-hover:text-[#FF6A00] transition-colors">
+                        <span className="text-sm font-bold text-zinc-900 group-hover:text-brand transition-colors">
                           Pedido #{order.id}
                         </span>
-                        <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${statusInfo.cls}`}>
-                          {statusInfo.label}
+                        <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${meta.badgeClass}`}>
+                          {meta.shortLabel}
                         </span>
                       </div>
                       <div className="flex items-center gap-1.5 text-xs text-zinc-400 mt-1">
@@ -296,8 +311,8 @@ export default function CustomerProfile() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-black text-[#FF6A00]">${parseFloat(order.total || "0").toFixed(2)}</span>
-                      <ChevronRight className="w-4 h-4 text-zinc-400 group-hover:text-[#FF6A00] transition-colors" />
+                      <span className="text-sm font-black text-brand">${parseFloat(order.total || "0").toFixed(2)}</span>
+                      <ChevronRight className="w-4 h-4 text-zinc-400 group-hover:text-brand transition-colors" />
                     </div>
                   </button>
                 );
@@ -309,7 +324,7 @@ export default function CustomerProfile() {
                   className="w-full py-2.5 px-4 bg-white border border-zinc-200/80 hover:bg-zinc-50 rounded-2xl text-xs font-bold text-zinc-700 flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
                 >
                   <span>Ver los {ordersList.length} pedidos anteriores</span>
-                  <ChevronRight className="w-3.5 h-3.5 text-[#FF6A00]" />
+                  <ChevronRight className="w-3.5 h-3.5 text-brand" />
                 </button>
               )}
             </div>
@@ -327,7 +342,7 @@ export default function CustomerProfile() {
               className="w-full p-3.5 flex items-center justify-between text-left hover:bg-zinc-50 transition-colors cursor-pointer"
             >
               <div className="flex items-center gap-3">
-                <Shield className="w-4 h-4 text-[#FF6A00]" />
+                <Shield className="w-4 h-4 text-brand" />
                 <span className="text-xs sm:text-sm font-semibold text-zinc-800">
                   Centro Legal y Privacidad
                 </span>
@@ -340,7 +355,7 @@ export default function CustomerProfile() {
               className="w-full p-3.5 flex items-center justify-between text-left hover:bg-zinc-50 transition-colors cursor-pointer"
             >
               <div className="flex items-center gap-3">
-                <Undo2 className="w-4 h-4 text-[#FF6A00]" />
+                <Undo2 className="w-4 h-4 text-brand" />
                 <span className="text-xs sm:text-sm font-semibold text-zinc-800">
                   Devolución y Desistimiento (🇪🇨)
                 </span>

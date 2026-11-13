@@ -3,11 +3,18 @@ import { bodyLimit } from "hono/body-limit";
 import { streamSSE } from "hono/streaming";
 import type { HttpBindings } from "@hono/node-server";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
+import * as cookie from "cookie";
+import { and, eq, inArray } from "drizzle-orm";
 import { appRouter } from "./router";
 import { createContext } from "./context";
 import { env } from "./lib/env";
 import { subscribe } from "./events";
 import { verifyAdminToken, verifyAdminRefreshToken } from "./admin-auth";
+import { getDb } from "./queries/connection";
+import { commerces, orderItems, orders } from "@db/schema";
+import { verifyAccessTokenPayload, verifyRefreshTokenPayload } from "./customer-auth";
+import { verifyDriverToken, verifyDriverRefreshToken } from "./driver-auth";
+import { verifyMerchantToken, verifyMerchantRefreshToken } from "./merchant-auth";
 
 async function seedAdmin() {
   try {
@@ -25,7 +32,7 @@ seedAdmin();
 app.use("*", async (c, next) => {
   await next();
   c.header("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
-  c.header("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: https://*.tile.openstreetmap.org; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://nominatim.openstreetmap.org https://*.tile.openstreetmap.org https://images.unsplash.com https://picsum.photos; font-src 'self' data:; worker-src 'self' blob:;");
+  c.header("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https: https://*.tile.openstreetmap.org; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://nominatim.openstreetmap.org https://*.tile.openstreetmap.org https://images.unsplash.com https://picsum.photos; font-src 'self' data: https://fonts.gstatic.com; worker-src 'self' blob:;");
   c.header("X-Frame-Options", "DENY");
   c.header("X-Content-Type-Options", "nosniff");
   c.header("Referrer-Policy", "strict-origin-when-cross-origin");
@@ -68,9 +75,126 @@ function setupSSE(c: any, channel: string, stream: any) {
   return { cleanup, isClosed: () => closed };
 }
 
+type SseIdentity = {
+  role: "customer" | "driver" | "merchant" | "admin";
+  id: number;
+};
+
+async function resolveSseIdentities(c: any): Promise<SseIdentity[]> {
+  const cookies = cookie.parse(c.req.header("cookie") || "");
+  const identities: SseIdentity[] = [];
+  const seen = new Set<string>();
+  const add = (role: SseIdentity["role"], id: number | null) => {
+    if (!id) return;
+    const key = `${role}:${id}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    identities.push({ role, id });
+  };
+
+  if (cookies.quickgo_admin_token) {
+    add("admin", await verifyAdminToken(cookies.quickgo_admin_token));
+  }
+  if (cookies.quickgo_admin_refresh) {
+    add("admin", await verifyAdminRefreshToken(cookies.quickgo_admin_refresh));
+  }
+  if (cookies.quickgo_token) {
+    add("customer", (await verifyAccessTokenPayload(cookies.quickgo_token))?.customerId ?? null);
+  }
+  if (cookies.refresh_token) {
+    add("customer", (await verifyRefreshTokenPayload(cookies.refresh_token))?.customerId ?? null);
+  }
+  if (cookies.quickgo_driver_token) {
+    add("driver", await verifyDriverToken(cookies.quickgo_driver_token));
+  }
+  if (cookies.quickgo_driver_refresh) {
+    add("driver", await verifyDriverRefreshToken(cookies.quickgo_driver_refresh));
+  }
+  if (cookies.quickgo_merchant_token) {
+    add("merchant", await verifyMerchantToken(cookies.quickgo_merchant_token));
+  }
+  if (cookies.quickgo_merchant_refresh) {
+    add("merchant", await verifyMerchantRefreshToken(cookies.quickgo_merchant_refresh));
+  }
+
+  return identities;
+}
+
+async function canAccessOrder(identities: SseIdentity[], orderId: number): Promise<boolean> {
+  if (identities.length === 0) return false;
+  if (identities.some((identity) => identity.role === "admin")) return true;
+
+  const db = getDb();
+  const rows = await db
+    .select({ customerId: orders.customerId, driverId: orders.driverId })
+    .from(orders)
+    .where(eq(orders.id, orderId))
+    .limit(1);
+  const order = rows[0];
+  if (!order) return false;
+
+  if (identities.some((identity) => identity.role === "customer" && identity.id === order.customerId)) {
+    return true;
+  }
+  if (identities.some((identity) => identity.role === "driver" && identity.id === order.driverId)) {
+    return true;
+  }
+
+  const merchantIds = identities
+    .filter((identity) => identity.role === "merchant")
+    .map((identity) => identity.id);
+  if (merchantIds.length === 0) return false;
+
+  const items = await db
+    .select({ commerceId: orderItems.commerceId })
+    .from(orderItems)
+    .where(eq(orderItems.orderId, orderId));
+  const commerceIds = [...new Set(items.map((item) => item.commerceId))];
+  if (commerceIds.length === 0) return false;
+
+  const owned = await db
+    .select({ id: commerces.id })
+    .from(commerces)
+    .where(
+      and(
+        inArray(commerces.id, commerceIds),
+        inArray(commerces.merchantUserId, merchantIds),
+      ),
+    )
+    .limit(1);
+  return owned.length > 0;
+}
+
+async function canAccessCommerce(identities: SseIdentity[], commerceId: number): Promise<boolean> {
+  if (identities.length === 0) return false;
+  if (identities.some((identity) => identity.role === "admin")) return true;
+
+  const merchantIds = identities
+    .filter((identity) => identity.role === "merchant")
+    .map((identity) => identity.id);
+  if (merchantIds.length === 0) return false;
+
+  const db = getDb();
+  const owned = await db
+    .select({ id: commerces.id })
+    .from(commerces)
+    .where(
+      and(
+        eq(commerces.id, commerceId),
+        inArray(commerces.merchantUserId, merchantIds),
+      ),
+    )
+    .limit(1);
+  return owned.length > 0;
+}
+
 // SSE endpoints for real-time updates
 app.get("/api/events/orders/:orderId", async (c) => {
-  const orderId = c.req.param("orderId");
+  const orderId = Number(c.req.param("orderId"));
+  if (!Number.isInteger(orderId) || orderId <= 0) return c.text("Bad Request", 400);
+  const identities = await resolveSseIdentities(c);
+  if (!(await canAccessOrder(identities, orderId))) return c.text("Unauthorized", 401);
+
   return streamSSE(c, async (stream) => {
     const { cleanup, isClosed } = setupSSE(c, `order:${orderId}`, stream);
 
@@ -89,7 +213,11 @@ app.get("/api/events/orders/:orderId", async (c) => {
 });
 
 app.get("/api/events/commerce/:commerceId", async (c) => {
-  const commerceId = c.req.param("commerceId");
+  const commerceId = Number(c.req.param("commerceId"));
+  if (!Number.isInteger(commerceId) || commerceId <= 0) return c.text("Bad Request", 400);
+  const identities = await resolveSseIdentities(c);
+  if (!(await canAccessCommerce(identities, commerceId))) return c.text("Unauthorized", 401);
+
   return streamSSE(c, async (stream) => {
     const { cleanup, isClosed } = setupSSE(c, `commerce:${commerceId}`, stream);
 
@@ -108,7 +236,15 @@ app.get("/api/events/commerce/:commerceId", async (c) => {
 });
 
 app.get("/api/events/driver/:driverId", async (c) => {
-  const driverId = c.req.param("driverId");
+  const driverId = Number(c.req.param("driverId"));
+  if (!Number.isInteger(driverId) || driverId <= 0) return c.text("Bad Request", 400);
+  const identities = await resolveSseIdentities(c);
+  const allowed = identities.some(
+    (identity) =>
+      identity.role === "admin" || (identity.role === "driver" && identity.id === driverId),
+  );
+  if (!allowed) return c.text("Unauthorized", 401);
+
   return streamSSE(c, async (stream) => {
     const { cleanup, isClosed } = setupSSE(c, `driver:${driverId}`, stream);
 
@@ -128,21 +264,8 @@ app.get("/api/events/driver/:driverId", async (c) => {
 
 // SSE endpoint para el panel de administración (protegido por token/refresh cookie)
 app.get("/api/events/admin-dashboard", async (c) => {
-  const cookieHeader = c.req.header("cookie") || "";
-  const tokenMatch = cookieHeader.match(/quickgo_admin=([^;]+)/);
-  const refreshMatch = cookieHeader.match(/quickgo_admin_refresh=([^;]+)/);
-
-  let isAdmin = false;
-  if (tokenMatch) {
-    const adminId = await verifyAdminToken(tokenMatch[1]);
-    if (adminId) isAdmin = true;
-  }
-  if (!isAdmin && refreshMatch) {
-    const adminId = await verifyAdminRefreshToken(refreshMatch[1]);
-    if (adminId) isAdmin = true;
-  }
-
-  if (!isAdmin) {
+  const identities = await resolveSseIdentities(c);
+  if (!identities.some((identity) => identity.role === "admin")) {
     return c.text("Unauthorized", 401);
   }
 
@@ -161,6 +284,9 @@ app.get("/api/events/admin-dashboard", async (c) => {
 });
 
 app.get("/api/events/commerces", async (c) => {
+  const identities = await resolveSseIdentities(c);
+  if (identities.length === 0) return c.text("Unauthorized", 401);
+
   return streamSSE(c, async (stream) => {
     const { cleanup, isClosed } = setupSSE(c, "commerces:global", stream);
 
@@ -179,6 +305,9 @@ app.get("/api/events/commerces", async (c) => {
 });
 
 app.get("/api/events/products", async (c) => {
+  const identities = await resolveSseIdentities(c);
+  if (identities.length === 0) return c.text("Unauthorized", 401);
+
   return streamSSE(c, async (stream) => {
     const { cleanup, isClosed } = setupSSE(c, "products:global", stream);
 

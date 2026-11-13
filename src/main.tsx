@@ -2,10 +2,10 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router'
 import './index.css'
-import './lib/leaflet-fix'
 import { TRPCProvider } from "@/providers/trpc"
 import { CartProvider } from "@/hooks/useCart"
 import { CustomerSessionProvider } from "@/hooks/useCustomerSession"
+import { Toaster } from "@/components/ui/sonner"
 import App from './App.tsx'
 
 createRoot(document.getElementById('root')!).render(
@@ -15,6 +15,7 @@ createRoot(document.getElementById('root')!).render(
         <CartProvider>
           <CustomerSessionProvider>
             <App />
+            <Toaster />
           </CustomerSessionProvider>
         </CartProvider>
       </TRPCProvider>

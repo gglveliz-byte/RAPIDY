@@ -57,7 +57,7 @@ export function HomeFeaturedCommerces({
         </h2>
         <button
           onClick={() => navigate("/search")}
-          className="text-xs font-bold text-[#FF6A00] hover:text-[#e05e00] flex items-center gap-0.5 cursor-pointer transition-colors"
+          className="text-xs font-bold text-brand hover:text-[#e05e00] flex items-center gap-0.5 cursor-pointer transition-colors"
         >
           <span>Ver más</span>
           <ChevronRight className="w-3.5 h-3.5" />
@@ -106,7 +106,7 @@ export function HomeFeaturedCommerces({
 
               {/* Info Body */}
               <div className="p-3">
-                <h3 className="font-bold text-zinc-900 text-sm truncate group-hover:text-[#FF6A00] transition-colors">
+                <h3 className="font-bold text-zinc-900 text-sm truncate group-hover:text-brand transition-colors">
                   {commerce.name}
                 </h3>
                 <p className="text-[11px] text-zinc-500 truncate mt-0.5">

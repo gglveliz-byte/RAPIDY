@@ -2,7 +2,6 @@ import { Routes, Route } from 'react-router'
 import { lazy, Suspense, useEffect } from 'react'
 import { Loader2 } from 'lucide-react'
 import SessionGuard from '@/components/SessionGuard'
-import { QueryProvider } from '@/providers/QueryProvider'
 import { trpcMutate } from '@/hooks/useDeliveryData'
 import { getSession } from '@/hooks/useSessionSync'
 
@@ -144,11 +143,9 @@ function AnimatedRoutes() {
 
 export default function App() {
   return (
-    <QueryProvider>
-      <Suspense fallback={<LoadingFallback />}>
-        <SessionRefresh />
-        <AnimatedRoutes />
-      </Suspense>
-    </QueryProvider>
+    <Suspense fallback={<LoadingFallback />}>
+      <SessionRefresh />
+      <AnimatedRoutes />
+    </Suspense>
   )
 }

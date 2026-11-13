@@ -36,25 +36,29 @@ export function OrderTrackingDetails({
       {/* Tarjeta de Resumen de Productos y Costos */}
       <div className="bg-white rounded-3xl p-5 border border-zinc-100 shadow-[0_4px_20px_rgba(0,0,0,0.03)]">
         <div className="flex items-center gap-2 mb-4 pb-2 border-b border-zinc-100">
-          <Receipt className="w-4 h-4 text-[#FF6A00]" />
+          <Receipt className="w-4 h-4 text-brand" />
           <h3 className="text-sm font-black text-zinc-900">Detalles de la compra</h3>
         </div>
 
         {/* Lista de Artículos */}
         <div className="space-y-3 mb-4">
-          {order.items?.map((item: any) => (
-            <div key={item.id} className="flex justify-between items-center text-xs sm:text-sm">
-              <div className="flex items-center gap-2 min-w-0 pr-2">
-                <span className="w-6 h-6 rounded-lg bg-orange-50 text-[#FF6A00] font-black text-xs flex items-center justify-center shrink-0">
-                  {Number(item.quantity) % 1 === 0 ? item.quantity : Number(item.quantity).toFixed(2)}x
+          {order.items?.length ? (
+            order.items.map((item: any) => (
+              <div key={item.id} className="flex justify-between items-center text-xs sm:text-sm">
+                <div className="flex items-center gap-2 min-w-0 pr-2">
+                  <span className="min-w-6 h-6 px-1.5 rounded-lg bg-orange-50 text-brand font-black text-[11px] flex items-center justify-center shrink-0">
+                    {Number(item.quantity) % 1 === 0 ? item.quantity : Number(item.quantity).toFixed(2)}x
+                  </span>
+                  <span className="text-zinc-700 font-semibold truncate">{item.productName}</span>
+                </div>
+                <span className="font-black text-zinc-900 shrink-0">
+                  ${parseFloat(item.total).toFixed(2)}
                 </span>
-                <span className="text-zinc-700 font-semibold truncate">{item.productName}</span>
               </div>
-              <span className="font-black text-zinc-900 shrink-0">
-                ${parseFloat(item.total).toFixed(2)}
-              </span>
-            </div>
-          ))}
+            ))
+          ) : (
+            <p className="text-xs text-zinc-500">No hay artículos registrados en este pedido.</p>
+          )}
         </div>
 
         {/* Desglose de Valores Monetarios */}
@@ -73,18 +77,10 @@ export function OrderTrackingDetails({
             </span>
           </div>
 
-          {order.commission && parseFloat(order.commission) > 0 && (
-            <div className="flex justify-between text-xs text-zinc-500 font-medium">
-              <span>Tarifa de servicio</span>
-              <span className="text-zinc-800 font-semibold">
-                ${parseFloat(order.commission).toFixed(2)}
-              </span>
-            </div>
-          )}
-
+          {/* La comisión es un acuerdo plataforma-comercio; el cliente no la paga aparte. */}
           <div className="flex justify-between items-center text-base font-black text-zinc-900 pt-3 border-t border-zinc-100">
             <span>Total a pagar</span>
-            <span className="text-lg text-[#FF6A00] font-black tracking-tight">
+            <span className="text-lg text-brand font-black tracking-tight">
               ${parseFloat(order.total || 0).toFixed(2)}
             </span>
           </div>
@@ -97,7 +93,7 @@ export function OrderTrackingDetails({
           <h3 className="text-sm font-black text-zinc-900 mb-2">Destino de entrega</h3>
 
           <div className="flex items-start gap-3 text-xs sm:text-sm">
-            <div className="w-8 h-8 rounded-xl bg-orange-50 text-[#FF6A00] flex items-center justify-center shrink-0">
+            <div className="w-8 h-8 rounded-xl bg-orange-50 text-brand flex items-center justify-center shrink-0">
               <MapPin className="w-4 h-4 stroke-[2.2]" />
             </div>
             <div className="min-w-0 flex-1">
@@ -108,7 +104,7 @@ export function OrderTrackingDetails({
 
           {order.customerPhone && (
             <div className="flex items-center gap-3 text-xs sm:text-sm pt-2 border-t border-zinc-50">
-              <div className="w-8 h-8 rounded-xl bg-orange-50 text-[#FF6A00] flex items-center justify-center shrink-0">
+              <div className="w-8 h-8 rounded-xl bg-orange-50 text-brand flex items-center justify-center shrink-0">
                 <Phone className="w-4 h-4 stroke-[2.2]" />
               </div>
               <div className="min-w-0 flex-1">
@@ -123,7 +119,7 @@ export function OrderTrackingDetails({
       {/* Celebración de Pedido Entregado */}
       {isDelivered && (
         <div className="bg-gradient-to-b from-orange-50/60 to-white rounded-3xl p-6 border border-orange-200/60 text-center shadow-md">
-          <div className="w-16 h-16 rounded-3xl bg-gradient-to-tr from-[#FF6A00] to-[#FFA040] text-white flex items-center justify-center mx-auto mb-4 shadow-lg shadow-[#FF6A00]/30 animate-bounce">
+          <div className="w-16 h-16 rounded-3xl bg-gradient-to-tr from-brand to-[#FFA040] text-white flex items-center justify-center mx-auto mb-4 shadow-lg shadow-brand/30 animate-bounce motion-reduce:animate-none">
             <CheckCircle2 className="w-9 h-9 stroke-[2.5]" />
           </div>
           <h2 className="text-xl font-black text-zinc-900 mb-1">¡Pedido Entregado!</h2>
@@ -132,14 +128,14 @@ export function OrderTrackingDetails({
           </p>
           <button
             onClick={() => navigate("/home")}
-            className="w-full h-12 bg-[#0E0E12] hover:bg-black text-white font-black text-sm rounded-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-lg shadow-black/20 cursor-pointer"
+            className="w-full h-12 bg-ink hover:bg-black text-white font-black text-sm rounded-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-lg shadow-black/20 cursor-pointer"
           >
             <ShoppingBag className="w-4 h-4" />
             <span>Seguir comprando en Rapidy</span>
             <ArrowRight className="w-4 h-4 ml-1" />
           </button>
-          <p className="text-[10px] text-zinc-400 font-semibold mt-3">
-            Redirigiendo al inicio en unos segundos...
+          <p className="text-[10px] text-zinc-500 font-semibold mt-3">
+            Puedes volver a este pedido desde tu perfil cuando quieras.
           </p>
         </div>
       )}

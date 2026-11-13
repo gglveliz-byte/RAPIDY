@@ -42,10 +42,22 @@ import {
 } from "lucide-react";
 import { useCart } from "@/hooks/useCart";
 import { useCustomerSession } from "@/hooks/useCustomerSession";
-import { useCreateOrder, usePublicSettings, useCommerces } from "@/hooks/useDeliveryData";
+import {
+  useCreateOrder,
+  usePublicSettings,
+  useCommerces,
+  useOrderQuote,
+} from "@/hooks/useDeliveryData";
 import { getAddressFromCoords } from "@/lib/locationUtils";
 import { CartAddressModal } from "./components/CartAddressModal";
 import { CustomerBottomNav } from "@/components/CustomerBottomNav";
+
+function createIdempotencyKey() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `ord_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+}
 
 export default function Cart() {
   const navigate = useNavigate();
@@ -63,14 +75,19 @@ export default function Cart() {
   const [customAddress, setCustomAddress] = useState("");
   const [geoLoading, setGeoLoading] = useState(false);
   const [currentAddress, setCurrentAddress] = useState("");
+  const [checkoutError, setCheckoutError] = useState("");
+  const [idempotencyKey, setIdempotencyKey] = useState(createIdempotencyKey);
 
   const settings = usePublicSettings();
   const { data: commerces, loading: loadingCommerces } = useCommerces();
+  const quote = useOrderQuote(
+    items.map((item) => ({ productId: item.productId, quantity: item.quantity }))
+  );
 
-  const deliveryFee = parseFloat(settings.delivery_fee || "2.50");
-  const commissionRate = parseFloat(settings.commission_rate || "8.00");
-  const commission = ((subtotal * commissionRate) / 100).toFixed(2);
-  const total = (subtotal + deliveryFee).toFixed(2);
+  const deliveryFee = quote.data?.deliveryFee ?? parseFloat(settings.delivery_fee || "2.50");
+  const total = quote.data?.total ?? subtotal + deliveryFee;
+  const quoteIssues: string[] = quote.data?.issues ?? [];
+  const quoteError = quote.error?.message ?? "";
 
   const grouped = getItemsByCommerce();
 
@@ -78,6 +95,7 @@ export default function Cart() {
     const commerce = (commerces || []).find((c: any) => c.id === item.commerceId);
     return !loadingCommerces && (!commerce || commerce.isOpen !== "open");
   });
+  const hasBlockingIssues = invalidItems.length > 0 || quoteIssues.length > 0;
 
   const getDeliveryAddress = () => {
     if (addressMode === "custom") return customAddress;
@@ -86,8 +104,12 @@ export default function Cart() {
   };
 
   const handleGetLocation = async () => {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation) {
+      setCheckoutError("Tu navegador no soporta geolocalización.");
+      return;
+    }
     setGeoLoading(true);
+    setCheckoutError("");
     try {
       const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
         navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 })
@@ -95,7 +117,9 @@ export default function Cart() {
       const addr = await getAddressFromCoords(pos.coords.latitude, pos.coords.longitude);
       setCurrentAddress(addr);
       setAddressMode("current");
-    } catch {} finally {
+    } catch {
+      setCheckoutError("No pudimos obtener tu ubicación. Escribe la dirección manualmente.");
+    } finally {
       setGeoLoading(false);
     }
   };
@@ -105,54 +129,76 @@ export default function Cart() {
       navigate("/register");
       return;
     }
+    setCheckoutError("");
     setShowAddressModal(true);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setCheckoutError("");
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      setCheckoutError("El comprobante debe ser una imagen JPG, PNG o WEBP.");
+      e.target.value = "";
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setCheckoutError("El comprobante no puede superar los 5 MB.");
+      e.target.value = "";
+      return;
+    }
     const reader = new FileReader();
     reader.onload = (ev) => {
       setPaymentReceipt(ev.target?.result as string);
     };
+    reader.onerror = () => setCheckoutError("No pudimos leer la imagen. Inténtalo de nuevo.");
     reader.readAsDataURL(file);
   };
 
   const confirmOrder = async () => {
     if (!customer) return;
     if (items.length === 0) return;
-
-    const deliveryAddress = getDeliveryAddress();
-    if (!deliveryAddress.trim()) return;
-
-    if (paymentMethod === "transfer" && !paymentReceipt) {
+    if (hasBlockingIssues) {
+      setCheckoutError(quoteIssues[0] || "Revisa los productos del carrito antes de continuar.");
       return;
     }
 
-    setShowAddressModal(false);
+    const deliveryAddress = getDeliveryAddress();
+    if (!deliveryAddress.trim()) {
+      setCheckoutError("Ingresa o confirma tu dirección de entrega.");
+      return;
+    }
+
+    if (paymentMethod === "transfer" && !paymentReceipt) {
+      setCheckoutError("Adjunta el comprobante de la transferencia.");
+      return;
+    }
+
+    setCheckoutError("");
     setLoading(true);
     try {
       const result: any = await createOrderMutation.mutateAsync({
-        customerId: customer.id,
         items: items.map((i) => ({
           productId: i.productId,
-          commerceId: i.commerceId,
           quantity: i.quantity,
         })),
-        deliveryAddress,
+        deliveryAddress: deliveryAddress.trim(),
         customerPhone: customer.phone,
         paymentMethod,
         paymentReceipt: paymentMethod === "transfer" ? (paymentReceipt || undefined) : undefined,
-        deliveryFee: deliveryFee.toFixed(2),
-        commission,
+        idempotencyKey,
       });
       if (result.success) {
+        setShowAddressModal(false);
         setOrderId(result.order.id);
         setOrderPlaced(true);
         clearCart();
+        setIdempotencyKey(createIdempotencyKey());
+      } else {
+        setCheckoutError("No pudimos crear el pedido. Inténtalo de nuevo.");
       }
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      setCheckoutError(err?.message || "No pudimos crear el pedido. Revisa tu conexión.");
     } finally {
       setLoading(false);
     }
@@ -160,9 +206,9 @@ export default function Cart() {
 
   if (orderPlaced && orderId) {
     return (
-      <div className="mobile-container bg-[#F7F7FA] min-h-screen flex flex-col items-center justify-center px-6 text-center select-none pb-safe-nav">
+      <div className="mobile-container bg-surface min-h-screen flex flex-col items-center justify-center px-6 text-center select-none pb-safe-nav">
         <div className="w-20 h-20 bg-orange-50 border border-orange-100 rounded-full flex items-center justify-center mb-4 shadow-sm">
-          <Package className="w-10 h-10 text-[#FF6A00]" />
+          <Package className="w-10 h-10 text-brand" />
         </div>
         <h1 className="text-2xl font-black text-zinc-900 mb-2">¡Pedido confirmado!</h1>
         <p className="text-zinc-500 text-sm mb-6 max-w-[280px]">
@@ -171,7 +217,7 @@ export default function Cart() {
         <div className="w-full space-y-3 max-w-[320px]">
           <button
             onClick={() => navigate(`/order/${orderId}`)}
-            className="w-full h-12 bg-[#FF6A00] hover:bg-[#e65f00] text-white font-bold rounded-2xl shadow-md shadow-[#FF6A00]/30 transition-all active:scale-[0.98] cursor-pointer"
+            className="w-full h-12 bg-brand hover:bg-brand-strong text-white font-bold rounded-2xl shadow-md shadow-brand/30 transition-all active:scale-[0.98] cursor-pointer"
           >
             Seguir pedido
           </button>
@@ -189,9 +235,9 @@ export default function Cart() {
 
   if (items.length === 0) {
     return (
-      <div className="mobile-container bg-[#F7F7FA] min-h-screen flex flex-col items-center justify-center px-6 text-center select-none pb-safe-nav">
+      <div className="mobile-container bg-surface min-h-screen flex flex-col items-center justify-center px-6 text-center select-none pb-safe-nav">
         <div className="w-24 h-24 rounded-full bg-orange-50 border border-orange-100 flex items-center justify-center mb-4 shadow-xs">
-          <ShoppingBag className="w-10 h-10 text-[#FF6A00]" />
+          <ShoppingBag className="w-10 h-10 text-brand" />
         </div>
         <h2 className="text-xl font-black text-zinc-900 mb-2">Tu carrito está vacío</h2>
         <p className="text-zinc-500 text-sm mb-6 max-w-[260px]">
@@ -199,7 +245,7 @@ export default function Cart() {
         </p>
         <button
           onClick={() => navigate("/home")}
-          className="h-12 px-8 bg-[#FF6A00] hover:bg-[#e65f00] text-white font-bold rounded-2xl shadow-md shadow-[#FF6A00]/30 active:scale-95 transition-all cursor-pointer"
+          className="h-12 px-8 bg-brand hover:bg-brand-strong text-white font-bold rounded-2xl shadow-md shadow-brand/30 active:scale-95 transition-all cursor-pointer"
         >
           Explorar comercios
         </button>
@@ -209,9 +255,9 @@ export default function Cart() {
   }
 
   return (
-    <div className="mobile-container bg-[#F7F7FA] min-h-screen select-none text-zinc-900 pb-44">
+    <div className="mobile-container bg-surface min-h-screen select-none text-zinc-900 pb-[calc(11rem+env(safe-area-inset-bottom,0px))]">
       {/* 1. Header Dark Velvet Fixed */}
-      <header className="fixed top-0 left-0 right-0 max-w-[480px] mx-auto z-40 bg-[#0E0E12]/95 backdrop-blur-2xl border-b border-white/10 px-4 pt-safe pb-2.5 flex items-center gap-3 shadow-xl text-white">
+      <header className="fixed top-0 left-0 right-0 max-w-[480px] mx-auto z-40 bg-ink/95 backdrop-blur-2xl border-b border-white/10 px-4 pt-safe pb-2.5 flex items-center gap-3 shadow-xl text-white">
         <button
           onClick={() => navigate("/home")}
           className="w-8 h-8 rounded-xl flex items-center justify-center text-white bg-white/10 hover:bg-white/20 border border-white/10 active:scale-90 transition-all cursor-pointer shrink-0"
@@ -236,6 +282,23 @@ export default function Cart() {
             <p className="text-xs text-red-600 leading-tight">
               Algunos productos pertenecen a comercios cerrados. Por favor, elimínalos para continuar.
             </p>
+          </div>
+        )}
+
+        {quoteIssues.length > 0 && (
+          <div role="alert" className="p-3 bg-amber-50 rounded-2xl border border-amber-200 flex items-start gap-2">
+            <span className="text-amber-600 font-bold mt-0.5">!</span>
+            <div className="text-xs text-amber-800 leading-tight space-y-0.5">
+              {quoteIssues.slice(0, 3).map((issue) => (
+                <p key={issue}>{issue}</p>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {quoteError && (
+          <div role="alert" className="p-3 bg-rose-50 rounded-2xl border border-rose-200 text-xs text-rose-700">
+            No pudimos validar el precio final: {quoteError}. Revisa tu conexión antes de ordenar.
           </div>
         )}
 
@@ -276,7 +339,7 @@ export default function Cart() {
                       </button>
                     </div>
                     <div className="flex items-center justify-between mt-2.5">
-                      <span className="text-sm font-black text-[#FF6A00]">
+                      <span className="text-sm font-black text-brand">
                         ${(parseFloat(item.price) * item.quantity).toFixed(2)}
                       </span>
                       <div className="flex items-center gap-2">
@@ -304,7 +367,7 @@ export default function Cart() {
                               item.quantity + (item.unitType === "kg" ? 0.1 : 1)
                             )
                           }
-                          className="w-7 h-7 rounded-xl bg-[#FF6A00] flex items-center justify-center text-white hover:bg-[#e65f00] active:scale-90 transition-transform shadow-sm shadow-[#FF6A00]/30 cursor-pointer"
+                          className="w-7 h-7 rounded-xl bg-brand flex items-center justify-center text-white hover:bg-brand-strong active:scale-90 transition-transform shadow-sm shadow-brand/30 cursor-pointer"
                           aria-label="Aumentar cantidad"
                         >
                           <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
@@ -328,7 +391,7 @@ export default function Cart() {
               onClick={() => setPaymentMethod("cash")}
               className={`flex-1 h-11 flex items-center justify-center gap-2 rounded-2xl border-2 text-xs font-bold transition-all cursor-pointer ${
                 paymentMethod === "cash"
-                  ? "border-[#FF6A00] bg-orange-50/60 text-[#FF6A00] shadow-xs"
+                  ? "border-brand bg-orange-50/60 text-brand shadow-xs"
                   : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300"
               }`}
             >
@@ -339,7 +402,7 @@ export default function Cart() {
               onClick={() => setPaymentMethod("transfer")}
               className={`flex-1 h-11 flex items-center justify-center gap-2 rounded-2xl border-2 text-xs font-bold transition-all cursor-pointer ${
                 paymentMethod === "transfer"
-                  ? "border-[#FF6A00] bg-orange-50/60 text-[#FF6A00] shadow-xs"
+                  ? "border-brand bg-orange-50/60 text-brand shadow-xs"
                   : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300"
               }`}
             >
@@ -364,21 +427,29 @@ export default function Cart() {
           </div>
           <div className="flex justify-between text-base font-bold text-zinc-900 pt-2 border-t border-zinc-100">
             <span>Total a pagar</span>
-            <span className="text-[#FF6A00] font-black text-lg">${total}</span>
+            <span className="text-brand font-black text-lg">${total}</span>
           </div>
         </div>
       </div>
 
       {/* 3. Botón Flotante de Confirmación (Docked encima de la barra inferior) */}
-      <div className="fixed bottom-[74px] left-3 right-3 max-w-[440px] mx-auto z-40">
+      <div className="fixed bottom-[calc(74px+env(safe-area-inset-bottom,0px))] left-3 right-3 max-w-[440px] mx-auto z-40">
         <button
           onClick={handleCheckout}
-          disabled={loading || invalidItems.length > 0}
-          className="w-full h-12 bg-[#FF6A00] hover:bg-[#e65f00] text-white font-bold text-sm rounded-2xl shadow-[0_6px_20px_rgba(255,106,0,0.35)] active:scale-[0.98] transition-all disabled:opacity-50 cursor-pointer flex items-center justify-between px-5"
+          disabled={loading || hasBlockingIssues || quote.loading}
+          className="w-full min-h-[52px] h-14 bg-brand hover:bg-brand-strong text-white font-bold text-sm rounded-2xl shadow-[0_6px_20px_rgba(255,106,0,0.35)] active:scale-[0.98] transition-all disabled:opacity-50 cursor-pointer flex items-center justify-between px-5"
         >
-          <span>{loading ? "Procesando..." : "Continuar con la entrega"}</span>
+          <span>
+            {loading
+              ? "Procesando..."
+              : quote.loading
+              ? "Validando precios..."
+              : hasBlockingIssues
+              ? "Revisa el carrito"
+              : "Continuar con la entrega"}
+          </span>
           <div className="flex items-center gap-1 font-black">
-            <span>${total}</span>
+            <span>${total.toFixed(2)}</span>
             <ChevronRight className="w-4 h-4" />
           </div>
         </button>
@@ -388,7 +459,11 @@ export default function Cart() {
       <CartAddressModal
         customer={customer!}
         isOpen={showAddressModal && !!customer}
-        onClose={() => setShowAddressModal(false)}
+        onClose={() => {
+          if (loading) return;
+          setShowAddressModal(false);
+          setCheckoutError("");
+        }}
         addressMode={addressMode}
         onSelectAddressMode={setAddressMode}
         customAddress={customAddress}
@@ -398,15 +473,18 @@ export default function Cart() {
         onGetLocation={handleGetLocation}
         paymentMethod={paymentMethod}
         onSelectPaymentMethod={setPaymentMethod}
-        total={total}
+        total={total.toFixed(2)}
         subtotal={subtotal}
         deliveryFee={deliveryFee}
         bankTransferInfo={settings.bank_transfer_info}
         paymentReceipt={paymentReceipt}
         onFileChange={handleFileChange}
         loading={loading}
+        error={checkoutError}
         canConfirm={
           !loading &&
+          !hasBlockingIssues &&
+          !quote.loading &&
           !!getDeliveryAddress().trim() &&
           !(paymentMethod === "transfer" && !paymentReceipt)
         }

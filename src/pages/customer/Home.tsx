@@ -41,6 +41,8 @@ import {
   useCategories,
   useCommerces,
   useFeaturedProducts,
+  useCatalogProducts,
+  useProductSearch,
   useProductsByCommerce,
 } from "@/hooks/useDeliveryData";
 import { CustomerBottomNav } from "@/components/CustomerBottomNav";
@@ -59,8 +61,10 @@ export default function CustomerHome() {
   const { data: categories } = useCategories();
   const { data: commerces, loading: loadingCommerces } = useCommerces();
   const { data: featuredProducts, loading: loadingFeatured } = useFeaturedProducts();
+  const { data: catalogProducts } = useCatalogProducts();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
+  const { data: searchResults } = useProductSearch(searchQuery);
 
   // Escuchar cambios de productos y comercios en tiempo real
   const productUtils = trpc.useUtils();
@@ -86,13 +90,23 @@ export default function CustomerHome() {
   }, [commerces, searchQuery, selectedCategory]);
 
   const filteredProducts = useMemo(() => {
-    if (!searchQuery) return featuredProducts;
-    return featuredProducts.filter(
-      (p) =>
-        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (p.commerceName || "").toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [featuredProducts, searchQuery]);
+    const normalized = searchQuery.trim().toLowerCase();
+    const source = normalized.length >= 2
+      ? searchResults
+      : selectedCategory
+      ? catalogProducts
+      : featuredProducts;
+
+    return source.filter((p: any) => {
+      const matchesQuery =
+        !normalized ||
+        p.name?.toLowerCase().includes(normalized) ||
+        (p.commerceName || "").toLowerCase().includes(normalized);
+      const matchesCategory =
+        !selectedCategory || p.commerceCategoryId === selectedCategory;
+      return matchesQuery && matchesCategory;
+    });
+  }, [searchQuery, selectedCategory, searchResults, catalogProducts, featuredProducts]);
 
   const handleSelectCategory = (catId: number) => {
     setSelectedCategory(selectedCategory === catId ? null : catId);
@@ -106,7 +120,7 @@ export default function CustomerHome() {
   };
 
   return (
-    <div className="mobile-container bg-[#F7F7FA] min-h-screen pb-32 select-none">
+    <div className="mobile-container bg-surface min-h-screen pb-32 select-none">
       {/* 1. Header with Logo, Slogan and Search */}
       <HomeHeader
         customerName={customer?.firstName}
@@ -137,23 +151,27 @@ export default function CustomerHome() {
           />
         )}
 
-        {/* 5. Popular Products Horizontal List */}
-        {!selectedCategory && !searchQuery && (
+        {/* 5. Popular / filtered products */}
+        {(filteredProducts.length > 0 || (loadingFeatured && !searchQuery && !selectedCategory)) && (
           <div>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-base sm:text-lg font-black text-zinc-900 tracking-tight">
-                Platillos populares
+                {searchQuery
+                  ? `Productos (${filteredProducts.length})`
+                  : selectedCategory
+                  ? "Productos de la categoría"
+                  : "Platillos populares"}
               </h2>
               <button
                 onClick={() => navigate("/search")}
-                className="text-xs font-bold text-[#FF6A00] flex items-center gap-0.5 cursor-pointer"
+                className="text-xs font-bold text-brand flex items-center gap-0.5 cursor-pointer"
               >
                 <span>Ver todo</span>
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>
             </div>
 
-            {loadingFeatured ? (
+            {loadingFeatured && !searchQuery && !selectedCategory ? (
               <div className="flex gap-3 overflow-x-auto no-scrollbar">
                 {[1, 2, 3].map((i) => (
                   <div key={i} className="min-w-[160px] h-48 bg-zinc-200 rounded-2xl animate-pulse" />
@@ -161,7 +179,7 @@ export default function CustomerHome() {
               </div>
             ) : (
               <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
-                {filteredProducts.slice(0, 8).map((product) => (
+                {filteredProducts.slice(0, 12).map((product: any) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
               </div>
@@ -212,23 +230,32 @@ export default function CustomerHome() {
 function ProductCard({ product }: { product: any }) {
   const navigate = useNavigate();
   const { addItem } = useCart();
+  const available = product.isAvailable === "yes" && product.commerceIsOpen !== "closed";
 
   return (
     <div className="min-w-[165px] bg-white rounded-2xl border border-zinc-100 shadow-[0_4px_16px_rgba(0,0,0,0.05)] overflow-hidden flex flex-col justify-between group">
       <div
-        className="h-28 bg-zinc-100 bg-cover bg-center cursor-pointer group-hover:scale-105 transition-transform duration-300"
+        className="h-28 bg-zinc-100 bg-cover bg-center cursor-pointer group-hover:scale-105 transition-transform duration-300 relative"
         style={{ backgroundImage: `url(${safeImage(product.image, "product")})` }}
         onClick={() => navigate(`/commerce/${product.commerceId}`)}
-      />
+      >
+        {!available && (
+          <span className="absolute top-2 left-2 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-bold text-white">
+            No disponible
+          </span>
+        )}
+      </div>
       <div className="p-3">
         <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 truncate">
           {product.commerceName}
         </p>
         <p className="text-xs font-bold text-zinc-900 truncate mt-0.5">{product.name}</p>
         <div className="flex items-center justify-between mt-2 pt-1 border-t border-zinc-50">
-          <span className="text-sm font-black text-[#FF6A00]">${product.price}</span>
+          <span className="text-sm font-black text-brand">${product.price}</span>
           <button
-            onClick={() =>
+            disabled={!available}
+            onClick={() => {
+              if (!available) return;
               addItem({
                 productId: product.id,
                 commerceId: product.commerceId,
@@ -236,10 +263,11 @@ function ProductCard({ product }: { product: any }) {
                 price: product.price,
                 image: product.image,
                 commerceName: product.commerceName,
-              })
-            }
-            className="w-7 h-7 bg-[#FF6A00] hover:bg-[#e65f00] text-white rounded-xl flex items-center justify-center active:scale-90 transition-all shadow-sm shadow-[#FF6A00]/30 cursor-pointer"
-            aria-label="Agregar al carrito"
+                unitType: product.unitType,
+              });
+            }}
+            className="w-9 h-9 bg-brand hover:bg-brand-strong disabled:bg-zinc-300 disabled:shadow-none text-white rounded-xl flex items-center justify-center active:scale-90 transition-all shadow-sm shadow-brand/30 cursor-pointer disabled:cursor-not-allowed"
+            aria-label={available ? "Agregar al carrito" : "Producto no disponible"}
           >
             <Plus className="w-4 h-4 stroke-[2.5]" />
           </button>
@@ -254,6 +282,7 @@ function CommerceCard({ commerce }: { commerce: any }) {
   const { addItem } = useCart();
   const { data: products } = useProductsByCommerce(commerce.id);
   const featured = (products || []).filter((p: any) => p.isFeatured === "yes").slice(0, 3);
+  const commerceOpen = commerce.isOpen === "open";
 
   return (
     <div className="bg-white rounded-3xl border border-zinc-100 shadow-[0_4px_20px_rgba(0,0,0,0.04)] overflow-hidden">
@@ -306,7 +335,9 @@ function CommerceCard({ commerce }: { commerce: any }) {
       {featured.length > 0 && (
         <div className="border-t border-zinc-100 p-3 bg-zinc-50/50">
           <div className="flex gap-2.5 overflow-x-auto no-scrollbar pb-1">
-            {featured.map((product: any) => (
+            {featured.map((product: any) => {
+              const productAvailable = commerceOpen && product.isAvailable === "yes";
+              return (
               <div
                 key={product.id}
                 className="shrink-0 w-36 bg-white rounded-2xl p-2.5 border border-zinc-100 shadow-xs"
@@ -318,10 +349,12 @@ function CommerceCard({ commerce }: { commerce: any }) {
                 />
                 <p className="text-xs font-bold text-zinc-900 truncate">{product.name}</p>
                 <div className="flex items-center justify-between mt-1.5">
-                  <span className="text-xs font-black text-[#FF6A00]">${product.price}</span>
+                  <span className="text-xs font-black text-brand">${product.price}</span>
                   <button
+                    disabled={!productAvailable}
                     onClick={(e) => {
                       e.stopPropagation();
+                      if (!productAvailable) return;
                       addItem({
                         productId: product.id,
                         commerceId: commerce.id,
@@ -329,15 +362,18 @@ function CommerceCard({ commerce }: { commerce: any }) {
                         price: product.price,
                         image: product.image,
                         commerceName: commerce.name,
+                        unitType: product.unitType,
                       });
                     }}
-                    className="w-6 h-6 bg-[#FF6A00] text-white rounded-lg flex items-center justify-center active:scale-90 transition-transform shadow-xs cursor-pointer"
+                    className="w-8 h-8 bg-brand disabled:bg-zinc-300 text-white rounded-lg flex items-center justify-center active:scale-90 transition-transform shadow-xs cursor-pointer disabled:cursor-not-allowed"
+                    aria-label={productAvailable ? `Agregar ${product.name}` : `${product.name} no disponible`}
                   >
                     <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
                   </button>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

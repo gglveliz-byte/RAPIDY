@@ -3,32 +3,14 @@
  * @modulo 02-customer-orders (Rastreo de Pedidos y Mapa en Tiempo Real)
  * @proposito
  *   Vista principal de seguimiento de órdenes para el cliente. Integra geolocalización en vivo,
- *   movimiento suavizado del repartidor por SSE, línea de tiempo de estados, detalles de compra
- *   en USD y acceso directo al canal de mensajería con el repartidor.
- *   Estilo oficial Rapidy: Cabecera Dark Velvet (#0E0E12), fondo luminoso (#F7F7FA) y acentos
- *   Flame Orange (#FF6A00).
- *
- * @resumen_contenido
- *   - Orquestador modular: sincroniza `OrderTrackingMap`, `OrderTrackingTimeline`, `OrderTrackingDetails`
- *     y `ChatBubble`. Controla eventos reactivos y geocodificación de dirección.
- *
- * @dependencias_internas
- *   - `useOrder`, `useUpdatePaymentReceipt` (@/hooks/useDeliveryData)
- *   - `useOrderEvents` (@/hooks/useOrderEvents)
- *   - `trpc` (@/providers/trpc)
- *   - `ChatBubble` (@/components/ChatBubble)
- *   - `OrderTrackingMap` (./components/OrderTrackingMap)
- *   - `OrderTrackingTimeline` (./components/OrderTrackingTimeline)
- *   - `OrderTrackingDetails` (./components/OrderTrackingDetails)
- *
- * @dependencias_externas
- *   - `react-router` (`useParams`, `useNavigate`)
- *   - `lucide-react` (`ArrowLeft`, `AlertCircle`, `Loader2`)
+ *   movimiento suavizado del repartidor por SSE, línea de tiempo de estados compartida,
+ *   detalles de compra en USD y acceso directo al chat con el repartidor.
  */
 
 import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router";
-import { ArrowLeft, AlertCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, AlertCircle, Loader2, RefreshCw } from "lucide-react";
+import { toast } from "sonner";
 import { useOrder, useUpdatePaymentReceipt } from "@/hooks/useDeliveryData";
 import { useOrderEvents } from "@/hooks/useOrderEvents";
 import { trpc } from "@/providers/trpc";
@@ -36,130 +18,179 @@ import ChatBubble from "@/components/ChatBubble";
 import { OrderTrackingMap } from "./components/OrderTrackingMap";
 import { OrderTrackingTimeline } from "./components/OrderTrackingTimeline";
 import { OrderTrackingDetails } from "./components/OrderTrackingDetails";
+import {
+  CUSTOMER_TIMELINE_STEPS,
+  getOrderStatusMeta,
+  isTerminalStatus,
+} from "@contracts/orderStatus";
 
-const statusSteps = [
-  { key: "received", label: "Recibido", description: "Pedido recibido y confirmado" },
-  { key: "preparing", label: "Preparando", description: "El comercio prepara tu pedido" },
-  { key: "ready_for_pickup", label: "Listo", description: "Listo para recoger por el repartidor" },
-  { key: "picked_up", label: "Retirado", description: "Repartidor retiró tu pedido" },
-  { key: "on_the_way", label: "En camino", description: "Repartidor en camino a tu domicilio" },
-  { key: "delivered", label: "Entregado", description: "Pedido entregado con éxito" },
-];
+const statusSteps = CUSTOMER_TIMELINE_STEPS.map((step) => ({
+  key: step.key,
+  label: step.label,
+  description: getOrderStatusMeta(step.key).description,
+}));
+
+interface GeoCoords {
+  lat: number;
+  lng: number;
+}
 
 export default function OrderTracking() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { data: order, loading } = useOrder(Number(id));
+  const orderId = Number(id);
+  const validId = Number.isInteger(orderId) && orderId > 0;
+  const { data: order, loading, error, isError, refresh } = useOrder(validId ? orderId : 0);
   const orderUtils = trpc.useUtils();
-  useOrderEvents(Number(id), orderUtils);
+  const { connected } = useOrderEvents(validId ? orderId : undefined, orderUtils);
 
-  const [driverPos, setDriverPos] = useState<{ lat: number; lng: number } | null>(null);
-  const [deliveryCoords, setDeliveryCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [driverPos, setDriverPos] = useState<GeoCoords | null>(null);
+  const [deliveryCoords, setDeliveryCoords] = useState<GeoCoords | null>(null);
   const [geoLoading, setGeoLoading] = useState(false);
   const [followDriver, setFollowDriver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const updateReceipt = useUpdatePaymentReceipt();
 
-  // Reenvío de comprobante de pago si fue rechazado
+  // Posición inicial conocida del repartidor (antes del primer evento SSE).
+  useEffect(() => {
+    const lat = order?.driver?.currentLat;
+    const lng = order?.driver?.currentLng;
+    if (lat && lng && !driverPos) {
+      const parsedLat = Number(lat);
+      const parsedLng = Number(lng);
+      if (Number.isFinite(parsedLat) && Number.isFinite(parsedLng)) {
+        setDriverPos({ lat: parsedLat, lng: parsedLng });
+      }
+    }
+  }, [order?.driver?.currentLat, order?.driver?.currentLng, driverPos]);
+
   const handleReuploadReceipt = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const base64 = reader.result as string;
-        try {
-          await updateReceipt.mutateAsync({ orderId: Number(id), receipt: base64 });
-          alert("Comprobante enviado exitosamente. En espera de revisión por el equipo.");
-        } catch (err) {
-          alert("Error al enviar el comprobante. Por favor, intenta de nuevo.");
-        }
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      toast.error("El comprobante debe ser una imagen JPG, PNG o WEBP.");
+      e.target.value = "";
+      return;
     }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("El comprobante no puede superar los 5 MB.");
+      e.target.value = "";
+      return;
+    }
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64 = reader.result as string;
+      try {
+        await updateReceipt.mutateAsync({ orderId, receipt: base64 });
+        toast.success("Comprobante enviado. Estamos revisando tu pago.");
+      } catch (err: any) {
+        toast.error(err?.message || "No pudimos enviar el comprobante. Inténtalo de nuevo.");
+      }
+    };
+    reader.onerror = () => toast.error("No pudimos leer la imagen.");
+    reader.readAsDataURL(file);
   };
 
-  // Geocodificación de la dirección del cliente al cargar la orden
+  // Geocodificación con caché de sesión y cancelación al desmontar.
   useEffect(() => {
-    if (!order?.deliveryAddress || deliveryCoords) return;
+    const address = order?.deliveryAddress;
+    if (!address || deliveryCoords) return;
+
+    const cacheKey = `rapidy:geo:${address}`;
+    try {
+      const cached = sessionStorage.getItem(cacheKey);
+      if (cached) {
+        const parsed = JSON.parse(cached) as GeoCoords;
+        if (Number.isFinite(parsed.lat) && Number.isFinite(parsed.lng)) {
+          setDeliveryCoords(parsed);
+          return;
+        }
+      }
+    } catch {}
+
+    const controller = new AbortController();
     setGeoLoading(true);
-    const q = encodeURIComponent(order.deliveryAddress);
-    fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1&accept-language=es`, {
-      headers: { "User-Agent": "Rapidy-App/1.0" },
-    })
-      .then((r) => r.json())
+    const query = encodeURIComponent(address);
+    fetch(
+      `https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=1&accept-language=es`,
+      { signal: controller.signal },
+    )
+      .then((response) => response.json())
       .then((data) => {
-        if (data?.length > 0) {
-          setDeliveryCoords({ lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) });
+        if (Array.isArray(data) && data.length > 0) {
+          const coords = {
+            lat: parseFloat(data[0].lat),
+            lng: parseFloat(data[0].lon),
+          };
+          if (Number.isFinite(coords.lat) && Number.isFinite(coords.lng)) {
+            setDeliveryCoords(coords);
+            try {
+              sessionStorage.setItem(cacheKey, JSON.stringify(coords));
+            } catch {}
+          }
         }
       })
-      .catch(() => {})
+      .catch((err) => {
+        if (err?.name !== "AbortError") {
+          toast.error("No pudimos ubicar la dirección en el mapa. El seguimiento sigue activo.");
+        }
+      })
       .finally(() => setGeoLoading(false));
+
+    return () => controller.abort();
   }, [order?.deliveryAddress, deliveryCoords]);
 
-  // Suscripción al stream SSE de coordenadas del repartidor
+  // SSE de ubicación del repartidor. El servidor emite eventos nombrados "update".
   useEffect(() => {
-    if (!order?.driver?.id) return;
-    const eventSource = new EventSource(`/api/events/driver/${order.driver.id}`);
+    const driverId = order?.driver?.id;
+    if (!driverId) return;
 
-    eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === "location_update" && data.lat && data.lng) {
-          setDriverPos({ lat: parseFloat(data.lat), lng: parseFloat(data.lng) });
-        }
-      } catch {}
+    let closed = false;
+    let eventSource: EventSource | null = null;
+    let retry = 0;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const connect = () => {
+      if (closed) return;
+      eventSource = new EventSource(`/api/events/driver/${driverId}`);
+      eventSource.addEventListener("update", (event) => {
+        try {
+          const data = JSON.parse((event as MessageEvent).data);
+          if (data?.type === "location_update" && data.lat && data.lng) {
+            const lat = Number(data.lat);
+            const lng = Number(data.lng);
+            if (Number.isFinite(lat) && Number.isFinite(lng)) {
+              retry = 0;
+              setDriverPos({ lat, lng });
+            }
+          }
+        } catch {}
+      });
+      eventSource.onerror = () => {
+        eventSource?.close();
+        if (closed) return;
+        const delay = Math.min(30_000, 1_500 * 2 ** retry++);
+        retryTimer = setTimeout(connect, delay);
+      };
     };
 
-    eventSource.onerror = () => {
-      eventSource.close();
-    };
+    connect();
 
     return () => {
-      eventSource.close();
+      closed = true;
+      eventSource?.close();
+      if (retryTimer) clearTimeout(retryTimer);
     };
   }, [order?.driver?.id]);
 
+  const meta = getOrderStatusMeta(order?.status);
   const isDelivered = order?.status === "delivered";
   const isCancelled = order?.status === "cancelled";
   const isPaymentRejected = order?.status === "payment_rejected";
+  const currentStepIndex = meta.step;
+  const progress =
+    currentStepIndex >= 0 ? ((currentStepIndex + 1) / statusSteps.length) * 100 : 0;
 
-  // Redirección suave al home tras 5 segundos de entregado
-  useEffect(() => {
-    if (isDelivered) {
-      const timer = setTimeout(() => navigate("/home"), 6000);
-      return () => clearTimeout(timer);
-    }
-  }, [isDelivered, navigate]);
-
-  // Pantalla de carga o no encontrado
-  if (loading || !order) {
-    return (
-      <div className="mobile-container bg-[#F7F7FA] min-h-screen flex flex-col items-center justify-center p-6 text-center">
-        {loading ? (
-          <div className="flex flex-col items-center gap-3">
-            <Loader2 className="w-9 h-9 text-[#FF6A00] animate-spin" />
-            <p className="text-xs font-bold text-zinc-500">Cargando seguimiento de tu pedido...</p>
-          </div>
-        ) : (
-          <div className="flex flex-col items-center gap-3">
-            <AlertCircle className="w-10 h-10 text-zinc-400" />
-            <p className="text-sm font-bold text-zinc-700">Pedido no encontrado</p>
-            <button
-              onClick={() => navigate("/home")}
-              className="mt-2 px-5 py-2.5 bg-[#0E0E12] text-white text-xs font-black rounded-xl cursor-pointer"
-            >
-              Volver al Inicio
-            </button>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  const currentStepIndex = statusSteps.findIndex((s) => s.key === order.status);
-  const progress = currentStepIndex >= 0 ? ((currentStepIndex + 1) / statusSteps.length) * 100 : 0;
-
-  // Cálculo de tiempo estimado en minutos
   const estimatedMinutes = (() => {
     if (!driverPos || !deliveryCoords) return null;
     const R = 6371;
@@ -174,14 +205,61 @@ export default function OrderTracking() {
     return Math.max(1, Math.round(distanceKm * 3));
   })();
 
+  if (loading) {
+    return (
+      <div className="mobile-container bg-surface min-h-screen flex flex-col items-center justify-center p-6 text-center">
+        <Loader2 className="w-9 h-9 text-brand animate-spin" />
+        <p className="mt-3 text-xs font-bold text-zinc-500">Cargando seguimiento de tu pedido...</p>
+      </div>
+    );
+  }
+
+  if (!order) {
+    return (
+      <div className="mobile-container bg-surface min-h-screen flex flex-col items-center justify-center p-6 text-center">
+        <AlertCircle className={`w-10 h-10 ${isError ? "text-rose-400" : "text-zinc-400"}`} />
+        <p className="mt-3 text-sm font-bold text-zinc-700">
+          {isError ? "No pudimos cargar tu pedido" : "Pedido no encontrado"}
+        </p>
+        <p className="mt-1 text-xs text-zinc-500 max-w-[260px]">
+          {isError
+            ? error?.message || "Revisa tu conexión e inténtalo de nuevo."
+            : "El enlace no es válido o el pedido ya no está disponible."}
+        </p>
+        <div className="mt-4 flex gap-2">
+          {isError && (
+            <button
+              onClick={() => refresh()}
+              className="h-10 px-4 bg-brand text-white text-xs font-black rounded-xl flex items-center gap-1.5"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              Reintentar
+            </button>
+          )}
+          <button
+            onClick={() => navigate("/home")}
+            className="h-10 px-4 bg-ink text-white text-xs font-black rounded-xl"
+          >
+            Volver al inicio
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const liveLabel = isTerminalStatus(order.status)
+    ? meta.shortLabel
+    : connected
+    ? "En vivo"
+    : "Reconectando";
+
   return (
-    <div className="mobile-container bg-[#F7F7FA] min-h-screen pb-24 text-zinc-900 selection:bg-[#FF6A00]/20">
-      {/* Cabecera Dark Velvet Fija */}
-      <header className="sticky top-0 z-40 bg-[#0E0E12] border-b border-white/10 px-4 py-3 flex items-center justify-between shadow-lg">
+    <div className="mobile-container bg-surface min-h-screen pb-24 text-zinc-900 selection:bg-brand/20">
+      <header className="sticky top-0 z-40 bg-ink border-b border-white/10 px-4 pt-safe pb-3 flex items-center justify-between shadow-lg">
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate("/home")}
-            className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/15 active:scale-95 text-white flex items-center justify-center transition-all cursor-pointer"
+            className="w-11 h-11 rounded-xl bg-white/10 hover:bg-white/15 active:scale-95 text-white flex items-center justify-center transition-all cursor-pointer"
             aria-label="Volver al inicio"
           >
             <ArrowLeft className="w-5 h-5 stroke-[2.2]" />
@@ -189,7 +267,11 @@ export default function OrderTracking() {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-base font-black text-white tracking-tight">Pedido #{order.id}</h1>
-              <span className="w-2 h-2 rounded-full bg-[#FF6A00] animate-ping" />
+              {!isTerminalStatus(order.status) && (
+                <span
+                  className={`w-2 h-2 rounded-full ${connected ? "bg-brand" : "bg-amber-400"} animate-pulse motion-reduce:animate-none`}
+                />
+              )}
             </div>
             <p className="text-[11px] text-zinc-400 font-medium">
               {new Date(order.createdAt).toLocaleDateString("es-ES", {
@@ -202,15 +284,21 @@ export default function OrderTracking() {
           </div>
         </div>
 
-        {/* Indicador de Estado Rapidy */}
-        <div className="text-right">
-          <span className="text-[10px] font-black uppercase tracking-wider text-[#FF6A00] bg-[#FF6A00]/15 border border-[#FF6A00]/30 px-2.5 py-1 rounded-full">
-            En vivo
+        <div className="text-right" aria-live="polite">
+          <span
+            className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full border ${
+              isTerminalStatus(order.status)
+                ? "text-emerald-300 bg-emerald-500/15 border-emerald-500/30"
+                : connected
+                ? "text-brand bg-brand/15 border-brand/30"
+                : "text-amber-300 bg-amber-500/15 border-amber-500/30"
+            }`}
+          >
+            {liveLabel}
           </span>
         </div>
       </header>
 
-      {/* Mapa Dinámico en Vivo */}
       <OrderTrackingMap
         order={order}
         driverPos={driverPos}
@@ -223,9 +311,7 @@ export default function OrderTracking() {
         isCancelled={isCancelled}
       />
 
-      {/* Contenido Principal Modular */}
       <main className="px-4 py-4 space-y-4">
-        {/* Línea de tiempo y estados */}
         <OrderTrackingTimeline
           order={order}
           statusSteps={statusSteps}
@@ -238,7 +324,6 @@ export default function OrderTracking() {
           isUpdatingReceipt={updateReceipt.isPending}
         />
 
-        {/* Desglose de productos, costos en USD y dirección */}
         <OrderTrackingDetails
           order={order}
           isDelivered={isDelivered}
@@ -246,7 +331,6 @@ export default function OrderTracking() {
         />
       </main>
 
-      {/* Botón flotante de mensajería en vivo con el repartidor */}
       {!isDelivered && !isCancelled && <ChatBubble orderId={order.id} />}
     </div>
   );

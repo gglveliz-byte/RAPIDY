@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { createRouter, publicQuery, driverQuery } from "./middleware";
+import { TRPCError } from "@trpc/server";
+import { createRouter, publicQuery, driverQuery, adminQuery } from "./middleware";
 import { getDb } from "./queries/connection";
 import { drivers, driverEarnings, orders, orderItems, orderStatusHistory, orderCommerceStatus } from "@db/schema";
 import { eq, and, ne, inArray, desc } from "drizzle-orm";
@@ -7,7 +8,7 @@ import { emit } from "./events";
 import { verifyDriverRefreshToken, clearDriverCookies, setDriverCookies } from "./driver-auth";
 
 export const driverRouter = createRouter({
-  list: publicQuery.query(async () => {
+  list: adminQuery.query(async () => {
     const db = getDb();
     return db
       .select({
@@ -25,24 +26,33 @@ export const driverRouter = createRouter({
       .from(drivers);
   }),
 
-  getById: publicQuery
-    .input(z.object({ id: z.number() }))
-    .query(async ({ input }) => {
+  getById: driverQuery
+    .input(z.object({ id: z.number().int().positive().optional() }))
+    .query(async ({ input, ctx }) => {
+      if (input.id && input.id !== ctx.driver!.id) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "No puedes ver otro repartidor" });
+      }
       const db = getDb();
-      const result = await db.select().from(drivers).where(eq(drivers.id, input.id));
+      const result = await db.select().from(drivers).where(eq(drivers.id, ctx.driver!.id));
       if (!result[0]) return null;
       const { passwordHash: _, fcmToken: __, ...safeDriver } = result[0];
       return safeDriver;
     }),
 
-  getProfile: publicQuery
-    .input(z.object({ id: z.number() }))
-    .query(async ({ input }) => {
+  getProfile: driverQuery
+    .input(z.object({ id: z.number().int().positive().optional() }))
+    .query(async ({ input, ctx }) => {
+      if (input.id && input.id !== ctx.driver!.id) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "No puedes ver otro repartidor" });
+      }
       const db = getDb();
-      const driver = await db.select().from(drivers).where(eq(drivers.id, input.id));
+      const driver = await db.select().from(drivers).where(eq(drivers.id, ctx.driver!.id));
       if (driver.length === 0) return null;
 
-      const earnings = await db.select().from(driverEarnings).where(eq(driverEarnings.driverId, input.id));
+      const earnings = await db
+        .select()
+        .from(driverEarnings)
+        .where(eq(driverEarnings.driverId, ctx.driver!.id));
       const totalEarnings = earnings.reduce((acc, e) => acc + parseFloat(String(e.amount)), 0);
 
       const { passwordHash: _, fcmToken: __, ...safeDriver } = driver[0];
@@ -161,8 +171,8 @@ export const driverRouter = createRouter({
     }),
 
   getOrderHistory: driverQuery
-    .input(z.object({ id: z.number() }))
-    .query(async ({ input, ctx }) => {
+    .input(z.object({ id: z.number().int().positive().optional() }))
+    .query(async ({ ctx }) => {
       const db = getDb();
       return db
         .select({
@@ -178,7 +188,7 @@ export const driverRouter = createRouter({
         .from(orders)
         .where(
           and(
-            eq(orders.driverId, input.id),
+            eq(orders.driverId, ctx.driver!.id),
             inArray(orders.status, ["delivered", "cancelled"])
           )
         )
@@ -207,9 +217,10 @@ export const driverRouter = createRouter({
   }),
 
   acceptOrder: driverQuery
-    .input(z.object({ driverId: z.number(), orderId: z.number() }))
+    .input(z.object({ orderId: z.number().int().positive(), driverId: z.number().int().positive().optional() }))
     .mutation(async ({ input, ctx }) => {
       const db = getDb();
+      const driverId = ctx.driver!.id;
 
       const result = await db.transaction(async (tx) => {
         const orderResult = await tx
@@ -230,7 +241,7 @@ export const driverRouter = createRouter({
           .from(orders)
           .where(
             and(
-              eq(orders.driverId, input.driverId),
+              eq(orders.driverId, driverId),
               ne(orders.status, "delivered"),
               ne(orders.status, "cancelled"),
             )
@@ -243,7 +254,7 @@ export const driverRouter = createRouter({
         await tx
           .update(orders)
           .set({
-            driverId: input.driverId,
+            driverId,
             status: "ready_for_pickup",
             updatedAt: new Date()
           })
@@ -255,13 +266,13 @@ export const driverRouter = createRouter({
           notes: "Repartidor asignado",
         });
 
-        await tx.update(drivers).set({ status: "busy" }).where(eq(drivers.id, input.driverId));
+        await tx.update(drivers).set({ status: "busy" }).where(eq(drivers.id, driverId));
 
         const updated = await tx.select().from(orders).where(eq(orders.id, input.orderId));
 
         // Emit SSE events to notify about order assignment
-        emit(`order:${input.orderId}`, { type: "status_update", status: "ready_for_pickup", driverId: input.driverId });
-        emit(`driver:${input.driverId}`, { type: "order_assigned", orderId: input.orderId });
+        emit(`order:${input.orderId}`, { type: "status_update", status: "ready_for_pickup", driverId });
+        emit(`driver:${driverId}`, { type: "order_assigned", orderId: input.orderId });
         emit("admin:dashboard", { type: "dashboard_update" });
 
         return updated[0];
@@ -271,9 +282,10 @@ export const driverRouter = createRouter({
     }),
 
   markCommercePickup: driverQuery
-    .input(z.object({ driverId: z.number(), orderId: z.number(), commerceId: z.number() }))
+    .input(z.object({ orderId: z.number().int().positive(), commerceId: z.number().int().positive(), driverId: z.number().int().positive().optional() }))
     .mutation(async ({ input, ctx }) => {
       const db = getDb();
+      const driverId = ctx.driver!.id;
 
       const result = await db.transaction(async (tx) => {
         const orderResult = await tx
@@ -283,7 +295,7 @@ export const driverRouter = createRouter({
           .for("update");
         const order = orderResult[0];
         if (!order) throw new Error("Pedido no encontrado");
-        if (order.driverId !== input.driverId) throw new Error("No tienes este pedido asignado");
+        if (order.driverId !== driverId) throw new Error("No tienes este pedido asignado");
 
         // Check commerce status - must be ready_for_pickup
         const commerceStatus = await tx
@@ -338,7 +350,7 @@ export const driverRouter = createRouter({
         } else {
           emit(`order:${input.orderId}`, { type: "commerce_pickup", commerceId: input.commerceId, pickedUpCommerceIds: newPicked });
         }
-        emit(`driver:${input.driverId}`, { type: "commerce_pickup", orderId: input.orderId, commerceId: input.commerceId, pickedUpCommerceIds: newPicked });
+        emit(`driver:${driverId}`, { type: "commerce_pickup", orderId: input.orderId, commerceId: input.commerceId, pickedUpCommerceIds: newPicked });
         emit("admin:dashboard", { type: "dashboard_update" });
 
         const updated = await tx.select().from(orders).where(eq(orders.id, input.orderId));

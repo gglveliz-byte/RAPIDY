@@ -22,12 +22,31 @@ import "leaflet/dist/leaflet.css";
 import { Navigation, Clock, Crosshair } from "lucide-react";
 import { safeImage } from "@/lib/imageUtils";
 
-// Inyección de animaciones CSS para los pines
-if (typeof document !== "undefined") {
+function escapeHtml(value: unknown): string {
+  return String(value ?? "").replace(/[&<>"']/g, (char) => {
+    switch (char) {
+      case "&": return "&amp;";
+      case "<": return "&lt;";
+      case ">": return "&gt;";
+      case '"': return "&quot;";
+      case "'": return "&#39;";
+      default: return char;
+    }
+  });
+}
+
+const MAP_STYLE_ID = "rapidy-map-styles";
+
+function ensureMapStyles() {
+  if (typeof document === "undefined" || document.getElementById(MAP_STYLE_ID)) return;
   const style = document.createElement("style");
+  style.id = MAP_STYLE_ID;
   style.textContent = `
     @keyframes rapDriverPulse { 0% { box-shadow: 0 0 0 0 rgba(255,106,0,0.6); } 70% { box-shadow: 0 0 0 14px rgba(255,106,0,0); } 100% { box-shadow: 0 0 0 0 rgba(255,106,0,0); } }
     @keyframes rapMarkerBounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+    @media (prefers-reduced-motion: reduce) {
+      .leaflet-marker-icon * { animation: none !important; }
+    }
   `;
   document.head.appendChild(style);
 }
@@ -49,13 +68,15 @@ const driverIcon = L.divIcon({
 
 // Ícono del Comercio con Logo
 function commerceLogoIcon(logoUrl: string, name: string): L.DivIcon {
+  const safeLogo = escapeHtml(safeImage(logoUrl, "cover"));
+  const safeName = escapeHtml(name);
   return L.divIcon({
     className: "",
     html: `<div style="display:flex;flex-direction:column;align-items:center;animation:rapMarkerBounce 2.5s ease-in-out infinite;">
       <div style="width:44px;height:44px;border-radius:14px;border:3px solid white;overflow:hidden;box-shadow:0 4px 14px rgba(0,0,0,0.2);background:white;">
-        <img src="${safeImage(logoUrl, 'cover')}" alt="${name}" style="width:100%;height:100%;object-fit:cover;" loading="lazy"/>
+        <img src="${safeLogo}" alt="${safeName}" style="width:100%;height:100%;object-fit:cover;" loading="lazy"/>
       </div>
-      <div style="margin-top:-3px;background:#0E0E12;color:white;font-size:8px;font-weight:900;padding:2px 7px;border-radius:0 0 8px 8px;border:1.5px solid white;white-space:nowrap;max-width:85px;overflow:hidden;text-overflow:ellipsis;">${name}</div>
+      <div style="margin-top:-3px;background:#0E0E12;color:white;font-size:8px;font-weight:900;padding:2px 7px;border-radius:0 0 8px 8px;border:1.5px solid white;white-space:nowrap;max-width:85px;overflow:hidden;text-overflow:ellipsis;">${safeName}</div>
     </div>`,
     iconSize: [44, 60],
     iconAnchor: [22, 44],
@@ -102,25 +123,42 @@ export function OrderTrackingMap({
   const driverMarkerRef = useRef<L.Marker | null>(null);
   const deliveryMarkerRef = useRef<L.Marker | null>(null);
   const polylineRef = useRef<L.Polyline | null>(null);
+  const commerceMarkersRef = useRef<Map<number, L.Marker>>(new Map());
   const prevDriverPosRef = useRef<{ lat: number; lng: number } | null>(null);
   const animFrameRef = useRef<number | null>(null);
+  const hasFittedRef = useRef(false);
+
+  useEffect(() => {
+    ensureMapStyles();
+    return () => {
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+    };
+  }, []);
 
   const mapContainerRef = useCallback((element: HTMLDivElement | null) => {
     if (element && !mapRef.current) {
       const map = L.map(element, {
         zoomControl: false,
-        attributionControl: false,
+        attributionControl: true,
       }).setView([-0.1807, -78.4678], 13);
 
       L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
         maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
       }).addTo(map);
 
       mapRef.current = map;
     }
     if (!element && mapRef.current) {
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
       mapRef.current.remove();
       mapRef.current = null;
+      driverMarkerRef.current = null;
+      deliveryMarkerRef.current = null;
+      polylineRef.current = null;
+      commerceMarkersRef.current.clear();
+      prevDriverPosRef.current = null;
+      hasFittedRef.current = false;
     }
   }, []);
 
@@ -166,76 +204,94 @@ export function OrderTrackingMap({
     const map = mapRef.current;
     if (!map || !order) return;
 
-    map.eachLayer((layer) => {
-      if (layer instanceof L.Marker && layer !== driverMarkerRef.current && layer !== deliveryMarkerRef.current) {
-        map.removeLayer(layer);
-      }
-      if (layer instanceof L.Polyline && layer !== polylineRef.current) {
-        map.removeLayer(layer);
-      }
-    });
-
     const bounds = L.latLngBounds([]);
 
-    // Marcadores de comercio
-    if (order.commerces) {
-      for (const c of order.commerces) {
-        if (c.lat && c.lng) {
-          const lat = parseFloat(c.lat);
-          const lng = parseFloat(c.lng);
-          L.marker([lat, lng], { icon: commerceLogoIcon(c.logo || "", c.name) }).addTo(map);
-          bounds.extend([lat, lng]);
-        }
+    // Marcadores de comercio: diff por ID para no recrear pines en cada update.
+    const seenCommerceIds = new Set<number>();
+    for (const c of order.commerces || []) {
+      if (!c.lat || !c.lng) continue;
+      const lat = Number(c.lat);
+      const lng = Number(c.lng);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+      seenCommerceIds.add(c.id);
+      const existing = commerceMarkersRef.current.get(c.id);
+      if (existing) {
+        existing.setLatLng([lat, lng]);
+      } else {
+        const marker = L.marker([lat, lng], { icon: commerceLogoIcon(c.logo || "", c.name) })
+          .addTo(map)
+          .bindPopup(`<b>${escapeHtml(c.name)}</b>`);
+        commerceMarkersRef.current.set(c.id, marker);
+      }
+      bounds.extend([lat, lng]);
+    }
+    for (const [id, marker] of commerceMarkersRef.current) {
+      if (!seenCommerceIds.has(id)) {
+        map.removeLayer(marker);
+        commerceMarkersRef.current.delete(id);
       }
     }
 
     // Marcador de destino
     if (deliveryCoords) {
+      const popup = `<b>Destino</b><br/>${escapeHtml(order.deliveryAddress)}`;
       if (deliveryMarkerRef.current) {
         deliveryMarkerRef.current.setLatLng([deliveryCoords.lat, deliveryCoords.lng]);
+        deliveryMarkerRef.current.setPopupContent(popup);
       } else {
         deliveryMarkerRef.current = L.marker([deliveryCoords.lat, deliveryCoords.lng], { icon: destinationIcon })
           .addTo(map)
-          .bindPopup(`<b>Destino</b><br/>${order.deliveryAddress}`);
+          .bindPopup(popup);
       }
       bounds.extend([deliveryCoords.lat, deliveryCoords.lng]);
     }
 
     // Marcador de repartidor
-    const dlat = driverPos?.lat ?? (order.driver?.currentLat ? parseFloat(order.driver.currentLat) : null);
-    const dlng = driverPos?.lng ?? (order.driver?.currentLng ? parseFloat(order.driver.currentLng) : null);
+    const rawLat = driverPos?.lat ?? (order.driver?.currentLat ? parseFloat(order.driver.currentLat) : null);
+    const rawLng = driverPos?.lng ?? (order.driver?.currentLng ? parseFloat(order.driver.currentLng) : null);
+    const dlat = typeof rawLat === "number" && Number.isFinite(rawLat) ? rawLat : null;
+    const dlng = typeof rawLng === "number" && Number.isFinite(rawLng) ? rawLng : null;
 
-    if (dlat && dlng) {
+    if (dlat !== null && dlng !== null) {
       if (driverMarkerRef.current) {
         animateDriverMarker(dlat, dlng);
       } else {
         driverMarkerRef.current = L.marker([dlat, dlng], { icon: driverIcon })
           .addTo(map)
-          .bindPopup(`<b>${order.driver?.name || "Repartidor Rapidy"}</b>`);
+          .bindPopup(`<b>${escapeHtml(order.driver?.name || "Repartidor Rapidy")}</b>`);
         prevDriverPosRef.current = { lat: dlat, lng: dlng };
       }
       bounds.extend([dlat, dlng]);
 
-      // Línea de ruta discontinua en Flame Orange Rapidy
       let targetLat = deliveryCoords?.lat ?? null;
       let targetLng = deliveryCoords?.lng ?? null;
-      if (!targetLat && order.commerces?.length > 0) {
+      if (targetLat === null && order.commerces?.length > 0) {
         const first = order.commerces.find((c: any) => c.lat && c.lng);
-        if (first) { targetLat = parseFloat(first.lat); targetLng = parseFloat(first.lng); }
+        if (first) {
+          targetLat = parseFloat(first.lat);
+          targetLng = parseFloat(first.lng);
+        }
       }
 
       if (polylineRef.current) {
-        polylineRef.current.setLatLngs([[dlat, dlng], [targetLat || dlat, targetLng || dlng]]);
-      } else if (targetLat && targetLng) {
+        polylineRef.current.setLatLngs([[dlat, dlng], [targetLat ?? dlat, targetLng ?? dlng]]);
+      } else if (targetLat !== null && targetLng !== null) {
         polylineRef.current = L.polyline(
           [[dlat, dlng], [targetLat, targetLng]],
           { color: "#FF6A00", weight: 3.5, opacity: 0.85, dashArray: "8,8" }
         ).addTo(map);
       }
+    } else if (driverMarkerRef.current) {
+      map.removeLayer(driverMarkerRef.current);
+      driverMarkerRef.current = null;
+      prevDriverPosRef.current = null;
     }
 
-    if (bounds.isValid()) {
+    // Solo ajustar el encuadre la primera vez (o si el usuario pulsa centrar),
+    // para no resetear el zoom/pan en cada actualización del repartidor.
+    if (!hasFittedRef.current && bounds.isValid()) {
       map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+      hasFittedRef.current = true;
     }
   }, [order, driverPos, deliveryCoords, animateDriverMarker]);
 
@@ -261,10 +317,11 @@ export function OrderTrackingMap({
         {driverPos && !isDelivered && !isCancelled && (
           <button
             onClick={onToggleFollowDriver}
-            className={`absolute bottom-3 right-3 z-10 w-10 h-10 rounded-2xl flex items-center justify-center shadow-lg transition-all active:scale-90 cursor-pointer ${
-              followDriver ? "bg-[#FF6A00] text-white shadow-[#FF6A00]/40" : "bg-white text-zinc-700 hover:bg-zinc-50 border border-zinc-200"
+            className={`absolute bottom-3 right-3 z-10 w-11 h-11 rounded-2xl flex items-center justify-center shadow-lg transition-all active:scale-90 cursor-pointer ${
+              followDriver ? "bg-brand text-white shadow-brand/40" : "bg-white text-zinc-700 hover:bg-zinc-50 border border-zinc-200"
             }`}
-            aria-label="Centrar en repartidor"
+            aria-label={followDriver ? "Dejar de seguir al repartidor" : "Centrar en el repartidor"}
+            aria-pressed={followDriver}
           >
             <Crosshair className="w-4 h-4" />
           </button>
@@ -273,19 +330,20 @@ export function OrderTrackingMap({
 
       {/* Franja de Información del Repartidor */}
       {order.driver && !isCancelled && (
-        <div className="bg-[#0E0E12] text-white px-4 py-2.5 flex items-center justify-between text-xs sm:text-sm border-t border-white/10 shadow-md">
+        <div className="bg-ink text-white px-4 py-2.5 flex items-center justify-between text-xs sm:text-sm border-t border-white/10 shadow-md">
           <div className="flex items-center gap-2 min-w-0">
-            <div className="w-7 h-7 rounded-xl bg-[#FF6A00]/20 flex items-center justify-center text-[#FF6A00] shrink-0">
+            <div className="w-7 h-7 rounded-xl bg-brand/20 flex items-center justify-center text-brand shrink-0">
               <Navigation className="w-3.5 h-3.5" />
             </div>
             <span className="truncate">
-              <strong className="text-white">{order.driver.name}</strong> • {order.driver.phone}
+              <strong className="text-white">{order.driver.name}</strong>
+              {order.driver.phone ? ` • ${order.driver.phone}` : ""}
             </span>
           </div>
           {estimatedMinutes && !isDelivered && (
-            <div className="flex items-center gap-1.5 text-[#FF6A00] font-black shrink-0 bg-white/5 px-2.5 py-1 rounded-lg border border-white/10">
+            <div className="flex items-center gap-1.5 text-brand font-black shrink-0 bg-white/5 px-2.5 py-1 rounded-lg border border-white/10">
               <Clock className="w-3.5 h-3.5" />
-              <span>~{estimatedMinutes} min</span>
+              <span>≈{estimatedMinutes} min</span>
             </div>
           )}
         </div>

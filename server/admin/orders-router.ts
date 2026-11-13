@@ -270,6 +270,7 @@ export const adminOrdersProcedures = {
               driverId: targetDriverId,
               orderId: input.id,
               amount: earnedAmount,
+              date: new Date().toISOString().split("T")[0],
             });
           }
         }

@@ -28,13 +28,16 @@ export default function ChatBubble({
   const path = role === "driver" ? `/driver/chat/${orderId}` : `/chat/${orderId}`;
 
   return (
-    <button
-      onClick={() => navigate(path)}
-      className="fixed bottom-6 right-4 w-14 h-14 bg-gradient-to-tr from-[#FF5E00] to-[#FF7700] hover:brightness-110 active:scale-90 text-white rounded-full flex items-center justify-center shadow-[0_8px_25px_rgba(255,106,0,0.45)] border-2 border-white/20 transition-all z-50 cursor-pointer group"
-      aria-label="Abrir chat del pedido"
-    >
-      <MessageCircle className="w-6 h-6 text-white stroke-[2.2] group-hover:scale-110 transition-transform" />
-      <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full animate-pulse" />
-    </button>
+    <div className="fixed inset-x-0 bottom-[calc(1.25rem+env(safe-area-inset-bottom,0px))] z-50 pointer-events-none">
+      <div className="mx-auto flex max-w-[480px] justify-end px-4">
+        <button
+          onClick={() => navigate(path)}
+          className="pointer-events-auto w-14 h-14 bg-gradient-to-tr from-[#FF5E00] to-[#FF7700] hover:brightness-110 active:scale-90 text-white rounded-full flex items-center justify-center shadow-[0_8px_25px_rgba(255,106,0,0.45)] border-2 border-white/20 transition-all cursor-pointer group"
+          aria-label="Abrir chat del pedido"
+        >
+          <MessageCircle className="w-6 h-6 text-white stroke-[2.2] group-hover:scale-110 transition-transform" />
+        </button>
+      </div>
+    </div>
   );
 }

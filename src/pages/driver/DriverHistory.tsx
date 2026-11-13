@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router";
+import type { ReactElement } from "react";
 import { ArrowLeft, Package, CheckCircle, XCircle, Clock, List, BarChart3, User } from "lucide-react";
 import { trpc } from "@/providers/trpc";
 import { useDriverSession } from "@/hooks/useDeliveryData";
@@ -18,7 +19,7 @@ export default function DriverHistory() {
     cancelled: "Cancelado",
   };
 
-  const statusIcon: Record<string, JSX.Element> = {
+  const statusIcon: Record<string, ReactElement> = {
     delivered: <CheckCircle className="w-4 h-4 text-green-600" />,
     cancelled: <XCircle className="w-4 h-4 text-red-500" />,
   };
