@@ -3,24 +3,25 @@
  * @modulo 02-customer-profile (Perfil, Domicilio e Historial de Clientes)
  * @proposito
  *   Pantalla de perfil de cliente para Rapidy.
- *   Diseñada con la estética oficial: cabecera superior Dark Velvet con avatar resplandeciente,
- *   cuerpo de datos luminoso (#F7F7FA), tarjeta flotante de domicilio con geocodificación GPS en vivo,
- *   historial de pedidos interactivo en tarjetas blancas de alta gama, marco legal y barra inferior.
+ *   Diseñada con cabecera superior fixed Dark Velvet, botón de cierre de sesión integrado
+ *   en el encabezado, tarjeta de presentación del cliente, editor de domicilio con GPS Nominatim,
+ *   vista previa del historial de pedidos con modal completo deslizable y marco legal.
  *
  * @resumen_contenido
- *   - Componente `CustomerProfile`: Muestra datos del cliente, editor de dirección con geolocalización,
- *     listado de órdenes con estados en tiempo real, accesos a políticas legales y cierre de sesión.
+ *   - Componente `CustomerProfile`: Datos del cliente, botón de logout en cabecera fixed,
+ *     editor de dirección, vista previa de última orden, modal de historial y enlaces legales.
  *
  * @dependencias_internas
  *   - `CustomerBottomNav` (@/components/CustomerBottomNav)
  *   - `useCustomerSession` (@/hooks/useCustomerSession)
  *   - `useCustomerOrders`, `useUpdateCustomerProfile` (@/hooks/useDeliveryData)
  *   - `getAddressFromCoords` (@/lib/locationUtils)
+ *   - `ProfileOrdersModal` (./components/ProfileOrdersModal)
  *
  * @dependencias_externas
  *   - `react` (`useState`)
  *   - `react-router` (`useNavigate`)
- *   - `lucide-react` (`User`, `Phone`, `MapPin`, `ShoppingBag`, `ChevronRight`, `LogOut`, `Navigation`, `Pencil`, `Check`, `X`, `Shield`, `Undo2`, `Trash2`)
+ *   - `lucide-react` (`User`, `Phone`, `MapPin`, `ShoppingBag`, `ChevronRight`, `LogOut`, `Navigation`, `Pencil`, `Check`, `X`, `Shield`, `Undo2`, `Trash2`, `Sparkles`, `Clock`)
  *
  * @tablas_bd_o_redis
  *   - PostgreSQL (Neon): `customers`, `orders`
@@ -42,11 +43,14 @@ import {
   Shield,
   Undo2,
   Trash2,
+  Sparkles,
+  Clock,
 } from "lucide-react";
 import { useCustomerSession } from "@/hooks/useCustomerSession";
 import { useCustomerOrders, useUpdateCustomerProfile } from "@/hooks/useDeliveryData";
 import { CustomerBottomNav } from "@/components/CustomerBottomNav";
 import { getAddressFromCoords } from "@/lib/locationUtils";
+import { ProfileOrdersModal } from "./components/ProfileOrdersModal";
 
 export default function CustomerProfile() {
   const navigate = useNavigate();
@@ -55,6 +59,7 @@ export default function CustomerProfile() {
   const [editAddress, setEditAddress] = useState("");
   const [geoLoading, setGeoLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showAllOrdersModal, setShowAllOrdersModal] = useState(false);
 
   const customerId = customer?.id ?? 0;
   const { data: orders, loading: ordersLoading } = useCustomerOrders(customerId);
@@ -118,64 +123,120 @@ export default function CustomerProfile() {
     }
   };
 
+  const handleLogout = () => {
+    logout();
+    navigate("/customer-login");
+  };
+
+  const ordersList = orders || [];
+  const previewOrders = ordersList.slice(0, 2);
+
   return (
     <div className="mobile-container bg-[#F7F7FA] min-h-screen text-zinc-900 pb-32 select-none">
-      {/* Cabecera Dark Velvet */}
-      <div className="bg-gradient-to-b from-[#0E0E12] via-[#141419] to-[#0E0E12] border-b border-white/10 px-4 pt-safe pb-8 relative overflow-hidden shadow-xl text-white">
-        <div className="absolute top-0 right-4 w-44 h-24 bg-[#FF6A00]/15 rounded-full blur-2xl pointer-events-none" />
-
-        <div className="relative z-10 flex items-center gap-3.5 pt-1">
-          <div className="w-14 h-14 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center text-[#FF6A00] ring-2 ring-[#FF6A00]/30 shadow-[0_0_18px_rgba(255,106,0,0.3)] shrink-0">
-            <User className="w-7 h-7 text-white stroke-[2.2]" />
+      {/* 1. Cabecera Fija Dark Velvet (Fixed Top Header) */}
+      <header className="fixed top-0 left-0 right-0 max-w-[480px] mx-auto z-40 bg-[#0E0E12]/95 backdrop-blur-2xl border-b border-white/10 shadow-xl px-4 pt-safe pb-2.5 transition-all flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center text-[#FF6A00] shadow-xs shrink-0">
+            <User className="w-4 h-4 text-[#FF6A00]" />
           </div>
-          <div className="min-w-0">
-            <h1 className="text-xl font-black text-white tracking-tight truncate">
+          <div>
+            <div className="flex items-center gap-1">
+              <span className="text-xs font-bold text-white tracking-tight">Mi Perfil</span>
+              <Sparkles className="w-3 h-3 text-[#FF6A00]" />
+            </div>
+            <p className="text-[10px] text-zinc-400 font-medium truncate max-w-[150px]">
               {customer.firstName} {customer.lastName}
-            </h1>
-            <div className="flex items-center gap-1.5 text-zinc-400 text-xs mt-1 font-medium">
-              <Phone className="w-3.5 h-3.5 text-[#FF6A00]" />
-              <span>{customer.phone}</span>
+            </p>
+          </div>
+        </div>
+
+        {/* Botón Cerrar Sesión reubicado en la cabecera fija */}
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-500/10 hover:bg-red-500/20 border border-red-500/25 text-red-400 hover:text-red-300 text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-xs"
+          aria-label="Cerrar sesión"
+        >
+          <LogOut className="w-3.5 h-3.5 stroke-[2.2]" />
+          <span>Salir</span>
+        </button>
+      </header>
+
+      {/* 2. Contenido desplazable por detrás de la cabecera fija */}
+      <div className="px-4 pt-[calc(env(safe-area-inset-top,0px)+68px)] space-y-4">
+        {/* Tarjeta de Presentación Premium del Cliente */}
+        <div className="relative bg-gradient-to-r from-[#0E0E12] via-[#16161D] to-[#0E0E12] border border-white/10 rounded-3xl p-4 text-white shadow-lg overflow-hidden">
+          <div className="absolute top-0 right-0 w-36 h-24 bg-[#FF6A00]/20 rounded-full blur-2xl pointer-events-none" />
+
+          <div className="relative z-10 flex items-center gap-3.5">
+            <div className="w-14 h-14 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center text-[#FF6A00] ring-2 ring-[#FF6A00]/40 shadow-[0_0_16px_rgba(255,106,0,0.3)] shrink-0">
+              <User className="w-7 h-7 text-white stroke-[2.2]" />
+            </div>
+            <div className="min-w-0">
+              <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#FF6A00]/20 border border-[#FF6A00]/30 text-[#FF6A00] text-[9.5px] font-black uppercase tracking-wider mb-1">
+                <Sparkles className="w-2.5 h-2.5" />
+                <span>Cliente Verificado</span>
+              </div>
+              <h2 className="text-base sm:text-lg font-black text-white tracking-tight truncate">
+                {customer.firstName} {customer.lastName}
+              </h2>
+              <div className="flex items-center gap-1.5 text-zinc-400 text-xs mt-0.5 font-medium">
+                <Phone className="w-3.5 h-3.5 text-[#FF6A00]" />
+                <span>{customer.phone}</span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Tarjeta Flotante de Dirección */}
-      <div className="px-4 -mt-4 relative z-20">
-        <div className="bg-white rounded-2xl border border-zinc-100 shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-4">
+        {/* Tarjeta de Dirección de Entrega con Edición / GPS */}
+        <div className="bg-white rounded-2xl border border-zinc-100 shadow-[0_4px_16px_rgba(0,0,0,0.05)] p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] font-black uppercase tracking-wider text-zinc-400">
+              Dirección de entrega
+            </span>
+            {!editingAddress && (
+              <button
+                onClick={startEditing}
+                className="w-7 h-7 rounded-lg bg-zinc-50 border border-zinc-100 flex items-center justify-center text-zinc-500 hover:text-zinc-900 transition-colors cursor-pointer"
+                aria-label="Editar dirección"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
           {editingAddress ? (
             <div>
-              <div className="flex items-start gap-2.5">
+              <div className="flex items-start gap-2">
                 <MapPin className="w-4 h-4 text-[#FF6A00] mt-1 shrink-0" />
                 <textarea
                   value={editAddress}
                   onChange={(e) => setEditAddress(e.target.value)}
                   rows={2}
                   className="flex-1 text-xs sm:text-sm bg-zinc-50 border border-zinc-200 rounded-xl p-2.5 focus:border-[#FF6A00] focus:ring-1 focus:ring-[#FF6A00] outline-none resize-none text-zinc-900"
-                  placeholder="Ingresa tu dirección exacta"
+                  placeholder="Ingresa tu dirección completa"
                 />
               </div>
               <button
                 type="button"
                 onClick={handleGetLocation}
                 disabled={geoLoading}
-                className="mt-2.5 w-full h-9 border border-zinc-200 bg-white rounded-xl text-xs text-zinc-700 font-semibold flex items-center justify-center gap-2 hover:bg-zinc-50 active:scale-[0.98] transition-all disabled:opacity-50 cursor-pointer shadow-xs"
+                className="mt-2 w-full h-8 border border-zinc-200 bg-white rounded-xl text-xs text-zinc-700 font-semibold flex items-center justify-center gap-2 hover:bg-zinc-50 active:scale-[0.98] transition-all disabled:opacity-50 cursor-pointer shadow-xs"
               >
                 <Navigation className="w-3.5 h-3.5 text-[#FF6A00]" />
-                {geoLoading ? "Obteniendo ubicación..." : "Usar mi ubicación actual"}
+                {geoLoading ? "Obteniendo ubicación..." : "Usar mi ubicación GPS actual"}
               </button>
-              <div className="flex gap-2 mt-2.5">
+              <div className="flex gap-2 mt-2">
                 <button
                   onClick={saveAddress}
                   disabled={saving}
-                  className="flex-1 h-9 bg-[#FF6A00] hover:bg-[#e65f00] text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1 shadow-sm shadow-[#FF6A00]/30 transition-all cursor-pointer disabled:opacity-50"
+                  className="flex-1 h-8 bg-[#FF6A00] hover:bg-[#e65f00] text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1 shadow-sm shadow-[#FF6A00]/30 transition-all cursor-pointer disabled:opacity-50"
                 >
                   <Check className="w-3.5 h-3.5" />
                   {saving ? "Guardando..." : "Guardar"}
                 </button>
                 <button
                   onClick={cancelEditing}
-                  className="h-9 px-4 border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50 text-xs font-semibold rounded-xl flex items-center justify-center gap-1 transition-all cursor-pointer"
+                  className="h-8 px-3 border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50 text-xs font-semibold rounded-xl flex items-center justify-center gap-1 transition-all cursor-pointer"
                 >
                   <X className="w-3.5 h-3.5" />
                   Cancelar
@@ -183,131 +244,144 @@ export default function CustomerProfile() {
               </div>
             </div>
           ) : (
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-start gap-2.5 text-xs sm:text-sm text-zinc-700 min-w-0">
-                <MapPin className="w-4 h-4 text-[#FF6A00] mt-0.5 shrink-0" />
-                <span className="font-medium truncate">{customer.address || "Sin dirección registrada"}</span>
-              </div>
-              <button
-                onClick={startEditing}
-                className="shrink-0 w-8 h-8 rounded-xl bg-zinc-50 border border-zinc-100 flex items-center justify-center text-zinc-400 hover:text-zinc-800 hover:bg-zinc-100 transition-all cursor-pointer"
-                aria-label="Editar dirección"
-              >
-                <Pencil className="w-3.5 h-3.5" />
-              </button>
+            <div className="flex items-start gap-2 text-xs sm:text-sm text-zinc-700">
+              <MapPin className="w-4 h-4 text-[#FF6A00] mt-0.5 shrink-0" />
+              <span className="font-semibold">{customer.address || "Sin dirección guardada"}</span>
             </div>
           )}
         </div>
-      </div>
 
-      {/* Historial de Pedidos */}
-      <div className="px-4 mt-6">
-        <h2 className="text-base sm:text-lg font-black text-zinc-900 tracking-tight mb-3">
-          Historial de pedidos
-        </h2>
-
-        {ordersLoading ? (
-          <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm p-6">
-            <div className="h-16 bg-zinc-100 rounded-xl animate-pulse" />
-          </div>
-        ) : (orders || []).length === 0 ? (
-          <div className="bg-white rounded-2xl border border-zinc-100 shadow-[0_2px_12px_rgba(0,0,0,0.04)] p-6 text-center">
-            <ShoppingBag className="w-10 h-10 text-zinc-300 mx-auto mb-2" />
-            <p className="text-sm font-medium text-zinc-500">No tienes pedidos aún</p>
-          </div>
-        ) : (
-          <div className="space-y-2.5">
-            {(orders || []).map((order: any) => (
+        {/* Sección de Historial de Pedidos (Preview + Botón de Modal) */}
+        <div>
+          <div className="flex items-center justify-between mb-2.5">
+            <h2 className="text-base font-black text-zinc-900 tracking-tight">
+              Historial de pedidos
+            </h2>
+            {ordersList.length > 0 && (
               <button
-                key={order.id}
-                onClick={() => navigate(`/order/${order.id}`)}
-                className="w-full bg-white rounded-2xl border border-zinc-100 shadow-[0_2px_12px_rgba(0,0,0,0.04)] p-4 flex items-center justify-between text-left hover:border-zinc-200 hover:shadow-md transition-all group cursor-pointer"
+                onClick={() => setShowAllOrdersModal(true)}
+                className="text-xs font-bold text-[#FF6A00] hover:underline flex items-center gap-0.5 cursor-pointer"
               >
-                <div>
-                  <p className="text-sm font-bold text-zinc-900 group-hover:text-[#FF6A00] transition-colors">
-                    Pedido #{order.id}
-                  </p>
-                  <p className="text-xs text-zinc-400 mt-0.5">
-                    {new Date(order.createdAt).toLocaleDateString("es-ES", {
-                      day: "numeric",
-                      month: "short",
-                    })}
-                    {" • "}
-                    <span className="capitalize font-medium text-zinc-600">
-                      {order.status === "pending_payment"
-                        ? "Revisando pago"
-                        : order.status.replace(/_/g, " ")}
-                    </span>
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm sm:text-base font-black text-[#FF6A00]">
-                    ${order.total}
-                  </span>
-                  <ChevronRight className="w-4 h-4 text-zinc-400 group-hover:text-zinc-700 transition-colors" />
-                </div>
+                <span>Ver todos ({ordersList.length})</span>
+                <ChevronRight className="w-3.5 h-3.5" />
               </button>
-            ))}
+            )}
           </div>
-        )}
-      </div>
 
-      {/* Información y Marco Legal */}
-      <div className="px-4 mt-6">
-        <h2 className="text-[11px] font-black uppercase tracking-wider text-zinc-400 mb-2">
-          Información y Marco Legal
-        </h2>
-        <div className="bg-white rounded-2xl border border-zinc-100 shadow-[0_2px_12px_rgba(0,0,0,0.04)] divide-y divide-zinc-100 overflow-hidden">
-          <button
-            onClick={() => navigate("/legal")}
-            className="w-full p-4 flex items-center justify-between text-left hover:bg-zinc-50 transition-colors cursor-pointer"
-          >
-            <div className="flex items-center gap-3">
-              <Shield className="w-4 h-4 text-[#FF6A00]" />
-              <span className="text-sm font-semibold text-zinc-800">Centro Legal y Privacidad</span>
+          {ordersLoading ? (
+            <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm p-5">
+              <div className="h-14 bg-zinc-100 rounded-xl animate-pulse" />
             </div>
-            <ChevronRight className="w-4 h-4 text-zinc-400" />
-          </button>
+          ) : ordersList.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-zinc-100 shadow-[0_2px_12px_rgba(0,0,0,0.04)] p-6 text-center">
+              <ShoppingBag className="w-10 h-10 text-zinc-300 mx-auto mb-2" />
+              <p className="text-sm font-medium text-zinc-500">No tienes pedidos aún</p>
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              {previewOrders.map((order: any) => (
+                <button
+                  key={order.id}
+                  onClick={() => navigate(`/order/${order.id}`)}
+                  className="w-full bg-white rounded-2xl border border-zinc-100 shadow-[0_2px_12px_rgba(0,0,0,0.04)] p-3.5 flex items-center justify-between text-left hover:border-[#FF6A00]/40 hover:shadow-md transition-all group cursor-pointer"
+                >
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-zinc-900 group-hover:text-[#FF6A00] transition-colors">
+                        Pedido #{order.id}
+                      </span>
+                      <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-orange-50 text-[#FF6A00] border border-orange-100">
+                        {order.status === "pending_payment"
+                          ? "Revisando pago"
+                          : order.status.replace(/_/g, " ")}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs text-zinc-400 mt-1">
+                      <Clock className="w-3.5 h-3.5 text-zinc-400" />
+                      <span>
+                        {new Date(order.createdAt).toLocaleDateString("es-ES", {
+                          day: "numeric",
+                          month: "short",
+                        })}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-black text-[#FF6A00]">${order.total}</span>
+                    <ChevronRight className="w-4 h-4 text-zinc-400 group-hover:text-[#FF6A00] transition-colors" />
+                  </div>
+                </button>
+              ))}
 
-          <button
-            onClick={() => navigate("/boton-de-arrepentimiento")}
-            className="w-full p-4 flex items-center justify-between text-left hover:bg-zinc-50 transition-colors cursor-pointer"
-          >
-            <div className="flex items-center gap-3">
-              <Undo2 className="w-4 h-4 text-amber-500" />
-              <span className="text-sm font-semibold text-zinc-800">Botón de Arrepentimiento (🇦🇷)</span>
+              {ordersList.length > 2 && (
+                <button
+                  onClick={() => setShowAllOrdersModal(true)}
+                  className="w-full py-2.5 px-4 bg-white border border-zinc-200/80 hover:bg-zinc-50 rounded-2xl text-xs font-bold text-zinc-700 flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer"
+                >
+                  <span>Ver los {ordersList.length} pedidos anteriores</span>
+                  <ChevronRight className="w-3.5 h-3.5 text-[#FF6A00]" />
+                </button>
+              )}
             </div>
-            <ChevronRight className="w-4 h-4 text-zinc-400" />
-          </button>
+          )}
+        </div>
 
-          <button
-            onClick={() => navigate("/eliminar-cuenta")}
-            className="w-full p-4 flex items-center justify-between text-left hover:bg-zinc-50 transition-colors cursor-pointer"
-          >
-            <div className="flex items-center gap-3">
-              <Trash2 className="w-4 h-4 text-zinc-400" />
-              <span className="text-sm font-semibold text-zinc-500">Eliminar cuenta y datos</span>
-            </div>
-            <ChevronRight className="w-4 h-4 text-zinc-400" />
-          </button>
+        {/* Información y Marco Legal */}
+        <div>
+          <h2 className="text-[11px] font-black uppercase tracking-wider text-zinc-400 mb-2">
+            Información y Marco Legal
+          </h2>
+          <div className="bg-white rounded-2xl border border-zinc-100 shadow-[0_2px_12px_rgba(0,0,0,0.04)] divide-y divide-zinc-100 overflow-hidden">
+            <button
+              onClick={() => navigate("/legal")}
+              className="w-full p-3.5 flex items-center justify-between text-left hover:bg-zinc-50 transition-colors cursor-pointer"
+            >
+              <div className="flex items-center gap-3">
+                <Shield className="w-4 h-4 text-[#FF6A00]" />
+                <span className="text-xs sm:text-sm font-semibold text-zinc-800">
+                  Centro Legal y Privacidad
+                </span>
+              </div>
+              <ChevronRight className="w-4 h-4 text-zinc-400" />
+            </button>
+
+            <button
+              onClick={() => navigate("/boton-de-arrepentimiento")}
+              className="w-full p-3.5 flex items-center justify-between text-left hover:bg-zinc-50 transition-colors cursor-pointer"
+            >
+              <div className="flex items-center gap-3">
+                <Undo2 className="w-4 h-4 text-amber-500" />
+                <span className="text-xs sm:text-sm font-semibold text-zinc-800">
+                  Botón de Arrepentimiento (🇦🇷)
+                </span>
+              </div>
+              <ChevronRight className="w-4 h-4 text-zinc-400" />
+            </button>
+
+            <button
+              onClick={() => navigate("/eliminar-cuenta")}
+              className="w-full p-3.5 flex items-center justify-between text-left hover:bg-zinc-50 transition-colors cursor-pointer"
+            >
+              <div className="flex items-center gap-3">
+                <Trash2 className="w-4 h-4 text-zinc-400" />
+                <span className="text-xs sm:text-sm font-semibold text-zinc-500">
+                  Eliminar cuenta y datos
+                </span>
+              </div>
+              <ChevronRight className="w-4 h-4 text-zinc-400" />
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Cerrar Sesión */}
-      <div className="px-4 mt-6 mb-6">
-        <button
-          onClick={() => {
-            logout();
-            navigate("/customer-login");
-          }}
-          className="w-full bg-white hover:bg-red-50 text-red-600 border border-red-100 rounded-2xl p-4 flex items-center justify-center gap-2 font-bold text-sm shadow-[0_2px_12px_rgba(0,0,0,0.04)] active:scale-[0.98] transition-all cursor-pointer"
-        >
-          <LogOut className="w-4 h-4 stroke-[2.2]" />
-          <span>Cerrar sesión</span>
-        </button>
-      </div>
+      {/* Modal Deslizable con Todos los Pedidos */}
+      <ProfileOrdersModal
+        isOpen={showAllOrdersModal}
+        onClose={() => setShowAllOrdersModal(false)}
+        orders={ordersList}
+      />
 
-      {/* Navegación Inferior Flotante */}
+      {/* Navegación Inferior Flotante en Tema Oscuro */}
       <CustomerBottomNav active="profile" />
     </div>
   );

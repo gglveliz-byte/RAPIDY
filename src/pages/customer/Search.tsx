@@ -77,8 +77,8 @@ export default function CustomerSearch() {
 
   return (
     <div className="mobile-container bg-[#F7F7FA] min-h-screen text-zinc-900 pb-32 select-none">
-      {/* Cabecera Dark Velvet Sticky */}
-      <div className="bg-gradient-to-b from-[#0E0E12] via-[#141419] to-[#0E0E12] border-b border-white/10 shadow-xl px-4 pt-safe pb-3 sticky top-0 z-30">
+      {/* Cabecera Dark Velvet Fixed */}
+      <header className="fixed top-0 left-0 right-0 max-w-[480px] mx-auto z-40 bg-[#0E0E12]/95 backdrop-blur-2xl border-b border-white/10 shadow-xl px-4 pt-safe pb-3 transition-all duration-300">
         {/* Fila del Buscador */}
         <div className="flex items-center gap-2.5 pt-1">
           <button
@@ -141,10 +141,10 @@ export default function CustomerSearch() {
             </button>
           ))}
         </div>
-      </div>
+      </header>
 
-      {/* Resultados de búsqueda */}
-      <div className="px-4 mt-5">
+      {/* Resultados de búsqueda (se desplazan por detrás de la cabecera fija) */}
+      <div className="px-4 pt-[calc(env(safe-area-inset-top,0px)+118px)]">
         {isLoading ? (
           <div className="flex justify-center items-center py-20">
             <Loader2 className="w-8 h-8 text-[#FF6A00] animate-spin" />

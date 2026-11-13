@@ -61,10 +61,12 @@
 
 | Ruta del Archivo | Módulo | Líneas Actuales (`/ 500 máx`) | Resumen de Responsabilidad y Exportaciones | Dependencias que Consume |
 | :--- | :--- | :---: | :--- | :--- |
-| `src/pages/customer/Search.tsx` | Cliente | `300 / 500` | Búsqueda reactiva por texto y categorías, estética oficial Rapidy (cabecera Dark Velvet + cuerpo luminoso con tarjetas blancas) | `useCategories`, `useCommerces`, `useFeaturedProducts`, `useCart`, `CustomerBottomNav`, `safeImage` |
-| `src/pages/customer/Cart.tsx` | Cliente | `390 / 500` | Carrito multi-comercio, selector de pago Efectivo/Transferencia, totales y confirmación | `useCart`, `useCustomerSession`, `useCreateOrder`, `usePublicSettings`, `useCommerces`, `CartAddressModal`, `locationUtils` |
+| `src/pages/customer/Search.tsx` | Cliente | `300 / 500` | Búsqueda reactiva, cabecera fixed con píldoras y scroll del catálogo por detrás | `useCategories`, `useCommerces`, `useFeaturedProducts`, `useCart`, `CustomerBottomNav`, `safeImage` |
+| `src/pages/customer/Cart.tsx` | Cliente | `416 / 500` | Carrito con cabecera fixed, botón flotante de confirmación, modal de checkout y barra inferior en tema oscuro | `useCart`, `useCustomerSession`, `useCreateOrder`, `usePublicSettings`, `useCommerces`, `CartAddressModal`, `CustomerBottomNav` |
 | `src/pages/customer/components/CartAddressModal.tsx` | Cliente | `198 / 500` | Modal modular de selección de domicilio (Perfil/Manual/GPS) y comprobante de transferencia bancaria | `lucide-react` |
-| `src/pages/customer/Profile.tsx` | Cliente | `314 / 500` | Perfil de usuario, cabecera Dark Velvet, editor GPS de dirección, historial de pedidos en tarjetas blancas y marco legal | `useCustomerSession`, `useCustomerOrders`, `useUpdateCustomerProfile`, `CustomerBottomNav`, `locationUtils` |
+| `src/pages/customer/Profile.tsx` | Cliente | `388 / 500` | Perfil de usuario con cabecera fixed, botón de salir integrado, preview de pedidos y barra inferior en tema oscuro | `useCustomerSession`, `useCustomerOrders`, `useUpdateCustomerProfile`, `CustomerBottomNav`, `ProfileOrdersModal`, `locationUtils` |
+| `src/pages/customer/components/ProfileOrdersModal.tsx` | Cliente | `140 / 500` | Modal deslizable con listado histórico completo de todas las órdenes del cliente | `lucide-react`, `react-router` |
+| `src/components/CustomerBottomNav.tsx` | UI Kernel | `108 / 500` | Navegación inferior flotante fija en Tema Oscuro (Dark Velvet) con indicador Flame Orange activa | `framer-motion`, `lucide-react`, `react-router` |
 | `src/pages/customer/Home.tsx` | Cliente | `346 / 500` | Orquesta catálogo con cabecera compacta 50/50, padding-top optimizado y scroll fluido | `HomeHeader`, `HomePromoBanner`, `HomeCategories`, `HomeFeaturedCommerces`, `CustomerBottomNav` |
 | `src/pages/customer/components/HomeHeader.tsx` | Cliente | `146 / 500` | Cabecera fija split (50% cliente izq / 50% Rapidy der) con buscador inferior de ancho completo | `lucide-react`, `react-router`, `react` |
 | `src/pages/customer/components/HomePromoBanner.tsx` | Cliente | `82 / 500` | Banner "¡Pedidos más rápidos!" con platillos flotantes en 3D | `lucide-react`, `react-router` |
@@ -82,6 +84,23 @@
 ---
 
 ## 5. Bitácora Cronológica de Integraciones (Changelog Técnico Live)
+
+### [2026-11-13 18:10 UTC] - Navegación Dark Velvet Unificada, Cabeceras Fixed y Modal de Historial en Perfil
+- **Resumen Técnico:**
+  1. **`CustomerBottomNav.tsx` en Tema Oscuro:** Se transformó la barra de navegación flotante a la estética Dark Velvet (`bg-[#0E0E12]/95 border-white/10`) con indicador de pestaña activa en Flame Orange `#FF6A00` y badge reactivo de carrito. Queda fijada en **todas** las rutas del cliente (`/home`, `/search`, `/cart`, `/profile`).
+  2. **`Search.tsx` con Cabecera Fixed:** Se convirtió la cabecera en `fixed` con efecto frosted glass para que los productos y comercios se desplacen fluidamente por detrás.
+  3. **`Cart.tsx` con Checkout Flotante:** Se integró la navegación inferior fija en el carrito y se desacopló el botón de confirmación en una barra flotante docked inmediatamente encima de la barra de navegación.
+  4. **`Profile.tsx` Rediseñado:**
+     - Cabecera fija con datos del usuario y botón de "Salir" (cierre de sesión) reubicado de forma elegante en la esquina superior derecha.
+     - Tarjeta de presentación hero del cliente ("Cliente Verificado").
+     - Historial de pedidos con vista previa de órdenes recientes y modal deslizable `ProfileOrdersModal.tsx` (140 líneas) para explorar la totalidad de pedidos.
+- **Archivos Modificados / Creados:**
+  - `src/components/CustomerBottomNav.tsx` (108 líneas).
+  - `src/pages/customer/Search.tsx` (300 líneas).
+  - `src/pages/customer/Cart.tsx` (416 líneas).
+  - `src/pages/customer/Profile.tsx` (388 líneas).
+  - `src/pages/customer/components/ProfileOrdersModal.tsx` (140 líneas - Creado).
+  - `docs/LIVE_ARCHITECTURE_LEDGER.md` (Actualizado).
 
 ### [2026-11-13 17:58 UTC] - Armonización Visual Luminosa de Search, Cart y Profile según Estética Home
 - **Resumen Técnico:**
