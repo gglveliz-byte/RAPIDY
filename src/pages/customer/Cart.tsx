@@ -397,6 +397,10 @@ export default function Cart() {
         geoLoading={geoLoading}
         onGetLocation={handleGetLocation}
         paymentMethod={paymentMethod}
+        onSelectPaymentMethod={setPaymentMethod}
+        total={total}
+        subtotal={subtotal}
+        deliveryFee={deliveryFee}
         bankTransferInfo={settings.bank_transfer_info}
         paymentReceipt={paymentReceipt}
         onFileChange={handleFileChange}

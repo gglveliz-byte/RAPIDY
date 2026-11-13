@@ -87,6 +87,29 @@
 
 ## 5. Bitácora Cronológica de Integraciones (Changelog Técnico Live)
 
+### [2026-11-13 19:10 UTC] - Rediseño Total de Comercio (CommerceDetail & CommerceCartBar) y Flujo de Checkout Impecable
+- **Resumen Técnico:**
+  1. **Erradicación Total del Verde Ya Llega en Detalle de Comercio (`CommerceDetail.tsx`):**
+     - Se reemplazaron todos los elementos verdes residuales (`#2E7D32`) por la estética oficial Rapidy (Flame Orange `#FF6A00` y Dark Velvet `#0E0E12`).
+     - Botón de volver con cristal frosted oscuro, portada con degradado Rapidy, pines y teléfonos en `#FF6A00`, insignias semánticas de estado y precios en negrita naranja.
+     - Stepper reactivo de cantidad en la propia tarjeta del producto (`-`, `cantidad`, `+`) para una experiencia de compra fluida.
+     - Presets del modal por kilo/importe actualizados a valores realistas en USD ($2, $5, $10, $15 USD).
+  2. **Barra Flotante de Carrito Oficial Rapidy (`CommerceCartBar.tsx`):**
+     - Rediseñada de la vieja barra verde a una isla flotante Dark Velvet (`bg-[#0E0E12]/95 border-white/15`) con contador en badge Flame Orange, texto en blanco nítido y botón "Ir a pagar" en píldora naranja.
+  3. **Flujo de Pago y Checkout 100% Accesible (`CartAddressModal.tsx` & `Cart.tsx`):**
+     - Elevación a `z-[120]` con fondo oscuro que cubre de forma impecable cualquier barra inferior flotante.
+     - **Botón Sticky Siempre Visible:** Pie de modal fijado (`sticky bottom-0`) con botón de confirmación de ancho completo `"Confirmar y pedir ahora ($XX.XX USD)"` que nunca se corta ni se oculta detrás de la navegación.
+     - **Selector de Pago Integrado:** Alternador claro entre *Efectivo al recibir* y *Transferencia bancaria* dentro del propio modal.
+     - **Transferencias de Alta Calidad:** Ficha de datos bancarios con botón de "Copiar datos" y previsualización real en miniatura de la foto del comprobante adjunto con opción de cambio inmediato.
+     - Alertas claras de validación que guían al usuario si falta la dirección o el comprobante.
+  4. **Verificación:** `npm run build` con código 0 y flujo completo de compra verificado exitosamente de punta a punta con Playwright.
+- **Archivos Modificados:**
+  - `src/components/CommerceCartBar.tsx` (85 líneas).
+  - `src/pages/customer/CommerceDetail.tsx` (447 líneas).
+  - `src/pages/customer/components/CartAddressModal.tsx` (416 líneas).
+  - `src/pages/customer/Cart.tsx` (420 líneas).
+  - `docs/LIVE_ARCHITECTURE_LEDGER.md` (Actualizado).
+
 ### [2026-11-13 18:58 UTC] - Optimización de Rendimiento 0ms y Rediseño Integral de Modal de Historial de Pedidos
 - **Resumen Técnico:**
   1. **Erradicación de Cargas Continuas y Parpadeos (Rendimiento 0ms):**
