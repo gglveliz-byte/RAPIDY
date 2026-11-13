@@ -151,6 +151,17 @@ async function main() {
       record(`Ruta ${route}`, ok, page.url());
     }
 
+    await page.goto(`${BASE_URL}/commerce/foo`, { waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(800);
+    record(
+      "Ruta inválida no expulsa al merchant",
+      !page.url().includes("/login") && !page.url().includes("/customer-login"),
+      page.url(),
+    );
+    await page.goto(`${BASE_URL}/commerce`, { waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(1500);
+    record("Sesión sigue viva tras ruta inválida", page.url().endsWith("/commerce"));
+
     // ── 2. APIs críticas del negocio ───────────────────────────────────────
     const jar = new Map();
     const login = await apiPost(
