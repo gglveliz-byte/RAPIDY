@@ -65,12 +65,23 @@ export default function Cart() {
   const settings = usePublicSettings();
   const { data: commerces, loading: loadingCommerces } = useCommerces();
   const quote = useOrderQuote(items.map((item) => ({ productId: item.productId, quantity: item.quantity })));
+  const quoteLineMap = new Map(
+    (quote.data?.lines ?? []).map((line: any) => [line.productId, line]),
+  );
 
   const deliveryFee = quote.data?.deliveryFee ?? parseFloat(settings.delivery_fee || "2.50");
   const displaySubtotal = quote.data?.subtotal ?? subtotal;
   const total = quote.data?.total ?? subtotal + deliveryFee;
   const quoteIssues: string[] = quote.data?.issues ?? [];
   const quoteError = quote.error?.message ?? "";
+  const quoteChanged = items.some((item) => {
+    const line: any = quoteLineMap.get(item.productId);
+    if (!line) return false;
+    return (
+      line.unitType !== item.unitType ||
+      Number(line.unitPrice) !== Number(item.price)
+    );
+  });
   const itemSignature = items.map((item) => `${item.productId}:${item.quantity}`).join("|");
   const lastSignatureRef = useRef(itemSignature);
 
@@ -284,6 +295,12 @@ export default function Cart() {
           </div>
         )}
 
+        {quoteChanged && (
+          <div role="alert" className="p-3 bg-sky-50 dark:bg-sky-950/40 rounded-2xl border border-sky-200 dark:border-sky-900/50 text-xs text-sky-800 dark:text-sky-300">
+            El precio o la unidad de un producto cambiaron. Revisa el total actualizado antes de pagar.
+          </div>
+        )}
+
         {quoteError && (
           <div role="alert" className="p-3 bg-rose-50 dark:bg-rose-950/40 rounded-2xl border border-rose-200 dark:border-rose-900/50 text-xs text-rose-700 dark:text-rose-300">
             No pudimos validar el precio final: {quoteError}. Revisa tu conexión antes de ordenar.
@@ -302,57 +319,64 @@ export default function Cart() {
               </h3>
             </div>
             <div className="divide-y divide-zinc-50 dark:divide-white/5">
-              {group.items.map((item) => (
-                <div key={item.productId} className="p-3.5 flex gap-3">
-                  <div
-                    className="w-16 h-16 rounded-xl bg-zinc-100 dark:bg-zinc-800 bg-cover bg-center shrink-0 border border-zinc-100 dark:border-white/10 shadow-xs"
-                    style={{ backgroundImage: `url(${item.image})` }}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between">
-                      <h4 className="text-sm font-bold text-zinc-900 dark:text-white truncate pr-2">
-                        {item.name}{" "}
-                        {item.unitType === "kg" && (
-                          <span className="text-xs text-zinc-400 dark:text-zinc-500 font-normal ml-1">
-                            ({item.quantity} kg)
-                          </span>
-                        )}
-                      </h4>
-                      <button
-                        onClick={() => removeItem(item.productId)}
-                        className="text-zinc-400 hover:text-red-500 active:scale-90 transition-all p-1 -mr-1 cursor-pointer"
-                        aria-label="Eliminar producto"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                    <div className="flex items-center justify-between mt-2.5">
-                      <span className="text-sm font-black text-brand">
-                        ${(parseFloat(item.price) * item.quantity).toFixed(2)}
-                      </span>
-                      <div className="flex items-center gap-2">
+              {group.items.map((item) => {
+                const line: any = quoteLineMap.get(item.productId);
+                const displayUnitType = line?.unitType ?? item.unitType;
+                const displayPrice = line ? Number(line.unitPrice) : Number(item.price);
+                const lineTotal = line ? Number(line.total) : displayPrice * item.quantity;
+                const displayName = line?.name ?? item.name;
+                return (
+                  <div key={item.productId} className="p-3.5 flex gap-3">
+                    <div
+                      className="w-16 h-16 rounded-xl bg-zinc-100 dark:bg-zinc-800 bg-cover bg-center shrink-0 border border-zinc-100 dark:border-white/10 shadow-xs"
+                      style={{ backgroundImage: `url(${line?.image ?? item.image})` }}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between">
+                        <h4 className="text-sm font-bold text-zinc-900 dark:text-white truncate pr-2">
+                          {displayName}{" "}
+                          {displayUnitType === "kg" && (
+                            <span className="text-xs text-zinc-400 dark:text-zinc-500 font-normal ml-1">
+                              ({item.quantity} kg)
+                            </span>
+                          )}
+                        </h4>
                         <button
-                          onClick={() => updateQuantity(item.productId, item.quantity - (item.unitType === "kg" ? 0.1 : 1))}
-                          className="w-7 h-7 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-90 transition-transform cursor-pointer"
-                          aria-label="Disminuir cantidad"
+                          onClick={() => removeItem(item.productId)}
+                          className="text-zinc-400 hover:text-red-500 active:scale-90 transition-all p-1 -mr-1 cursor-pointer"
+                          aria-label="Eliminar producto"
                         >
-                          <Minus className="w-3.5 h-3.5" />
+                          <Trash2 className="w-4 h-4" />
                         </button>
-                        <span className="text-xs font-bold min-w-[24px] text-center text-zinc-900 dark:text-white">
-                          {item.unitType === "kg" ? Number(item.quantity).toFixed(2) : item.quantity}
+                      </div>
+                      <div className="flex items-center justify-between mt-2.5">
+                        <span className="text-sm font-black text-brand">
+                          ${lineTotal.toFixed(2)}
                         </span>
-                        <button
-                          onClick={() => updateQuantity(item.productId, item.quantity + (item.unitType === "kg" ? 0.1 : 1))}
-                          className="w-7 h-7 rounded-xl bg-brand flex items-center justify-center text-white hover:bg-brand-strong active:scale-90 transition-transform shadow-sm shadow-brand/30 cursor-pointer"
-                          aria-label="Aumentar cantidad"
-                        >
-                          <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => updateQuantity(item.productId, item.quantity - (displayUnitType === "kg" ? 0.1 : 1))}
+                            className="w-7 h-7 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 active:scale-90 transition-transform cursor-pointer"
+                            aria-label="Disminuir cantidad"
+                          >
+                            <Minus className="w-3.5 h-3.5" />
+                          </button>
+                          <span className="text-xs font-bold min-w-[24px] text-center text-zinc-900 dark:text-white">
+                            {displayUnitType === "kg" ? Number(item.quantity).toFixed(2) : item.quantity}
+                          </span>
+                          <button
+                            onClick={() => updateQuantity(item.productId, item.quantity + (displayUnitType === "kg" ? 0.1 : 1))}
+                            className="w-7 h-7 rounded-xl bg-brand flex items-center justify-center text-white hover:bg-brand-strong active:scale-90 transition-transform shadow-sm shadow-brand/30 cursor-pointer"
+                            aria-label="Aumentar cantidad"
+                          >
+                            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         ))}
