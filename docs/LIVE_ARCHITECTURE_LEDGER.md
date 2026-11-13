@@ -61,6 +61,9 @@
 
 | Ruta del Archivo | Módulo | Líneas Actuales (`/ 500 máx`) | Resumen de Responsabilidad y Exportaciones | Dependencias que Consume |
 | :--- | :--- | :---: | :--- | :--- |
+| `src/pages/customer/Search.tsx` | Cliente | `290 / 500` | Búsqueda reactiva por texto y categorías, tarjetas Dark Velvet de productos y comercios | `useCategories`, `useCommerces`, `useFeaturedProducts`, `useCart`, `CustomerBottomNav`, `safeImage` |
+| `src/pages/customer/Cart.tsx` | Cliente | `443 / 500` | Gestión de carrito multi-comercio, selector de pago, checkout y modal de entrega con geolocalización | `useCart`, `useCustomerSession`, `useCreateOrder`, `usePublicSettings`, `useCommerces`, `locationUtils` |
+| `src/pages/customer/Profile.tsx` | Cliente | `291 / 500` | Perfil de usuario, editor GPS de dirección, historial de pedidos y accesos al marco legal | `useCustomerSession`, `useCustomerOrders`, `useUpdateCustomerProfile`, `CustomerBottomNav`, `locationUtils` |
 | `src/pages/customer/Home.tsx` | Cliente | `346 / 500` | Orquesta catálogo con cabecera compacta 50/50, padding-top optimizado y scroll fluido | `HomeHeader`, `HomePromoBanner`, `HomeCategories`, `HomeFeaturedCommerces`, `CustomerBottomNav` |
 | `src/pages/customer/components/HomeHeader.tsx` | Cliente | `146 / 500` | Cabecera fija split (50% cliente izq / 50% Rapidy der) con buscador inferior de ancho completo | `lucide-react`, `react-router`, `react` |
 | `src/pages/customer/components/HomePromoBanner.tsx` | Cliente | `82 / 500` | Banner "¡Pedidos más rápidos!" con platillos flotantes en 3D | `lucide-react`, `react-router` |
@@ -78,6 +81,19 @@
 ---
 
 ## 5. Bitácora Cronológica de Integraciones (Changelog Técnico Live)
+
+### [2026-11-13 17:48 UTC] - Rediseño Concurrente Multi-Agente de Search, Cart y Profile (Estilo Rapidy)
+- **Resumen Técnico:**
+  1. Se ejecutó el rediseño coordinado en paralelo de las 3 páginas restantes del portal de cliente mediante subagentes especializados, aplicando con rigor la política de **CERO invención de lógica o campos**.
+  2. **`Search.tsx`:** Erradicación del verde Ya Llega; cabecera sticky Dark Velvet con input de píldora blanca, micro-anillo `#FF6A00`, carrusel de categorías con píldora activa en Flame Orange y micro-brillo, y tarjetas de productos y comercios en dark mode (`#18181F`).
+  3. **`Cart.tsx`:** Carrito con lista de productos agrupada por comercio, botones de incremento/decremento con acento Rapidy, vista de carrito vacío con micro-glow, modal de checkout y confirmación de pedidos con geolocalización directa y subida de transferencias.
+  4. **`Profile.tsx`:** Encabezado con degradado Dark Velvet, halo difuso `#FF6A00`, avatar iluminado, edición de domicilio con GPS OpenStreetMap en vivo, historial interactivo de pedidos y marco legal.
+  5. Todas las páginas cuentan con cabeceras JSDoc canónicas en español, estricto conteo <500 líneas y compilación validada al 100% con `npm run build`.
+- **Archivos Modificados:**
+  - `src/pages/customer/Search.tsx` (290 líneas).
+  - `src/pages/customer/Cart.tsx` (443 líneas).
+  - `src/pages/customer/Profile.tsx` (291 líneas).
+  - `docs/LIVE_ARCHITECTURE_LEDGER.md` (Actualizado).
 
 ### [2026-11-13 16:56 UTC] - Rediseño Modular del Panel de Cliente (Home) según Mockup Rapidy
 - **Resumen Técnico:** 
