@@ -52,6 +52,16 @@ import { CustomerBottomNav } from "@/components/CustomerBottomNav";
 import { getAddressFromCoords } from "@/lib/locationUtils";
 import { ProfileOrdersModal } from "./components/ProfileOrdersModal";
 
+function getStatusBadge(status: string) {
+  const s = (status || "").toLowerCase().trim();
+  if (s === "delivered") return { label: "Entregado", cls: "bg-emerald-50 text-emerald-700 border-emerald-200" };
+  if (s === "in_transit" || s === "picked_up") return { label: "En camino", cls: "bg-sky-50 text-sky-700 border-sky-200" };
+  if (s === "in_preparation" || s === "preparing") return { label: "En preparación", cls: "bg-amber-50 text-amber-800 border-amber-200" };
+  if (s === "pending_payment") return { label: "Revisando pago", cls: "bg-yellow-50 text-yellow-800 border-yellow-200" };
+  if (s === "cancelled") return { label: "Cancelado", cls: "bg-rose-50 text-rose-700 border-rose-200" };
+  return { label: s ? s.replace(/_/g, " ") : "Confirmado", cls: "bg-blue-50 text-blue-700 border-blue-200" };
+}
+
 export default function CustomerProfile() {
   const navigate = useNavigate();
   const { customer, login, logout, isAuthenticated } = useCustomerSession();
@@ -258,39 +268,40 @@ export default function CustomerProfile() {
             </div>
           ) : (
             <div className="space-y-2.5">
-              {previewOrders.map((order: any) => (
-                <button
-                  key={order.id}
-                  onClick={() => navigate(`/order/${order.id}`)}
-                  className="w-full bg-white rounded-2xl border border-zinc-100 shadow-[0_2px_12px_rgba(0,0,0,0.04)] p-3.5 flex items-center justify-between text-left hover:border-[#FF6A00]/40 hover:shadow-md transition-all group cursor-pointer"
-                >
-                  <div>
+              {previewOrders.map((order: any) => {
+                const statusInfo = getStatusBadge(order.status);
+                return (
+                  <button
+                    key={order.id}
+                    onClick={() => navigate(`/order/${order.id}`)}
+                    className="w-full bg-white rounded-2xl border border-zinc-100 shadow-[0_2px_12px_rgba(0,0,0,0.04)] p-3.5 flex items-center justify-between text-left hover:border-[#FF6A00]/40 hover:shadow-md transition-all group cursor-pointer"
+                  >
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-zinc-900 group-hover:text-[#FF6A00] transition-colors">
+                          Pedido #{order.id}
+                        </span>
+                        <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${statusInfo.cls}`}>
+                          {statusInfo.label}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-xs text-zinc-400 mt-1">
+                        <Clock className="w-3.5 h-3.5 text-zinc-400" />
+                        <span>
+                          {new Date(order.createdAt).toLocaleDateString("es-ES", {
+                            day: "numeric",
+                            month: "short",
+                          })}
+                        </span>
+                      </div>
+                    </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold text-zinc-900 group-hover:text-[#FF6A00] transition-colors">
-                        Pedido #{order.id}
-                      </span>
-                      <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-orange-50 text-[#FF6A00] border border-orange-100">
-                        {order.status === "pending_payment"
-                          ? "Revisando pago"
-                          : order.status.replace(/_/g, " ")}
-                      </span>
+                      <span className="text-sm font-black text-[#FF6A00]">${parseFloat(order.total || "0").toFixed(2)}</span>
+                      <ChevronRight className="w-4 h-4 text-zinc-400 group-hover:text-[#FF6A00] transition-colors" />
                     </div>
-                    <div className="flex items-center gap-1.5 text-xs text-zinc-400 mt-1">
-                      <Clock className="w-3.5 h-3.5 text-zinc-400" />
-                      <span>
-                        {new Date(order.createdAt).toLocaleDateString("es-ES", {
-                          day: "numeric",
-                          month: "short",
-                        })}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-black text-[#FF6A00]">${order.total}</span>
-                    <ChevronRight className="w-4 h-4 text-zinc-400 group-hover:text-[#FF6A00] transition-colors" />
-                  </div>
-                </button>
-              ))}
+                  </button>
+                );
+              })}
 
               {ordersList.length > 2 && (
                 <button

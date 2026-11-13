@@ -177,11 +177,11 @@ export const orderRouter = createRouter({
     .input(z.object({ customerId: z.number() }))
     .query(async ({ input }) => {
       const db = getDb();
-      return db
-        .select()
-        .from(orders)
-        .where(eq(orders.customerId, input.customerId))
-        .orderBy(desc(orders.createdAt));
+      const list = await db.select().from(orders).where(eq(orders.customerId, input.customerId)).orderBy(desc(orders.createdAt));
+      if (list.length === 0) return [];
+      const orderIds = list.map(o => o.id);
+      const items = await db.select({ orderId: orderItems.orderId, productName: orderItems.productName, quantity: orderItems.quantity, total: orderItems.total }).from(orderItems).where(inArray(orderItems.orderId, orderIds));
+      return list.map(order => ({ ...order, items: items.filter(it => it.orderId === order.id) }));
     }),
 
   getByDriver: publicQuery

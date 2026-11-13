@@ -87,6 +87,29 @@
 
 ## 5. Bitácora Cronológica de Integraciones (Changelog Técnico Live)
 
+### [2026-11-13 18:58 UTC] - Optimización de Rendimiento 0ms y Rediseño Integral de Modal de Historial de Pedidos
+- **Resumen Técnico:**
+  1. **Erradicación de Cargas Continuas y Parpadeos (Rendimiento 0ms):**
+     - **Sesión de Cliente Instantánea:** `useCustomerSession.tsx` ahora se hidrata sincrónicamente desde `localStorage` (`customer_session`), eliminando la pantalla intermedia de carga y los retrasos de verificación al navegar.
+     - **Guardia de Sesión Silenciosa:** `SessionGuard.tsx` inicializa de inmediato en `checking = false` si el cliente ya está autenticado en `localStorage`, erradicando el spinner intermedio entre pestañas.
+     - **Carga Eager de Rutas Principales:** `App.tsx` importa de forma directa `CustomerHome`, `CustomerSearch`, `Cart` y `CustomerProfile` en lugar de `lazy import`, eliminando las descargas de chunks vía red y los fallbacks de pantalla negra al cambiar entre pestañas.
+     - **Transiciones Ultrarrápidas:** `PageTransition.tsx` optimizado a 120ms sin bloqueo de `mode="wait"`.
+  2. **Rediseño Integral de `ProfileOrdersModal.tsx`:**
+     - **Corrección de Oclusión:** Capa elevada a `z-[120]` superando con holgura a `CustomerBottomNav` (`z-50`), garantizando que la barra de navegación nunca tape los pedidos ni botones.
+     - **Escalabilidad para Múltiples Pedidos (2 a 100+):** Contenedor scrollable `max-h-[90dvh]` con overscroll contenido, barra de búsqueda reactiva por número o producto, y pestañas de filtro (*Todos*, *Entregados*, *En proceso*).
+     - **Traducción Estricta al Español:** Reemplazo de etiquetas crudas en inglés (e.g. `DELIVERED`) por insignias semánticas en español (*Entregado*, *En camino*, *En preparación*, *Revisando pago*, *Cancelado*) con iconos dedicados y colores temáticos.
+     - **Desglose de Productos:** `server/order-router.ts` actualizado en `getByCustomer` para incluir los ítems de cada orden (`quantity` formateada, `productName`, `total`).
+  3. **Verificación:** `npm run build` exitoso con código 0 e inspección interactiva y visual validada con Playwright.
+- **Archivos Modificados:**
+  - `src/hooks/useCustomerSession.tsx` (105 líneas).
+  - `src/components/SessionGuard.tsx` (95 líneas).
+  - `src/components/PageTransition.tsx` (50 líneas).
+  - `src/App.tsx` (154 líneas).
+  - `server/order-router.ts` (484 líneas).
+  - `src/pages/customer/Profile.tsx` (378 líneas).
+  - `src/pages/customer/components/ProfileOrdersModal.tsx` (347 líneas).
+  - `docs/LIVE_ARCHITECTURE_LEDGER.md` (Actualizado).
+
 ### [2026-11-13 18:31 UTC] - Precios Realistas en Dólares ($ USD) y Semilla Oficial de Base de Datos
 - **Resumen Técnico:**
   1. **Actualización de Moneda a Dólares ($ USD):** Se normalizaron todos los precios del catálogo a valores de mercado en USD (entre $1.00 y $14.00 USD), eliminando cifras heredadas en miles de pesos argentinos.

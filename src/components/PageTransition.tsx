@@ -1,28 +1,39 @@
+/**
+ * @archivo src/components/PageTransition.tsx
+ * @modulo 00-ui-kernel (Transiciones Ultra-Rápidas entre Vistas)
+ * @proposito
+ *   Transición fluida y ligera entre rutas para evitar retrasos perceptibles
+ *   o pantallas intermedias en blanco. Optimizado para móvil y redes lentas.
+ *
+ * @resumen_contenido
+ *   - Componente `PageTransition`: Envoltorio con micro-animación de opacidad y desplazamiento.
+ *
+ * @dependencias_externas
+ *   - `framer-motion` (`motion`)
+ *   - `react` (`ReactNode`)
+ */
+
 import { motion } from 'framer-motion';
 import { ReactNode } from 'react';
 
 const pageVariants = {
   initial: {
-    opacity: 0,
-    y: 15,
-    scale: 0.98
+    opacity: 0.85,
+    y: 4,
   },
   in: {
     opacity: 1,
     y: 0,
-    scale: 1
   },
   out: {
-    opacity: 0,
-    y: -15,
-    scale: 1.02
+    opacity: 0.85,
+    y: -4,
   }
 };
 
 const pageTransition = {
-  type: 'spring',
-  stiffness: 300,
-  damping: 25,
+  duration: 0.12,
+  ease: "easeOut",
 };
 
 interface PageTransitionProps {

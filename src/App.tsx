@@ -6,17 +6,19 @@ import { QueryProvider } from '@/providers/QueryProvider'
 import { trpcMutate } from '@/hooks/useDeliveryData'
 import { getSession } from '@/hooks/useSessionSync'
 
-// Public pages
+// Core customer pages (Carga inmediata para navegación instantánea sin pantallas de carga)
+import CustomerHome from './pages/customer/Home'
+import CustomerSearch from './pages/customer/Search'
+import Cart from './pages/customer/Cart'
+import CustomerProfile from './pages/customer/Profile'
+
+// Public & secondary customer pages (lazy)
 const Welcome = lazy(() => import('./pages/customer/Welcome'))
 const Register = lazy(() => import('./pages/customer/Register'))
 const CustomerLogin = lazy(() => import('./pages/customer/CustomerLogin'))
-const CustomerHome = lazy(() => import('./pages/customer/Home'))
-const CustomerSearch = lazy(() => import('./pages/customer/Search'))
 const CommerceDetail = lazy(() => import('./pages/customer/CommerceDetail'))
-const Cart = lazy(() => import('./pages/customer/Cart'))
 const OrderTracking = lazy(() => import('./pages/customer/OrderTracking'))
 const Chat = lazy(() => import('./pages/customer/Chat'))
-const CustomerProfile = lazy(() => import('./pages/customer/Profile'))
 
 // Driver app
 const DriverHome = lazy(() => import('./pages/driver/DriverHome'))
@@ -84,7 +86,7 @@ function AnimatedRoutes() {
   const location = useLocation()
   
   return (
-    <AnimatePresence mode="wait">
+    <AnimatePresence initial={false}>
       <Routes location={location} key={location.pathname}>
         {/* Customer App Routes */}
         <Route path="/" element={<PageTransition><Welcome /></PageTransition>} />

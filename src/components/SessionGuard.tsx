@@ -11,7 +11,14 @@ type GuardRole = "customer" | "admin" | "merchant" | "driver"
 export default function SessionGuard({ role, children }: { role: GuardRole; children: ReactNode }) {
   const navigate = useNavigate()
   const { isAuthenticated } = useCustomerSession()
-  const [checking, setChecking] = useState(true)
+  const [checking, setChecking] = useState(() => {
+    const session = getSession()
+    if (role === "customer") {
+      const hasStoredCustomer = typeof window !== "undefined" && Boolean(localStorage.getItem("customer_session"))
+      return !(session?.role === "customer" && hasStoredCustomer)
+    }
+    return true
+  })
   const redirected = useRef(false)
 
   // Registrar notificaciones push nativas si el usuario está autenticado
@@ -49,7 +56,7 @@ export default function SessionGuard({ role, children }: { role: GuardRole; chil
       }
       const timer = setTimeout(() => {
         setChecking(false)
-      }, 3000)
+      }, 600)
       return () => clearTimeout(timer)
     }
 
@@ -79,8 +86,8 @@ export default function SessionGuard({ role, children }: { role: GuardRole; chil
 
   if (checking) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-[#2E7D32]" />
+      <div className="min-h-screen flex items-center justify-center bg-[#F7F7FA]">
+        <Loader2 className="h-8 w-8 animate-spin text-[#FF6A00]" />
       </div>
     )
   }
