@@ -64,8 +64,10 @@
 | `src/pages/customer/Search.tsx` | Cliente | `300 / 500` | Búsqueda reactiva, cabecera fixed con píldoras y scroll del catálogo por detrás | `useCategories`, `useCommerces`, `useFeaturedProducts`, `useCart`, `CustomerBottomNav`, `safeImage` |
 | `src/pages/customer/Cart.tsx` | Cliente | `416 / 500` | Carrito con cabecera fixed, botón flotante de confirmación, modal de checkout y barra inferior en tema oscuro | `useCart`, `useCustomerSession`, `useCreateOrder`, `usePublicSettings`, `useCommerces`, `CartAddressModal`, `CustomerBottomNav` |
 | `src/pages/customer/components/CartAddressModal.tsx` | Cliente | `198 / 500` | Modal modular de selección de domicilio (Perfil/Manual/GPS) y comprobante de transferencia bancaria | `lucide-react` |
-| `src/pages/customer/Profile.tsx` | Cliente | `388 / 500` | Perfil de usuario con cabecera fixed, botón de salir integrado, preview de pedidos y barra inferior en tema oscuro | `useCustomerSession`, `useCustomerOrders`, `useUpdateCustomerProfile`, `CustomerBottomNav`, `ProfileOrdersModal`, `locationUtils` |
+| `src/pages/customer/Profile.tsx` | Cliente | `367 / 500` | Perfil de usuario con cabecera fixed, botón de salir integrado, sin duplicaciones, preview de pedidos y modal | `useCustomerSession`, `useCustomerOrders`, `useUpdateCustomerProfile`, `CustomerBottomNav`, `ProfileOrdersModal`, `locationUtils` |
 | `src/pages/customer/components/ProfileOrdersModal.tsx` | Cliente | `140 / 500` | Modal deslizable con listado histórico completo de todas las órdenes del cliente | `lucide-react`, `react-router` |
+| `src/pages/customer/components/HomePromoBanner.tsx` | Cliente | `209 / 500` | Banner dinámico reactivo con rotación automática de platillos más pedidos (TOP 1, 2, 3...) según BD | `useTopOrderedProducts`, `safeImage`, `framer-motion`, `lucide-react`, `react-router` |
+| `server/product-router.ts` | Backend tRPC | `228 / 500` | Router de productos con listado, detalle, destacados y cálculo dinámico de `getTopOrdered` agrupado por órdenes | `drizzle-orm`, `products`, `orderItems`, `commerces` |
 | `src/components/CustomerBottomNav.tsx` | UI Kernel | `108 / 500` | Navegación inferior flotante fija en Tema Oscuro (Dark Velvet) con indicador Flame Orange activa | `framer-motion`, `lucide-react`, `react-router` |
 | `src/pages/customer/Home.tsx` | Cliente | `346 / 500` | Orquesta catálogo con cabecera compacta 50/50, padding-top optimizado y scroll fluido | `HomeHeader`, `HomePromoBanner`, `HomeCategories`, `HomeFeaturedCommerces`, `CustomerBottomNav` |
 | `src/pages/customer/components/HomeHeader.tsx` | Cliente | `146 / 500` | Cabecera fija split (50% cliente izq / 50% Rapidy der) con buscador inferior de ancho completo | `lucide-react`, `react-router`, `react` |
@@ -84,6 +86,20 @@
 ---
 
 ## 5. Bitácora Cronológica de Integraciones (Changelog Técnico Live)
+
+### [2026-11-13 18:24 UTC] - Eliminación de Tarjeta Duplicada en Perfil y Banner Dinámico de Tops Más Pedidos
+- **Resumen Técnico:**
+  1. **Erradicación de Duplicación en Perfil (`Profile.tsx`):** Se eliminó la tarjeta central redundante señalada por el usuario, unificando los datos del cliente (nombre, avatar con halo, teléfono y botón *"Salir"*) exclusivamente en la cabecera fija Dark Velvet. El contenido inicia de inmediato con la tarjeta de dirección de entrega.
+  2. **Banner Dinámico con Tops Más Pedidos (`HomePromoBanner.tsx`):**
+     - Se creó el procedimiento tRPC `product.getTopOrdered` en `server/product-router.ts` y el hook `useTopOrderedProducts()`.
+     - El banner clasifica y rota dinámicamente cada 3.8s entre los productos más pedidos (TOP 1, TOP 2, TOP 3, TOP 4...) con insignias reactivas de ranking (`TOP 1 🔥`, `TOP 2 ⚡`, `TOP 3 🏆`), fotos con animación de levitación, precio actual, nombre de comercio y puntos interactivos de navegación.
+  3. Verificación de compilación `npm run build` con código de salida 0 y validación visual en Playwright.
+- **Archivos Modificados:**
+  - `src/pages/customer/Profile.tsx` (367 líneas).
+  - `src/pages/customer/components/HomePromoBanner.tsx` (209 líneas).
+  - `server/product-router.ts` (228 líneas).
+  - `src/hooks/useDeliveryData.ts` (577 líneas).
+  - `docs/LIVE_ARCHITECTURE_LEDGER.md` (Actualizado).
 
 ### [2026-11-13 18:10 UTC] - Navegación Dark Velvet Unificada, Cabeceras Fixed y Modal de Historial en Perfil
 - **Resumen Técnico:**

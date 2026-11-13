@@ -133,27 +133,30 @@ export default function CustomerProfile() {
 
   return (
     <div className="mobile-container bg-[#F7F7FA] min-h-screen text-zinc-900 pb-32 select-none">
-      {/* 1. Cabecera Fija Dark Velvet (Fixed Top Header) */}
+      {/* 1. Cabecera Fija Dark Velvet (Fixed Top Header con datos del cliente y salir) */}
       <header className="fixed top-0 left-0 right-0 max-w-[480px] mx-auto z-40 bg-[#0E0E12]/95 backdrop-blur-2xl border-b border-white/10 shadow-xl px-4 pt-safe pb-2.5 transition-all flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center text-[#FF6A00] shadow-xs shrink-0">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-9 h-9 rounded-2xl bg-white/10 border border-white/15 flex items-center justify-center text-[#FF6A00] ring-1 ring-[#FF6A00]/40 shadow-xs shrink-0">
             <User className="w-4 h-4 text-[#FF6A00]" />
           </div>
-          <div>
+          <div className="min-w-0">
             <div className="flex items-center gap-1">
-              <span className="text-xs font-bold text-white tracking-tight">Mi Perfil</span>
-              <Sparkles className="w-3 h-3 text-[#FF6A00]" />
+              <span className="text-xs sm:text-sm font-black text-white tracking-tight truncate">
+                {customer.firstName} {customer.lastName}
+              </span>
+              <Sparkles className="w-3 h-3 text-[#FF6A00] shrink-0" />
             </div>
-            <p className="text-[10px] text-zinc-400 font-medium truncate max-w-[150px]">
-              {customer.firstName} {customer.lastName}
-            </p>
+            <div className="flex items-center gap-1 text-[10px] sm:text-[11px] text-zinc-400 font-medium truncate">
+              <Phone className="w-3 h-3 text-[#FF6A00] shrink-0" />
+              <span className="truncate">{customer.phone}</span>
+            </div>
           </div>
         </div>
 
-        {/* Botón Cerrar Sesión reubicado en la cabecera fija */}
+        {/* Botón Salir reubicado en la cabecera fija */}
         <button
           onClick={handleLogout}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-500/10 hover:bg-red-500/20 border border-red-500/25 text-red-400 hover:text-red-300 text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-xs"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-500/10 hover:bg-red-500/20 border border-red-500/25 text-red-400 hover:text-red-300 text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-xs shrink-0 ml-2"
           aria-label="Cerrar sesión"
         >
           <LogOut className="w-3.5 h-3.5 stroke-[2.2]" />
@@ -163,30 +166,6 @@ export default function CustomerProfile() {
 
       {/* 2. Contenido desplazable por detrás de la cabecera fija */}
       <div className="px-4 pt-[calc(env(safe-area-inset-top,0px)+68px)] space-y-4">
-        {/* Tarjeta de Presentación Premium del Cliente */}
-        <div className="relative bg-gradient-to-r from-[#0E0E12] via-[#16161D] to-[#0E0E12] border border-white/10 rounded-3xl p-4 text-white shadow-lg overflow-hidden">
-          <div className="absolute top-0 right-0 w-36 h-24 bg-[#FF6A00]/20 rounded-full blur-2xl pointer-events-none" />
-
-          <div className="relative z-10 flex items-center gap-3.5">
-            <div className="w-14 h-14 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center text-[#FF6A00] ring-2 ring-[#FF6A00]/40 shadow-[0_0_16px_rgba(255,106,0,0.3)] shrink-0">
-              <User className="w-7 h-7 text-white stroke-[2.2]" />
-            </div>
-            <div className="min-w-0">
-              <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#FF6A00]/20 border border-[#FF6A00]/30 text-[#FF6A00] text-[9.5px] font-black uppercase tracking-wider mb-1">
-                <Sparkles className="w-2.5 h-2.5" />
-                <span>Cliente Verificado</span>
-              </div>
-              <h2 className="text-base sm:text-lg font-black text-white tracking-tight truncate">
-                {customer.firstName} {customer.lastName}
-              </h2>
-              <div className="flex items-center gap-1.5 text-zinc-400 text-xs mt-0.5 font-medium">
-                <Phone className="w-3.5 h-3.5 text-[#FF6A00]" />
-                <span>{customer.phone}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* Tarjeta de Dirección de Entrega con Edición / GPS */}
         <div className="bg-white rounded-2xl border border-zinc-100 shadow-[0_4px_16px_rgba(0,0,0,0.05)] p-4">
           <div className="flex items-center justify-between mb-2">

@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { createRouter, publicQuery, merchantQuery } from "./middleware";
 import { getDb } from "./queries/connection";
-import { products, commerces } from "@db/schema";
-import { eq, like, and } from "drizzle-orm";
+import { products, commerces, orderItems } from "@db/schema";
+import { eq, like, and, sql, desc } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { emit } from "./events";
 
@@ -48,6 +48,52 @@ export const productRouter = createRouter({
       .leftJoin(commerces, eq(products.commerceId, commerces.id))
       .where(and(eq(products.isFeatured, "yes"), eq(products.isAvailable, "yes")));
     return rows;
+  }),
+
+  getTopOrdered: publicQuery.query(async () => {
+    const db = getDb();
+    const orderStats = await db
+      .select({
+        productId: orderItems.productId,
+        orderCount: sql<number>`cast(count(${orderItems.id}) as int)`,
+        totalQty: sql<number>`cast(sum(${orderItems.quantity}) as float)`,
+      })
+      .from(orderItems)
+      .groupBy(orderItems.productId)
+      .orderBy(sql`sum(${orderItems.quantity}) desc`)
+      .limit(8);
+
+    const countMap = new Map<number, number>();
+    orderStats.forEach((stat) => {
+      countMap.set(stat.productId, stat.totalQty || stat.orderCount || 1);
+    });
+
+    const allProducts = await db
+      .select({
+        id: products.id,
+        commerceId: products.commerceId,
+        name: products.name,
+        description: products.description,
+        price: products.price,
+        image: products.image,
+        category: products.category,
+        isFeatured: products.isFeatured,
+        isAvailable: products.isAvailable,
+        preparationTime: products.preparationTime,
+        unitType: products.unitType,
+        commerceName: commerces.name,
+      })
+      .from(products)
+      .leftJoin(commerces, eq(products.commerceId, commerces.id))
+      .where(eq(products.isAvailable, "yes"));
+
+    const sorted = [...allProducts].sort((a, b) => {
+      const salesA = countMap.get(a.id) ?? (a.isFeatured === "yes" ? 20 - a.id : 0);
+      const salesB = countMap.get(b.id) ?? (b.isFeatured === "yes" ? 20 - b.id : 0);
+      return salesB - salesA;
+    });
+
+    return sorted.slice(0, 6);
   }),
 
   search: publicQuery

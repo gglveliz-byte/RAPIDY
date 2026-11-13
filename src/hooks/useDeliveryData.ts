@@ -158,6 +158,14 @@ export function useFeaturedProducts() {
   return { data: query.data ?? [], loading: query.isLoading };
 }
 
+export function useTopOrderedProducts() {
+  const query = useQuery({
+    queryKey: ["product.getTopOrdered"],
+    queryFn: () => trpcCall<any[]>("product.getTopOrdered"),
+  });
+  return { data: query.data ?? [], loading: query.isLoading };
+}
+
 export function useProductsByCommerce(commerceId: number) {
   const query = useQuery({
     queryKey: ["product.getByCommerce", commerceId],
