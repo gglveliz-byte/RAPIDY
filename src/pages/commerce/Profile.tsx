@@ -83,8 +83,15 @@ export default function CommerceProfile() {
 
   const merchantUser = getRoleUser<{ email?: string }>("merchant");
   const registeredEmail = merchantUser?.email || "";
-  const { commerceId } = useMerchantCommerceId();
-  const { data: commerce, loading } = useCommerce(commerceId || 0);
+  const {
+    commerceId,
+    loading: commerceLoading,
+    error: commerceError,
+    refresh: refreshCommerce,
+  } = useMerchantCommerceId();
+  const { data: commerce, loading, error, refresh } = useCommerce(commerceId || 0);
+  const isLoading = commerceLoading || loading;
+  const loadError = commerceError || error;
 
   const [form, setForm] = useState({
     name: "", description: "", address: "", phone: "", email: "",
@@ -245,7 +252,7 @@ export default function CommerceProfile() {
     navigate("/login");
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <CommerceLayout>
         <div className="flex items-center justify-center min-h-[60vh]">
@@ -255,7 +262,50 @@ export default function CommerceProfile() {
     );
   }
 
-  const isOpen = commerce?.isOpen === "open";
+  if (loadError) {
+    return (
+      <CommerceLayout>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6">
+          <div className="w-12 h-12 rounded-2xl bg-red-50 dark:bg-red-950/40 text-red-500 flex items-center justify-center mb-3">
+            <Store className="w-6 h-6" />
+          </div>
+          <h2 className="text-sm font-bold text-zinc-800 dark:text-white">No se pudo cargar el perfil</h2>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 max-w-xs">
+            {loadError.message || "Revisa tu conexión e inténtalo de nuevo."}
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              refreshCommerce();
+              refresh();
+            }}
+            className="mt-4 px-4 py-2 rounded-xl bg-[#FF6A00] hover:bg-[#e65f00] text-white text-xs font-bold"
+          >
+            Reintentar
+          </button>
+        </div>
+      </CommerceLayout>
+    );
+  }
+
+  if (!commerce) {
+    return (
+      <CommerceLayout>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-6">
+          <div className="w-12 h-12 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 flex items-center justify-center mb-3">
+            <Store className="w-6 h-6" />
+          </div>
+          <h2 className="text-sm font-bold text-zinc-800 dark:text-white">Comercio sin asignar</h2>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 max-w-xs">
+            Tu usuario no tiene un comercio vinculado. Contacta a soporte para completar la configuración.
+          </p>
+        </div>
+      </CommerceLayout>
+    );
+  }
+
+  const isOpen = commerce.isOpen === "open";
+  const isActive = commerce.status === "active";
 
   return (
     <CommerceLayout>
@@ -293,24 +343,29 @@ export default function CommerceProfile() {
         <div className="bg-white dark:bg-[#16161B] rounded-2xl border border-slate-200/80 dark:border-white/10 p-3 min-[360px]:p-4 shadow-xs flex items-center justify-between gap-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <div className={`w-2.5 h-2.5 rounded-full ${isOpen ? "bg-[#FF6A00] ring-4 ring-[#FF6A00]/20 animate-pulse" : "bg-slate-300 dark:bg-zinc-600"}`} />
+              <div className={`w-2.5 h-2.5 rounded-full ${isOpen && isActive ? "bg-[#FF6A00] ring-4 ring-[#FF6A00]/20 animate-pulse" : "bg-slate-300 dark:bg-zinc-600"}`} />
               <p className="text-xs min-[360px]:text-sm font-bold text-slate-900 dark:text-white">Estado Operativo</p>
             </div>
             <p className="text-[10px] min-[360px]:text-xs text-slate-500 dark:text-zinc-400 mt-0.5 ml-4.5 truncate">
-              {isOpen ? "Aceptando pedidos en vivo en la app Rapidy" : "Comercio cerrado temporalmente"}
+              {!isActive
+                ? "Comercio pendiente de activación o suspendido. Contacta a soporte."
+                : isOpen
+                  ? "Aceptando pedidos en vivo en la app Rapidy"
+                  : "Comercio cerrado temporalmente"}
             </p>
           </div>
           <button
             type="button"
             onClick={handleToggleOpen}
-            className={`px-3 py-1.5 min-[360px]:px-3.5 min-[360px]:py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 active:scale-95 flex-shrink-0 shadow-xs ${
+            disabled={toggleCommerceStatus.isPending || !isActive}
+            className={`px-3 py-1.5 min-[360px]:px-3.5 min-[360px]:py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 active:scale-95 flex-shrink-0 shadow-xs disabled:opacity-50 ${
               isOpen
                 ? "bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-zinc-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 border border-slate-200 dark:border-white/10"
                 : "bg-[#FF6A00] text-white hover:bg-[#e65f00] shadow-[#FF6A00]/20"
             }`}
           >
             <Power className="w-3.5 h-3.5" />
-            {isOpen ? "Cerrar Tienda" : "Abrir Tienda"}
+            {toggleCommerceStatus.isPending ? "Actualizando..." : isOpen ? "Cerrar Tienda" : "Abrir Tienda"}
           </button>
         </div>
 
@@ -367,7 +422,7 @@ export default function CommerceProfile() {
                     }`}
                   >
                     <span className={`w-1.5 h-1.5 rounded-full ${isOpen ? "bg-[#FF6A00] animate-pulse" : "bg-slate-400"}`} />
-                    {isOpen ? "Abierto" : "Cerrado"}
+                    {!isActive ? "No activo" : isOpen ? "Abierto" : "Cerrado"}
                   </span>
                 </div>
                 <p className="text-[10px] min-[360px]:text-xs text-slate-400 dark:text-zinc-400 truncate mt-0.5">
