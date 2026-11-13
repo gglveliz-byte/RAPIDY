@@ -64,6 +64,13 @@
       "when": 1794609169219,
       "tag": "0008_simple_vance_astro",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794613300075,
+      "tag": "0009_furry_nemesis",
+      "breakpoints": true
     }
   ]
 }

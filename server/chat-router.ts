@@ -18,6 +18,42 @@ function senderTypeForViewer(role: ViewerRole): "customer" | "commerce" | "drive
   });
 }
 
+function readColumnForViewer(
+  role: ViewerRole,
+): "readByCustomer" | "readByDriver" | "readByCommerce" {
+  if (role === "customer") return "readByCustomer";
+  if (role === "driver") return "readByDriver";
+  if (role === "merchant") return "readByCommerce";
+  throw new TRPCError({
+    code: "FORBIDDEN",
+    message: "El administrador no puede marcar mensajes como leídos.",
+  });
+}
+
+function isReadForViewer(
+  row: {
+    senderType: string;
+    isRead: string;
+    readByCustomer: string;
+    readByDriver: string;
+    readByCommerce: string;
+  },
+  role: ViewerRole,
+): boolean {
+  const ownType = senderTypeForViewer(role);
+  if (row.senderType !== ownType) {
+    return row[readColumnForViewer(role)] === "yes";
+  }
+  // Para un mensaje propio, se muestra leído si al menos otro participante lo leyó.
+  const otherColumns =
+    role === "customer"
+      ? [row.readByDriver, row.readByCommerce]
+      : role === "driver"
+        ? [row.readByCustomer, row.readByCommerce]
+        : [row.readByCustomer, row.readByDriver];
+  return otherColumns.includes("yes") || row.isRead === "yes";
+}
+
 export const chatRouter = createRouter({
   send: participantQuery
     .input(
@@ -68,6 +104,7 @@ export const chatRouter = createRouter({
         });
       }
 
+      const senderReadColumn = readColumnForViewer(viewer.role);
       const inserted = await db
         .insert(chatMessages)
         .values({
@@ -76,6 +113,7 @@ export const chatRouter = createRouter({
           senderId: viewer.id,
           senderName: viewer.name,
           message: input.message,
+          [senderReadColumn]: "yes",
         })
         .returning();
 
@@ -97,7 +135,7 @@ export const chatRouter = createRouter({
       }),
     )
     .query(async ({ input, ctx }) => {
-      await assertOrderAccess(ctx, input.orderId);
+      const access = await assertOrderAccess(ctx, input.orderId);
       const db = getDb();
       const rows = await db
         .select()
@@ -109,7 +147,10 @@ export const chatRouter = createRouter({
         )
         .orderBy(desc(chatMessages.id))
         .limit(input.limit);
-      return rows.reverse();
+      return rows.reverse().map((row) => ({
+        ...row,
+        isRead: isReadForViewer(row, access.viewer.role) ? "yes" : "no",
+      }));
     }),
 
   markAsRead: participantQuery
@@ -119,16 +160,22 @@ export const chatRouter = createRouter({
       if (access.viewer.role === "admin") return { success: true };
 
       const db = getDb();
+      const readColumn = readColumnForViewer(access.viewer.role);
       await db
         .update(chatMessages)
-        .set({ isRead: "yes" })
+        .set({ [readColumn]: "yes" })
         .where(
           and(
             eq(chatMessages.orderId, input.orderId),
             ne(chatMessages.senderType, senderTypeForViewer(access.viewer.role)),
-            eq(chatMessages.isRead, "no"),
+            eq(chatMessages[readColumn], "no"),
           ),
         );
+      emit(`order:${input.orderId}`, {
+        type: "chat_read",
+        orderId: input.orderId,
+        readerRole: access.viewer.role,
+      });
       return { success: true };
     }),
 });

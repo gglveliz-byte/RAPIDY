@@ -53,7 +53,7 @@ export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   unionId: varchar("unionId", { length: 255 }).notNull().unique(),
   name: varchar("name", { length: 255 }),
-  email: varchar("email", { length: 320 }),
+  email: varchar("email", { length: 320 }).unique(),
   passwordHash: varchar("password_hash", { length: 255 }),
   avatar: text("avatar"),
   role: roleEnum("role").default("user").notNull(),
@@ -91,7 +91,7 @@ export type InsertCustomer = typeof customers.$inferInsert;
 export const drivers = pgTable("drivers", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 200 }).notNull(),
-  phone: varchar("phone", { length: 20 }).notNull(),
+  phone: varchar("phone", { length: 20 }).notNull().unique(),
   passwordHash: varchar("password_hash", { length: 255 }),
   vehicle: varchar("vehicle", { length: 100 }),
   licensePlate: varchar("license_plate", { length: 20 }),
@@ -101,6 +101,7 @@ export const drivers = pgTable("drivers", {
   rating: numeric("rating", { precision: 2, scale: 1 }).default("4.5"),
   totalEarnings: numeric("total_earnings", { precision: 10, scale: 2 }).default("0.00"),
   commissionRate: numeric("commission_rate", { precision: 5, scale: 2 }).default("75.00"),
+  sessionVersion: integer("session_version").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   fcmToken: text("fcm_token"),
 });
@@ -202,6 +203,7 @@ export const orders = pgTable("orders", {
 }, (table) => [
   index("orders_customer_id_idx").on(table.customerId),
   index("orders_driver_id_idx").on(table.driverId),
+  index("orders_driver_status_delivered_idx").on(table.driverId, table.status, table.deliveredAt),
   index("orders_status_idx").on(table.status),
   index("orders_created_at_idx").on(table.createdAt),
   index("orders_customer_created_idx").on(table.customerId, table.createdAt),
@@ -269,6 +271,9 @@ export const chatMessages = pgTable("chat_messages", {
   senderName: varchar("sender_name", { length: 200 }),
   message: text("message").notNull(),
   isRead: readEnum("is_read").default("no").notNull(),
+  readByCustomer: readEnum("read_by_customer").default("no").notNull(),
+  readByDriver: readEnum("read_by_driver").default("no").notNull(),
+  readByCommerce: readEnum("read_by_commerce").default("no").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => [
   index("chat_messages_order_created_idx").on(table.orderId, table.createdAt),

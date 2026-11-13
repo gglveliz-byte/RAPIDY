@@ -97,6 +97,7 @@ export const adminDriversProcedures = {
 
       if (password && password.trim().length >= 4) {
         updateData.passwordHash = await bcrypt.hash(password, 10);
+        updateData.sessionVersion = sql`coalesce(${drivers.sessionVersion}, 0) + 1`;
       }
 
       if (Object.keys(updateData).length > 0) {
@@ -125,6 +126,19 @@ export const adminDriversProcedures = {
       const db = getDb();
       
       await db.transaction(async (tx) => {
+        const historicalOrders = await tx
+          .select({ id: orders.id })
+          .from(orders)
+          .where(eq(orders.driverId, input.id))
+          .limit(1);
+        if (historicalOrders.length > 0) {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message:
+              "No se puede eliminar un repartidor con historial de pedidos. Desactívalo para conservar la trazabilidad y sus ganancias.",
+          });
+        }
+
         // Bloqueo preventivo si el chofer tiene pedidos activos en tránsito
         const activeOrders = await tx
           .select({ id: orders.id })

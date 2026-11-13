@@ -13,6 +13,7 @@
  */
 
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { eq, desc, inArray } from "drizzle-orm";
 import { getDb } from "../queries/connection";
 import {
@@ -28,12 +29,25 @@ import {
 import { adminQuery } from "../middleware";
 import { emit } from "../events";
 import { syncAllCommerceStatuses } from "../lib/order-status-sync";
+import { guayaquilDateKey } from "../lib/dates";
 
 export const adminOrdersProcedures = {
   // Listado enriquecido de pedidos con desglose financiero multi-comercio
   orders: adminQuery.query(async () => {
     const db = getDb();
     const allOrders = await db.select().from(orders).orderBy(desc(orders.createdAt));
+    const allEarnings = await db
+      .select({
+        orderId: driverEarnings.orderId,
+        amount: driverEarnings.amount,
+        type: driverEarnings.type,
+      })
+      .from(driverEarnings);
+    const earningsByOrder = new Map(
+      allEarnings
+        .filter((earning) => earning.type === "delivery_fee")
+        .map((earning) => [earning.orderId, Number(earning.amount)]),
+    );
 
     const enrichedOrders = [];
     for (const order of allOrders) {
@@ -90,7 +104,11 @@ export const adminOrdersProcedures = {
       const totalFee = parseFloat(order.deliveryFee || "0");
       const subtotal = parseFloat(order.subtotal || "0");
 
-      const driverCut = totalFee * (driverCommissionRate / 100);
+      const storedDriverEarning = earningsByOrder.get(order.id);
+      const driverCut =
+        storedDriverEarning !== undefined
+          ? storedDriverEarning
+          : totalFee * (driverCommissionRate / 100);
       const adminDeliveryCommission = totalFee - driverCut;
 
       let commerceOwed = 0;
@@ -137,7 +155,7 @@ export const adminOrdersProcedures = {
       if (order.length === 0) return { success: false };
       await db
         .update(orders)
-        .set({ commerceSettled: !order[0].commerceSettled, updatedAt: new Date() })
+        .set({ commerceSettled: !order[0].commerceSettled })
         .where(eq(orders.id, input.id));
       emit("admin:dashboard", { type: "dashboard_update" });
       return { success: true };
@@ -152,7 +170,7 @@ export const adminOrdersProcedures = {
       if (order.length === 0) return { success: false };
       await db
         .update(orders)
-        .set({ driverSettled: !order[0].driverSettled, updatedAt: new Date() })
+        .set({ driverSettled: !order[0].driverSettled })
         .where(eq(orders.id, input.id));
       emit("admin:dashboard", { type: "dashboard_update" });
       return { success: true };
@@ -221,6 +239,15 @@ export const adminOrdersProcedures = {
       const result = await db.transaction(async (tx) => {
         const existingOrder = await tx.select().from(orders).where(eq(orders.id, input.id)).for("update");
         if (!existingOrder[0]) throw new Error("Pedido no encontrado");
+        if (
+          ["delivered", "cancelled"].includes(existingOrder[0].status) &&
+          existingOrder[0].status !== input.status
+        ) {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: "Un pedido entregado o cancelado es terminal y no se puede cambiar.",
+          });
+        }
 
         const updateData: Partial<typeof orders.$inferInsert> = {
           status: input.status,
@@ -274,7 +301,7 @@ export const adminOrdersProcedures = {
               driverId: targetDriverId,
               orderId: input.id,
               amount: earnedAmount,
-              date: new Date().toISOString().split("T")[0],
+              date: guayaquilDateKey(),
             });
           }
         }
@@ -331,6 +358,18 @@ export const adminOrdersProcedures = {
           .for("update");
         const order = orderResult[0];
         if (!order) throw new Error("Pedido no encontrado");
+        if (["delivered", "cancelled", "picked_up", "on_the_way"].includes(order.status)) {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: "No se puede asignar o reasignar un pedido terminal o ya retirado.",
+          });
+        }
+        if (!["ready_for_pickup", "driver_assigned"].includes(order.status)) {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: "El pedido debe estar listo para retirar antes de asignar un repartidor.",
+          });
+        }
 
         if (order.driverId && order.driverId !== input.driverId) {
           if (!input.forceReassign) {

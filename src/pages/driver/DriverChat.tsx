@@ -37,7 +37,7 @@ export default function DriverChat() {
   const navigate = useNavigate();
   const driverSession = useDriverSession();
   const chatOrderId = Number(orderId);
-  const { data: messages, refresh } = useChatMessages(chatOrderId);
+  const { data: messages, refresh, error } = useChatMessages(chatOrderId);
   const sendChat = useSendChatMessage(chatOrderId);
   const utils = trpc.useUtils();
   const { connected } = useOrderEvents(chatOrderId || undefined, utils);
@@ -50,15 +50,19 @@ export default function DriverChat() {
     }
   }, [messages]);
 
+  const lastMessageId = messages && messages.length > 0
+    ? (messages[messages.length - 1] as any).id
+    : null;
+
   useEffect(() => {
-    if (chatOrderId && driverSession) {
+    if (chatOrderId && driverSession && lastMessageId) {
       trpcMutate("chat.markAsRead", { orderId: chatOrderId }).catch(() => {});
     }
-  }, [chatOrderId, driverSession, messages.length]);
+  }, [chatOrderId, driverSession, lastMessageId]);
 
   const handleSend = async (msg: string) => {
     const message = msg.trim();
-    if (!message || !driverSession || !chatOrderId) return;
+    if (!message || !driverSession || !chatOrderId || sendChat.isPending) return;
     try {
       await sendChat.mutateAsync({
         orderId: chatOrderId,
@@ -98,6 +102,14 @@ export default function DriverChat() {
 
       {/* Messages area */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-2 bg-surface">
+        {error && (
+          <div role="alert" className="mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 flex items-center justify-between gap-2">
+            <span>No se pudo cargar el chat: {error.message}</span>
+            <button type="button" onClick={() => refresh()} className="font-bold underline">
+              Reintentar
+            </button>
+          </div>
+        )}
         {grouped.map((group) => (
           <div key={group.date}>
             {/* Date separator */}
@@ -156,7 +168,8 @@ export default function DriverChat() {
           <button
             key={qm}
             onClick={() => handleSend(qm)}
-            className="px-3 py-1.5 bg-zinc-100 rounded-full text-xs text-zinc-700 whitespace-nowrap hover:bg-brand-soft hover:text-brand transition-colors shadow-sm"
+            disabled={sendChat.isPending}
+            className="px-3 py-1.5 bg-zinc-100 rounded-full text-xs text-zinc-700 whitespace-nowrap hover:bg-brand-soft hover:text-brand transition-colors shadow-sm disabled:opacity-40"
           >
             {qm}
           </button>

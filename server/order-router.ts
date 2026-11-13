@@ -29,6 +29,7 @@ import {
   safeDriver,
 } from "./lib/order-access";
 import { markCommerceReadyForOrder } from "./lib/order-ready";
+import { guayaquilDateKey } from "./lib/dates";
 import {
   syncAllCommerceStatuses,
   syncCommerceStatuses,
@@ -666,8 +667,9 @@ export const orderRouter = createRouter({
       return rows.map(sanitizeOrder);
     }),
 
-  getAvailableForDriver: driverQuery.query(async () => {
+  getAvailableForDriver: driverQuery.query(async ({ ctx }) => {
     const db = getDb();
+    const rate = Number(ctx.driver!.commissionRate ?? "75");
     const availableOrders = await db
       .select({
         id: orders.id,
@@ -676,10 +678,8 @@ export const orderRouter = createRouter({
         deliveryFee: orders.deliveryFee,
         total: orders.total,
         paymentMethod: orders.paymentMethod,
-        deliveryAddress: orders.deliveryAddress,
-        customerPhone: orders.customerPhone,
-        notes: orders.notes,
         createdAt: orders.createdAt,
+        commerceId: commerces.id,
         commerceName: commerces.name,
         commerceAddress: commerces.address,
         commerceLat: commerces.lat,
@@ -696,13 +696,69 @@ export const orderRouter = createRouter({
       )
       .orderBy(orders.createdAt);
 
-    const grouped = new Map<number, (typeof availableOrders)[number] & { lat: string | null; lng: string | null }>();
-    for (const row of availableOrders) {
-      if (!grouped.has(row.id)) {
-        grouped.set(row.id, { ...row, lat: row.commerceLat, lng: row.commerceLng });
+    const grouped = new Map<
+      number,
+      {
+        id: number;
+        status: string;
+        subtotal: string;
+        deliveryFee: string | null;
+        total: string;
+        paymentMethod: string;
+        createdAt: Date;
+        commerceName: string | null;
+        commerceAddress: string | null;
+        commerceLat: string | null;
+        commerceLng: string | null;
+        commerceIds: Set<number>;
+        itemCount: number;
       }
+    >();
+
+    for (const row of availableOrders) {
+      const existing = grouped.get(row.id);
+      if (existing) {
+        existing.itemCount += 1;
+        if (row.commerceId) existing.commerceIds.add(row.commerceId);
+        continue;
+      }
+      grouped.set(row.id, {
+        id: row.id,
+        status: row.status,
+        subtotal: row.subtotal,
+        deliveryFee: row.deliveryFee,
+        total: row.total,
+        paymentMethod: row.paymentMethod,
+        createdAt: row.createdAt,
+        commerceName: row.commerceName,
+        commerceAddress: row.commerceAddress,
+        commerceLat: row.commerceLat,
+        commerceLng: row.commerceLng,
+        commerceIds: new Set(row.commerceId ? [row.commerceId] : []),
+        itemCount: 1,
+      });
     }
-    return [...grouped.values()];
+
+    return [...grouped.values()].map((order) => ({
+      id: order.id,
+      status: order.status,
+      subtotal: order.subtotal,
+      deliveryFee: order.deliveryFee,
+      total: order.total,
+      paymentMethod: order.paymentMethod,
+      createdAt: order.createdAt,
+      commerceName: order.commerceName,
+      commerceAddress: order.commerceAddress,
+      commerceLat: order.commerceLat,
+      commerceLng: order.commerceLng,
+      commerceCount: order.commerceIds.size,
+      itemCount: order.itemCount,
+      // La dirección/teléfono/notas del cliente se entregan recién después
+      // de aceptar el pedido, desde order.getById.
+      estimatedEarning: (
+        Number(order.deliveryFee ?? 0) * (rate / 100)
+      ).toFixed(2),
+    }));
   }),
 
   updateStatus: participantQuery
@@ -730,6 +786,31 @@ export const orderRouter = createRouter({
       const db = getDb();
       const access = await assertOrderAccess(ctx, input.id);
       const { order, viewer } = access;
+
+      if (viewer.role === "driver") {
+        if (input.status === "picked_up") {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: "Usa el checklist de retiro por comercio para marcar el pedido como recogido.",
+          });
+        }
+        if (input.status === "delivered") {
+          const commerceIds = [...new Set(access.items.map((item) => item.commerceId))];
+          const picked = new Set(order.pickedUpCommerceIds ?? []);
+          if (!commerceIds.every((commerceId) => picked.has(commerceId))) {
+            throw new TRPCError({
+              code: "PRECONDITION_FAILED",
+              message: "Debes retirar el pedido en todos los comercios antes de entregarlo.",
+            });
+          }
+          if (order.status !== "on_the_way") {
+            throw new TRPCError({
+              code: "PRECONDITION_FAILED",
+              message: "El pedido debe estar en camino antes de marcarlo entregado.",
+            });
+          }
+        }
+      }
 
       if (viewer.role === "merchant") {
         if (!["accepted", "preparing", "cancelled"].includes(input.status)) {
@@ -774,6 +855,29 @@ export const orderRouter = createRouter({
       }
 
       const updated = await db.transaction(async (tx) => {
+        const lockedRows = await tx
+          .select()
+          .from(orders)
+          .where(eq(orders.id, order.id))
+          .for("update")
+          .limit(1);
+        const current = lockedRows[0];
+        if (!current) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Pedido no encontrado" });
+        }
+        if (current.status !== order.status) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "El pedido cambió mientras lo actualizabas. Recarga e inténtalo de nuevo.",
+          });
+        }
+        if (input.status === "delivered" && current.status !== "on_the_way") {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: "El pedido debe estar en camino antes de marcarlo entregado.",
+          });
+        }
+
         if (input.status === "delivered" && assignedDriverId) {
           const existingEarning = await tx
             .select({ id: driverEarnings.id })
@@ -794,7 +898,7 @@ export const orderRouter = createRouter({
             const driver = driverRows[0];
             const rate = Number(driver?.commissionRate ?? "80");
             const amount = Number(order.deliveryFee) * (rate / 100);
-            const today = new Date().toISOString().split("T")[0];
+            const today = guayaquilDateKey();
             await tx
               .insert(driverEarnings)
               .values({

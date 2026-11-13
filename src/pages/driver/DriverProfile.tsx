@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router";
 import {
   ArrowLeft,
@@ -15,14 +15,15 @@ import {
   Save,
   X,
 } from "lucide-react";
-import { trpc } from "@/providers/trpc";
-import { trpcMutate } from "@/hooks/useDeliveryData";
-import { queryClient } from "@/providers/trpc";
+import { toast } from "sonner";
+import { trpc, queryClient } from "@/providers/trpc";
+import { trpcMutate, useDriverSession } from "@/hooks/useDeliveryData";
 import { clearRoleUser, clearSession, dispatchLogout } from "@/hooks/useSessionSync";
 
 export default function DriverProfile() {
   const navigate = useNavigate();
-  const [driverId, setDriverId] = useState<number | null>(null);
+  const driverSession = useDriverSession();
+  const driverId = driverSession?.id ?? null;
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState("");
   const [editVehicle, setEditVehicle] = useState("");
@@ -30,32 +31,27 @@ export default function DriverProfile() {
 
   const utils = trpc.useUtils();
 
-  useEffect(() => {
-    const session = localStorage.getItem("driver_user");
-    if (session) {
-      try {
-        const data = JSON.parse(session);
-        if (data?.id) {
-          setDriverId(data.id);
-        }
-      } catch {}
-    }
-  }, []);
-
-  const { data: driver, isLoading } = trpc.driver.getById.useQuery(
+  const { data: driver, isLoading, isError, error, refetch } = trpc.driver.getProfile.useQuery(
     { id: driverId! },
     { enabled: !!driverId }
   );
 
-  const updateStatusMutation = trpc.driver.updateStatus.useMutation();
+  const updateStatusMutation = trpc.driver.updateStatus.useMutation({
+    onSuccess: () => {
+      if (driverId) utils.driver.getProfile.invalidate({ id: driverId });
+    },
+    onError: (mutationError) =>
+      toast.error(mutationError.message || "No se pudo cambiar el estado."),
+  });
 
   const updateProfileMutation = trpc.driver.updateProfile.useMutation({
     onSuccess: () => {
-      if (driverId) {
-        utils.driver.getById.invalidate({ id: driverId });
-      }
+      if (driverId) utils.driver.getProfile.invalidate({ id: driverId });
       setIsEditing(false);
+      toast.success("Perfil actualizado.");
     },
+    onError: (mutationError) =>
+      toast.error(mutationError.message || "No se pudo guardar el perfil."),
   });
 
   const handleStartEdit = () => {
@@ -67,11 +63,15 @@ export default function DriverProfile() {
 
   const handleSaveProfile = async () => {
     if (!driverId) return;
+    if (!editName.trim() || !editVehicle.trim() || !editLicensePlate.trim()) {
+      toast.error("Nombre, vehículo y placa son obligatorios.");
+      return;
+    }
     await updateProfileMutation.mutateAsync({
       id: driverId,
-      name: editName,
-      vehicle: editVehicle,
-      licensePlate: editLicensePlate,
+      name: editName.trim(),
+      vehicle: editVehicle.trim(),
+      licensePlate: editLicensePlate.trim(),
     });
   };
 
@@ -81,12 +81,25 @@ export default function DriverProfile() {
 
   const handleToggleOnline = async () => {
     if (!driver) return;
+    if (driver.status === "busy") {
+      toast.error("Tienes un pedido activo. Termínalo antes de cambiar tu estado.");
+      return;
+    }
     const newStatus = driver.status === "online" ? "offline" : "online";
     await updateStatusMutation.mutateAsync({ id: driver.id, status: newStatus });
   };
 
   const handleLogout = async () => {
-    await trpcMutate("login.logout", { scope: "driver" }).catch(() => {});
+    try {
+      await trpcMutate("driver.logoutSession", {});
+    } catch (logoutError) {
+      const message = logoutError instanceof Error ? logoutError.message : "";
+      if (message.toLowerCase().includes("pedido activo")) {
+        toast.error(message);
+        return;
+      }
+      await trpcMutate("login.logout", { scope: "driver" }).catch(() => {});
+    }
     clearRoleUser("driver");
     clearSession("driver");
     dispatchLogout("driver");
@@ -98,6 +111,30 @@ export default function DriverProfile() {
     return (
       <div className="mobile-container bg-gray-50 min-h-screen flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-[#2E7D32]" />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="mobile-container bg-gray-50 min-h-screen flex flex-col items-center justify-center px-6 text-center">
+        <p className="text-sm font-bold text-red-700">No se pudo cargar tu perfil</p>
+        <p className="text-xs text-gray-500 mt-1">{error.message}</p>
+        <button
+          type="button"
+          onClick={() => refetch()}
+          className="mt-4 px-4 py-2 rounded-lg bg-[#2E7D32] text-white text-xs font-bold"
+        >
+          Reintentar
+        </button>
+      </div>
+    );
+  }
+
+  if (!driver) {
+    return (
+      <div className="mobile-container bg-gray-50 min-h-screen flex items-center justify-center">
+        <p className="text-sm text-gray-500">Repartidor no encontrado</p>
       </div>
     );
   }
@@ -161,14 +198,20 @@ export default function DriverProfile() {
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-800">
-                  {driver?.status === "online" ? "En linea" : driver?.status === "busy" ? "Ocupado" : "Desconectado"}
+                  {driver?.status === "online" ? "En línea" : driver?.status === "busy" ? "Ocupado" : "Desconectado"}
                 </p>
                 <p className="text-xs text-gray-500">
-                  {driver?.status === "online" ? "Recibiendo pedidos" : "No recibiras pedidos"}
+                  {driver?.status === "online" ? "Recibiendo pedidos" : driver?.status === "busy" ? "Pedido en curso" : "No recibirás pedidos"}
                 </p>
               </div>
             </div>
-            <button onClick={handleToggleOnline} className="touch-target" disabled={updateStatusMutation.isPending}>
+            <button
+              onClick={handleToggleOnline}
+              className="touch-target"
+              disabled={updateStatusMutation.isPending || driver.status === "busy"}
+              aria-label={driver.status === "online" ? "Desconectarse" : "Conectarse"}
+              aria-pressed={driver.status === "online"}
+            >
               {driver?.status === "online" ? (
                 <ToggleRight className="w-10 h-10 text-[#2E7D32]" />
               ) : (

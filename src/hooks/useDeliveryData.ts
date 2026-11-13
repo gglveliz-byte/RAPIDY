@@ -610,13 +610,15 @@ export function useAdminAssignDriver() {
 
 // ========== DRIVER ==========
 export function useDriverSession() {
-  const [driverUser, setDriverUser] = useState<any>(null);
-  useEffect(() => {
-    const session = localStorage.getItem("driver_user") || localStorage.getItem("qs_driver_user");
-    if (session) {
-      try { setDriverUser(JSON.parse(session)); } catch { /* empty */ }
+  const [driverUser] = useState<any>(() => {
+    try {
+      const session =
+        localStorage.getItem("driver_user") || localStorage.getItem("qs_driver_user");
+      return session ? JSON.parse(session) : null;
+    } catch {
+      return null;
     }
-  }, []);
+  });
   return driverUser;
 }
 

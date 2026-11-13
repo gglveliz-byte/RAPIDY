@@ -114,48 +114,15 @@ export default function OrderTracking() {
     }
   };
 
-  // Geocodificación delegada a TanStack Query (caché de sesión + cancelación).
+  // La ubicación llega por el SSE del pedido: el backend emite driver_location
+// al canal order:{id}, que el cliente sí puede autenticar.
   useEffect(() => {
-    const driverId = order?.driver?.id;
-    if (!driverId) return;
-
-    let closed = false;
-    let eventSource: EventSource | null = null;
-    let retry = 0;
-    let retryTimer: ReturnType<typeof setTimeout> | null = null;
-
-    const connect = () => {
-      if (closed) return;
-      eventSource = new EventSource(`/api/events/driver/${driverId}`);
-      eventSource.addEventListener("update", (event) => {
-        try {
-          const data = JSON.parse((event as MessageEvent).data);
-          if (data?.type === "location_update" && data.lat && data.lng) {
-            const lat = Number(data.lat);
-            const lng = Number(data.lng);
-            if (Number.isFinite(lat) && Number.isFinite(lng)) {
-              retry = 0;
-              setDriverPos({ lat, lng });
-            }
-          }
-        } catch { /* sin acción */ }
-      });
-      eventSource.onerror = () => {
-        eventSource?.close();
-        if (closed) return;
-        const delay = Math.min(30_000, 1_500 * 2 ** retry++);
-        retryTimer = setTimeout(connect, delay);
-      };
-    };
-
-    connect();
-
-    return () => {
-      closed = true;
-      eventSource?.close();
-      if (retryTimer) clearTimeout(retryTimer);
-    };
-  }, [order?.driver?.id]);
+    const lat = Number(order?.driver?.currentLat);
+    const lng = Number(order?.driver?.currentLng);
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+      setDriverPos({ lat, lng });
+    }
+  }, [order?.driver?.currentLat, order?.driver?.currentLng]);
 
   const meta = getOrderStatusMeta(order?.status);
   const isDelivered = order?.status === "delivered";

@@ -11,8 +11,11 @@ import {
   Home,
   Check,
 } from "lucide-react";
+import { toast } from "sonner";
 import { trpc } from "@/providers/trpc";
+import { useDriverSession } from "@/hooks/useDeliveryData";
 import { useOrderEvents } from "@/hooks/useOrderEvents";
+import { getOrderStatusMeta } from "@contracts/orderStatus";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import ChatBubble from "@/components/ChatBubble";
@@ -31,40 +34,49 @@ if (typeof document !== "undefined") {
 }
 
 const orderSteps = [
-  { key: "ready_for_pickup", label: "Retirar del local" },
-  { key: "picked_up", label: "Camino al cliente" },
-  { key: "on_the_way", label: "Entregado" },
+  { key: "driver_assigned", label: "Asignado · retirar del local" },
+  { key: "picked_up", label: "Pedido retirado" },
+  { key: "on_the_way", label: "En camino al cliente" },
+  { key: "delivered", label: "Entregado" },
 ];
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
 
 export default function DriverOrder() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [driverId, setDriverId] = useState<number | null>(null);
+  const driverSession = useDriverSession();
+  const driverId = driverSession?.id ?? null;
   const mapRef = useRef<L.Map | null>(null);
   const [destCoords, setDestCoords] = useState<{ lat: number; lng: number } | null>(null);
-
-  useEffect(() => {
-    const session = localStorage.getItem("driver_user");
-    if (session) {
-      try {
-        const data = JSON.parse(session);
-        if (data?.id) {
-          setDriverId(data.id);
-        }
-      } catch {}
-    }
-  }, []);
 
   const { data: order, isLoading } = trpc.order.getById.useQuery(
     { id: Number(id) },
     { enabled: !!id }
+  );
+  const { data: driverProfile } = trpc.driver.getById.useQuery(
+    { id: driverId! },
+    { enabled: !!driverId },
   );
 
   const utils = trpc.useUtils();
   useOrderEvents(Number(id), utils);
 
   const updateStatusMutation = trpc.order.updateStatus.useMutation({
-    onSuccess: () => utils.order.getById.invalidate({ id: Number(id) }),
+    onSuccess: () => {
+      utils.order.getById.invalidate({ id: Number(id) });
+      utils.driver.getEarnings.invalidate({ id: driverId! });
+      utils.driver.getOrderHistory.invalidate({ limit: 50 });
+      utils.driver.getActiveOrders.invalidate({ id: driverId! });
+      utils.driver.getById.invalidate({ id: driverId! });
+    },
   });
   const acceptOrderMutation = trpc.driver.acceptOrder.useMutation({
     onSuccess: () => utils.order.getById.invalidate({ id: Number(id) }),
@@ -74,7 +86,32 @@ export default function DriverOrder() {
       utils.order.getById.invalidate({ id: Number(id) });
       utils.driver.getActiveOrders.invalidate({ id: driverId! });
     },
+    onError: (error) => toast.error(error.message || "No se pudo marcar el retiro."),
   });
+  const updateLocationMutation = trpc.driver.updateLocation.useMutation();
+  const lastLocationRef = useRef(0);
+
+  useEffect(() => {
+    if (!driverId || !order) return;
+    if (!["driver_assigned", "ready_for_pickup", "picked_up", "on_the_way"].includes(order.status)) {
+      return;
+    }
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        const now = Date.now();
+        if (now - lastLocationRef.current < 15_000) return;
+        lastLocationRef.current = now;
+        updateLocationMutation.mutate({
+          id: driverId,
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+        });
+      },
+      () => {},
+      { enableHighAccuracy: true, maximumAge: 30_000, timeout: 10_000 },
+    );
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, [driverId, order?.status, updateLocationMutation]);
 
   const allCommerceIds: number[] = order?.items ? [...new Set(order.items.map((i: any) => i.commerceId as number))] : [];
   const pickedUpCommerceIds: number[] = (order as any)?.pickedUpCommerceIds || [];
@@ -100,24 +137,30 @@ export default function DriverOrder() {
   }, [order?.deliveryAddress]);
 
   const getCurrentStep = (status: string) => {
-    if (status === "ready_for_pickup") return 0;
+    if (status === "ready_for_pickup" || status === "driver_assigned") return 0;
     if (status === "picked_up") return 1;
-    if (status === "on_the_way") return 1;
-    if (status === "delivered") return 2;
+    if (status === "on_the_way") return 2;
+    if (status === "delivered") return 3;
     return -1;
   };
 
   const currentStep = order ? getCurrentStep(order.status) : -1;
   const delivered = order?.status === "delivered";
+  const isTerminal = delivered || order?.status === "cancelled";
   const isAssigned = order?.driverId === driverId;
+  const earningAmount = (
+    (Number(order?.deliveryFee ?? 0) * Number(driverProfile?.commissionRate ?? 75)) /
+    100
+  ).toFixed(2);
 
   const handleAcceptOrder = async () => {
     if (!id || !driverId) return;
-    await acceptOrderMutation.mutateAsync({
-      driverId,
-      orderId: Number(id),
-    });
-    utils.order.getById.invalidate({ id: Number(id) });
+    try {
+      await acceptOrderMutation.mutateAsync({ orderId: Number(id) });
+      utils.order.getById.invalidate({ id: Number(id) });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "No se pudo aceptar el pedido.");
+    }
   };
 
   const handleMarkCommercePickup = async (commerceId: number) => {
@@ -131,30 +174,25 @@ export default function DriverOrder() {
 
   const handleNextStep = async () => {
     if (!id || !order) return;
-
-    if (order.status === "picked_up") {
-      await updateStatusMutation.mutateAsync({
-        id: Number(id),
-        status: "on_the_way",
-        driverId: driverId || undefined,
-      });
-    } else if (order.status === "on_the_way") {
-      await updateStatusMutation.mutateAsync({
-        id: Number(id),
-        status: "delivered",
-        driverId: driverId || undefined,
-      });
+    try {
+      if (order.status === "picked_up") {
+        await updateStatusMutation.mutateAsync({
+          id: Number(id),
+          status: "on_the_way",
+          driverId: driverId || undefined,
+        });
+      } else if (order.status === "on_the_way") {
+        await updateStatusMutation.mutateAsync({
+          id: Number(id),
+          status: "delivered",
+          driverId: driverId || undefined,
+        });
+      }
+      utils.order.getById.invalidate({ id: Number(id) });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "No se pudo actualizar el pedido.");
     }
-    utils.order.getById.invalidate({ id: Number(id) });
   };
-
-  // Auto-redirect to /driver after 3s on delivery
-  useEffect(() => {
-    if (delivered) {
-      const timer = setTimeout(() => navigate("/driver"), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [delivered, navigate]);
 
   const openRoute = () => {
     const address = encodeURIComponent(order?.deliveryAddress || "");
@@ -168,13 +206,18 @@ export default function DriverOrder() {
     const mapContainer = document.getElementById("driver-map");
     if (!mapContainer || !mapContainer.offsetWidth) return;
 
+    const firstCommerce = order.commerces?.find((c: any) => c.lat && c.lng);
+    const initialLat = firstCommerce ? Number(firstCommerce.lat) : -0.1807;
+    const initialLng = firstCommerce ? Number(firstCommerce.lng) : -78.4678;
+
     const newMap = L.map(mapContainer, {
       zoomControl: false,
-      attributionControl: false,
-    }).setView([-33.45, -70.65], 13);
+      attributionControl: true,
+    }).setView([initialLat, initialLng], 13);
 
     L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
       maxZoom: 19,
+      attribution: '&copy; OpenStreetMap &copy; CARTO',
     }).addTo(newMap);
 
     newMap.whenReady(() => {
@@ -199,7 +242,7 @@ export default function DriverOrder() {
                   <div style="width:36px;height:36px;background:${isPicked ? "linear-gradient(135deg,#43A047,#2E7D32)" : isReady ? "linear-gradient(135deg,#2E7D32,#1B5E20)" : "linear-gradient(135deg,#9E9E9E,#757575)"};border:3px solid white;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.2);">
                     ${isPicked ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' : isReady ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>' : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>'}
                   </div>
-                  <div style="margin-top:2px;background:${isPicked ? "#43A047" : isReady ? "#2E7D32" : "#9E9E9E"};color:white;font-size:7px;font-weight:700;padding:1px 6px;border-radius:4px;border:1px solid white;white-space:nowrap;">${c.name || "Comercio"}</div>
+                  <div style="margin-top:2px;background:${isPicked ? "#43A047" : isReady ? "#2E7D32" : "#9E9E9E"};color:white;font-size:7px;font-weight:700;padding:1px 6px;border-radius:4px;border:1px solid white;white-space:nowrap;">${escapeHtml(c.name || "Comercio")}</div>
                 </div>`,
               }),
             }).addTo(newMap);
@@ -292,7 +335,7 @@ export default function DriverOrder() {
         </button>
         <h1 className="text-xl font-bold text-white">Pedido #{id}</h1>
         <p className="text-white/70 text-sm mt-1">
-          {delivered ? "Entregado" : currentStep >= 0 ? orderSteps[currentStep]?.label : order.status.replace(/_/g, " ")}
+          {getOrderStatusMeta(order.status).label}
         </p>
       </div>
 
@@ -326,13 +369,15 @@ export default function DriverOrder() {
                 <Home className="w-5 h-5 text-blue-600" />
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-800">Cliente: {order.customerPhone || "Teléfono no disponible"}</p>
+                <p className="text-sm font-medium text-gray-800">Cliente</p>
                 <p className="text-xs text-gray-500">{order.deliveryAddress}</p>
-                <div className="flex gap-2 mt-1">
-                  <a href={`tel:${order.customerPhone || ""}`} className="text-xs text-blue-600 flex items-center gap-0.5">
-                    <Phone className="w-3 h-3" /> Llamar
-                  </a>
-                </div>
+                {!isTerminal && (
+                  <div className="flex gap-2 mt-1">
+                    <a href={`tel:${order.customerPhone || ""}`} className="text-xs text-blue-600 flex items-center gap-0.5">
+                      <Phone className="w-3 h-3" /> {order.customerPhone || "Llamar"}
+                    </a>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -407,7 +452,7 @@ export default function DriverOrder() {
                       i <= currentStep ? "bg-[#2E7D32] text-white" : "bg-gray-200 text-gray-400"
                     }`}
                   >
-                    {i < currentStep ? (
+                    {(i < currentStep || (i === currentStep && delivered)) ? (
                       <CheckCircle className="w-4 h-4" />
                     ) : (
                       <span className="text-xs font-bold">{i + 1}</span>
@@ -459,7 +504,7 @@ export default function DriverOrder() {
         </div>
       )}
 
-      {!delivered && (
+      {!isTerminal && (
         <button
           onClick={openRoute}
           className="mx-4 mb-2 h-10 bg-white border border-gray-200 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-all flex items-center justify-center gap-2"
@@ -469,15 +514,21 @@ export default function DriverOrder() {
         </button>
       )}
 
-      {!delivered && <ChatBubble orderId={Number(id)} role="driver" />}
+      {!isTerminal && <ChatBubble orderId={Number(id)} role="driver" />}
 
       {delivered && (
         <div className="px-4 mt-4 mb-6">
           <div className="bg-green-50 rounded-xl p-4 text-center">
             <CheckCircle className="w-10 h-10 text-[#2E7D32] mx-auto mb-2" />
             <p className="text-sm font-medium text-gray-800">Entrega completada!</p>
-            <p className="text-xs text-gray-500 mt-1">Ganancia: ${order.deliveryFee}</p>
-            <p className="text-xs text-gray-400 mt-2">Redirigiendo en 3 segundos...</p>
+            <p className="text-xs text-gray-500 mt-1">Ganancia acreditada: ${earningAmount}</p>
+            <button
+              type="button"
+              onClick={() => navigate("/driver/history")}
+              className="mt-3 px-4 py-2 rounded-lg bg-[#2E7D32] text-white text-xs font-bold"
+            >
+              Ver historial
+            </button>
           </div>
         </div>
       )}

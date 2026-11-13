@@ -1,82 +1,66 @@
-import { useState, useEffect, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { ArrowLeft, DollarSign, TrendingUp, Clock, Bike, Loader2 } from "lucide-react";
 import { trpc } from "@/providers/trpc";
+import { useDriverSession } from "@/hooks/useDeliveryData";
+import { useDriverEvents } from "@/hooks/useOrderEvents";
+
+function guayaquilDateKey(value: string | Date): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Guayaquil",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(value));
+}
 
 export default function DriverEarnings() {
   const navigate = useNavigate();
-  const [driverId, setDriverId] = useState<number | null>(null);
+  const driverSession = useDriverSession();
+  const driverId = driverSession?.id ?? null;
+  const utils = trpc.useUtils();
+  useDriverEvents(driverId || undefined, utils);
   const [period, setPeriod] = useState<"day" | "week" | "month">("week");
 
-  useEffect(() => {
-    const session = localStorage.getItem("driver_user");
-    if (session) {
-      try {
-        const data = JSON.parse(session);
-        if (data?.id) {
-          setDriverId(data.id);
-        }
-      } catch {}
-    }
-  }, []);
-
-  const { data: earnings, isLoading } = trpc.driver.getEarnings.useQuery(
+  const { data: earnings, isLoading, isError, error, refetch } = trpc.driver.getEarnings.useQuery(
     { id: driverId! },
     { enabled: !!driverId }
   );
 
   const dailyHistory = useMemo(() => {
     if (!earnings || earnings.length === 0) return [];
-    return earnings.reduce((acc: any[], e: any) => {
-      const date = e.date;
-      const existing = acc.find((a: any) => a.date === date);
-      if (existing) {
-        existing.earnings += parseFloat(String(e.amount));
-        existing.deliveries += 1;
-      } else {
-        acc.push({ date, deliveries: 1, earnings: parseFloat(String(e.amount)) });
-      }
-      return acc;
-    }, []);
+    const grouped = new Map<string, { date: string; deliveries: number; earnings: number }>();
+    for (const entry of earnings as any[]) {
+      const key = guayaquilDateKey(entry.createdAt ?? entry.date);
+      const current = grouped.get(key) ?? { date: key, deliveries: 0, earnings: 0 };
+      current.deliveries += 1;
+      current.earnings += Number(entry.amount);
+      grouped.set(key, current);
+    }
+    return [...grouped.values()].sort((a, b) => b.date.localeCompare(a.date));
   }, [earnings]);
 
-  const getPeriodEarnings = () => {
-    if (!earnings || earnings.length === 0) return 0;
+  const periodEntries = useMemo(() => {
+    if (!earnings || earnings.length === 0) return [];
     const now = new Date();
-    const filtered = earnings.filter((e: any) => {
-      const entryDate = new Date(e.date);
-      if (period === "day") {
-        return entryDate.toDateString() === now.toDateString();
-      }
-      if (period === "week") {
-        const weekStart = new Date(now);
-        weekStart.setDate(now.getDate() - now.getDay());
-        return entryDate >= weekStart;
-      }
-      if (period === "month") {
-        return entryDate.getMonth() === now.getMonth() && entryDate.getFullYear() === now.getFullYear();
-      }
-      return true;
-    });
-    return filtered.reduce((acc: number, e: any) => acc + parseFloat(String(e.amount)), 0) || 0;
-  };
+    const todayKey = guayaquilDateKey(now);
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - now.getDay());
+    const weekStartKey = guayaquilDateKey(weekStart);
 
-  const periodEarnings = getPeriodEarnings();
-  const periodDeliveries = useMemo(() => {
-    if (!earnings || earnings.length === 0) return 0;
-    const now = new Date();
-    return earnings.filter((e: any) => {
-      const entryDate = new Date(e.date);
-      if (period === "day") return entryDate.toDateString() === now.toDateString();
-      if (period === "week") {
-        const weekStart = new Date(now);
-        weekStart.setDate(now.getDate() - now.getDay());
-        return entryDate >= weekStart;
-      }
-      if (period === "month") return entryDate.getMonth() === now.getMonth() && entryDate.getFullYear() === now.getFullYear();
-      return true;
-    }).length;
+    return (earnings as any[]).filter((entry) => {
+      const key = guayaquilDateKey(entry.createdAt ?? entry.date);
+      if (period === "day") return key === todayKey;
+      if (period === "week") return key >= weekStartKey;
+      return key.slice(0, 7) === todayKey.slice(0, 7);
+    });
   }, [earnings, period]);
+
+  const periodEarnings = periodEntries.reduce(
+    (sum, entry: any) => sum + Number(entry.amount),
+    0,
+  );
+  const periodDeliveries = periodEntries.length;
   const totalDeliveries = earnings?.length || 0;
   const avgEarnings = periodDeliveries > 0 ? periodEarnings / periodDeliveries : 0;
 
@@ -84,6 +68,22 @@ export default function DriverEarnings() {
     return (
       <div className="mobile-container bg-gray-50 min-h-screen flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-[#2E7D32]" />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="mobile-container bg-gray-50 min-h-screen flex flex-col items-center justify-center px-6 text-center">
+        <p className="text-sm font-bold text-red-700">No se pudieron cargar tus ganancias</p>
+        <p className="text-xs text-gray-500 mt-1">{error.message}</p>
+        <button
+          type="button"
+          onClick={() => refetch()}
+          className="mt-4 px-4 py-2 rounded-lg bg-[#2E7D32] text-white text-xs font-bold"
+        >
+          Reintentar
+        </button>
       </div>
     );
   }
@@ -159,7 +159,7 @@ export default function DriverEarnings() {
               <div key={day.date} className="p-4 flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-800">
-                    {new Date(day.date).toLocaleDateString("es-ES", {
+                    {new Date(`${day.date}T12:00:00`).toLocaleDateString("es-ES", {
                       weekday: "short",
                       day: "numeric",
                       month: "short",

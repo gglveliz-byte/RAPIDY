@@ -12,6 +12,7 @@ import {
 import { useCustomerSession } from "@/hooks/useCustomerSession"
 import { checkCustomerAuth } from "@/lib/customerAuthCache"
 import { trpcCall } from "@/hooks/useDeliveryData"
+import { queryClient } from "@/providers/trpc"
 import { usePushNotifications } from "@/hooks/usePushNotifications"
 import { Loader2, RefreshCw } from "lucide-react"
 
@@ -46,6 +47,7 @@ export default function SessionGuard({ role, children }: { role: GuardRole; chil
     redirected.current = true
     clearRoleUser(role)
     clearSession(role)
+    queryClient.clear()
     dispatchLogout(role)
     if (role === "customer") navigate("/customer-login", { replace: true })
     else navigate("/login", { replace: true })

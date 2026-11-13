@@ -3,11 +3,15 @@ import { TRPCError } from "@trpc/server";
 import { createRouter, publicQuery } from "./middleware";
 import { getDb } from "./queries/connection";
 import { users, drivers, commerces, customers } from "@db/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { env } from "./lib/env";
 import { setAdminCookie, clearAdminCookie, verifyAdminRefreshToken } from "./admin-auth";
-import { setDriverCookies, clearDriverCookies, verifyDriverRefreshToken } from "./driver-auth";
+import {
+  setDriverCookies,
+  clearDriverCookies,
+  verifyDriverRefreshTokenPayload,
+} from "./driver-auth";
 import { setMerchantCookie, clearMerchantCookie, verifyMerchantRefreshToken } from "./merchant-auth";
 import { clearCustomerCookies, setCustomerCookies, verifyRefreshTokenPayload } from "./customer-auth";
 
@@ -162,25 +166,33 @@ export const loginRouter = createRouter({
 
       if (input.phone) {
         const normalizedPhone = input.phone.replace(/\D/g, "");
-        let driverResult = await db.select().from(drivers).where(eq(drivers.phone, normalizedPhone));
+        let driverResult = await db
+          .select()
+          .from(drivers)
+          .where(eq(drivers.phone, normalizedPhone));
 
-        // Fallback: buscar sin código de país (para drivers creados con input de texto plano)
-        if (driverResult.length === 0 && normalizedPhone.length > 7) {
-          const countryCodes = ["54", "591", "56", "57", "506", "53", "1809", "593", "503", "502", "504", "52", "505", "507", "595", "51", "1787", "598", "58", "34", "1", "44", "33", "39", "55"];
-          for (const cc of countryCodes) {
-            if (normalizedPhone.startsWith(cc)) {
-              const withoutCC = normalizedPhone.slice(cc.length);
-              driverResult = await db.select().from(drivers).where(eq(drivers.phone, withoutCC));
-              if (driverResult.length > 0) break;
-            }
-          }
+        // Fallback por últimos 9 dígitos: tolera +593, 0 inicial y formatos legacy.
+        if (driverResult.length === 0 && normalizedPhone.length >= 9) {
+          const national = normalizedPhone.slice(-9);
+          driverResult = await db
+            .select()
+            .from(drivers)
+            .where(
+              sql`right(regexp_replace(${drivers.phone}, '[^0-9]', '', 'g'), 9) = ${national}`,
+            );
         }
 
         const driver = driverResult[0];
         const valid = await bcrypt.compare(input.password, driver?.passwordHash ?? DUMMY_HASH);
         if (driver && driver.passwordHash && valid) {
           clearLoginFailures(attemptKey);
-          await setDriverCookies(ctx.resHeaders, ctx.req.headers, driver.id);
+          clearAdminCookie(ctx.resHeaders);
+          clearMerchantCookie(ctx.resHeaders);
+          const session = await setDriverCookies(ctx.resHeaders, ctx.req.headers, driver.id);
+          if (!session) {
+            recordLoginFailure(attemptKey);
+            return { success: false, message: "Credenciales inválidas" };
+          }
           return {
             success: true,
             role: "driver",
@@ -267,10 +279,19 @@ export const loginRouter = createRouter({
     // Try driver refresh
     const driverRefresh = cookies["quickgo_driver_refresh"];
     if (driverRefresh) {
-      const driverId = await verifyDriverRefreshToken(driverRefresh);
-      if (driverId) {
-        await setDriverCookies(ctx.resHeaders, ctx.req.headers, driverId);
-        return { success: true, role: "driver" };
+      const payload = await verifyDriverRefreshTokenPayload(driverRefresh);
+      if (payload) {
+        const db = getDb();
+        const rows = await db.select().from(drivers).where(eq(drivers.id, payload.driverId));
+        const driver = rows[0];
+        if (
+          driver &&
+          (payload.sessionVersion === null ||
+            (driver.sessionVersion ?? 0) === payload.sessionVersion)
+        ) {
+          const session = await setDriverCookies(ctx.resHeaders, ctx.req.headers, driver.id);
+          if (session) return { success: true, role: "driver" };
+        }
       }
     }
 

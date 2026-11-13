@@ -184,13 +184,22 @@ export function useDriverEvents(
     const connection = createReconnectingEventSource(
       `/api/events/driver/${driverId}`,
       (data) => {
-        if (data && typeof data === "object" && "type" in (data as any) && (data as any).type === "new_available") {
-          onNewOrder?.();
-        }
+        const type = data && typeof data === "object" && "type" in (data as any)
+          ? (data as any).type
+          : null;
+        if (type === "location_update") return;
+        if (type === "new_available") onNewOrder?.();
         utils.order.getAvailableForDriver.invalidate();
-        utils.driver.getOrderHistory.invalidate({ id: driverId });
+        utils.driver.getOrderHistory.invalidate({ limit: 50 });
+        utils.driver.getActiveOrders.invalidate({ id: driverId });
+        utils.driver.getEarnings.invalidate({ id: driverId });
+        utils.driver.getById.invalidate({ id: driverId });
+        utils.driver.getProfile.invalidate({ id: driverId });
         queryClient.invalidateQueries({ queryKey: ["order.getAvailableForDriver"] });
-        queryClient.invalidateQueries({ queryKey: ["driver.getOrderHistory", driverId] });
+        queryClient.invalidateQueries({ queryKey: ["driver.getOrderHistory"] });
+        queryClient.invalidateQueries({ queryKey: ["driver.getActiveOrders", driverId] });
+        queryClient.invalidateQueries({ queryKey: ["driver.getEarnings", driverId] });
+        queryClient.invalidateQueries({ queryKey: ["driver.getById", driverId] });
       }
     );
 

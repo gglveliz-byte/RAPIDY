@@ -3,9 +3,13 @@ import { TRPCError } from "@trpc/server";
 import { createRouter, publicQuery, driverQuery, adminQuery } from "./middleware";
 import { getDb } from "./queries/connection";
 import { drivers, driverEarnings, orders, orderItems, orderStatusHistory, orderCommerceStatus } from "@db/schema";
-import { eq, and, ne, inArray, desc } from "drizzle-orm";
+import { eq, and, ne, inArray, desc, sql } from "drizzle-orm";
 import { emit } from "./events";
-import { verifyDriverRefreshToken, clearDriverCookies, setDriverCookies } from "./driver-auth";
+import {
+  verifyDriverRefreshTokenPayload,
+  clearDriverCookies,
+  setDriverCookies,
+} from "./driver-auth";
 
 export const driverRouter = createRouter({
   list: adminQuery.query(async () => {
@@ -71,9 +75,33 @@ export const driverRouter = createRouter({
     )
     .mutation(async ({ input, ctx }) => {
       if (ctx.driver.id !== input.id) {
-        throw new Error("No tienes autorización para modificar el estado de otro repartidor");
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "No puedes modificar el estado de otro repartidor",
+        });
       }
       const db = getDb();
+      const activeOrders = await db
+        .select({ id: orders.id })
+        .from(orders)
+        .where(
+          and(
+            eq(orders.driverId, input.id),
+            inArray(orders.status, [
+              "driver_assigned",
+              "ready_for_pickup",
+              "picked_up",
+              "on_the_way",
+            ]),
+          ),
+        )
+        .limit(1);
+      if (activeOrders.length > 0 && input.status !== "busy") {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "Tienes un pedido activo. Termínalo antes de cambiar tu disponibilidad.",
+        });
+      }
       await db.update(drivers).set({ status: input.status }).where(eq(drivers.id, input.id));
       const result = await db.select().from(drivers).where(eq(drivers.id, input.id));
       emit("admin:dashboard", { type: "dashboard_update" });
@@ -84,22 +112,51 @@ export const driverRouter = createRouter({
   updateLocation: driverQuery
     .input(
       z.object({
-        id: z.number(),
-        lat: z.string(),
-        lng: z.string(),
+        id: z.number().int().positive(),
+        lat: z.coerce.number().finite().min(-90).max(90),
+        lng: z.coerce.number().finite().min(-180).max(180),
       })
     )
     .mutation(async ({ input, ctx }) => {
       if (ctx.driver.id !== input.id) {
-        throw new Error("No tienes autorización para modificar la ubicación de otro repartidor");
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "No puedes modificar la ubicación de otro repartidor",
+        });
       }
       const db = getDb();
       await db
         .update(drivers)
-        .set({ currentLat: input.lat, currentLng: input.lng })
+        .set({ currentLat: input.lat.toFixed(8), currentLng: input.lng.toFixed(8) })
         .where(eq(drivers.id, input.id));
 
-      emit(`driver:${input.id}`, { type: "location_update", lat: input.lat, lng: input.lng, ts: Date.now() });
+      emit(`driver:${input.id}`, {
+        type: "location_update",
+        lat: input.lat.toFixed(8),
+        lng: input.lng.toFixed(8),
+        ts: Date.now(),
+      });
+
+      // El cliente escucha el canal del pedido, no el canal privado del driver.
+      const activeOrders = await db
+        .select({ id: orders.id })
+        .from(orders)
+        .where(
+          and(
+            eq(orders.driverId, input.id),
+            inArray(orders.status, ["driver_assigned", "picked_up", "on_the_way"]),
+          ),
+        )
+        .limit(3);
+      for (const active of activeOrders) {
+        emit(`order:${active.id}`, {
+          type: "driver_location",
+          driverId: input.id,
+          lat: input.lat.toFixed(8),
+          lng: input.lng.toFixed(8),
+          ts: Date.now(),
+        });
+      }
 
       return { success: true };
     }),
@@ -107,19 +164,22 @@ export const driverRouter = createRouter({
   updateProfile: driverQuery
     .input(
       z.object({
-        id: z.number(),
-        name: z.string().optional(),
-        vehicle: z.string().optional(),
-        licensePlate: z.string().optional(),
+        id: z.number().int().positive(),
+        name: z.string().trim().min(2, "El nombre es obligatorio").max(200).optional(),
+        vehicle: z.string().trim().min(1, "El vehículo es obligatorio").max(100).optional(),
+        licensePlate: z.string().trim().min(1, "La placa es obligatoria").max(20).optional(),
       })
     )
     .mutation(async ({ input, ctx }) => {
       if (ctx.driver.id !== input.id) {
-        throw new Error("No tienes autorización para modificar el perfil de otro repartidor");
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "No puedes modificar el perfil de otro repartidor",
+        });
       }
       const db = getDb();
       const { id, ...data } = input;
-      const updateData: any = {};
+      const updateData: Partial<typeof drivers.$inferInsert> = {};
       if (data.name !== undefined) updateData.name = data.name;
       if (data.vehicle !== undefined) updateData.vehicle = data.vehicle;
       if (data.licensePlate !== undefined) updateData.licensePlate = data.licensePlate;
@@ -133,13 +193,21 @@ export const driverRouter = createRouter({
     }),
 
   getEarnings: driverQuery
-    .input(z.object({ id: z.number() }))
+    .input(z.object({ id: z.number().int().positive() }))
     .query(async ({ input, ctx }) => {
       if (ctx.driver.id !== input.id) {
-        throw new Error("No tienes autorización para ver las ganancias de otro repartidor");
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "No puedes ver las ganancias de otro repartidor",
+        });
       }
       const db = getDb();
-      return db.select().from(driverEarnings).where(eq(driverEarnings.driverId, input.id));
+      return db
+        .select()
+        .from(driverEarnings)
+        .where(eq(driverEarnings.driverId, input.id))
+        .orderBy(desc(driverEarnings.createdAt))
+        .limit(500);
     }),
 
   getActiveOrders: driverQuery
@@ -164,35 +232,67 @@ export const driverRouter = createRouter({
         .where(
           and(
             eq(orders.driverId, input.id),
-            inArray(orders.status, ["ready_for_pickup", "picked_up", "on_the_way"])
+            inArray(orders.status, [
+              "driver_assigned",
+              "ready_for_pickup",
+              "picked_up",
+              "on_the_way",
+            ])
           )
         )
-        .orderBy(desc(orders.createdAt));
+        .orderBy(desc(orders.createdAt))
+        .limit(5);
     }),
 
   getOrderHistory: driverQuery
-    .input(z.object({ id: z.number().int().positive().optional() }))
-    .query(async ({ ctx }) => {
+    .input(
+      z
+        .object({
+          limit: z.number().int().min(1).max(100).default(50),
+        })
+        .default({ limit: 50 }),
+    )
+    .query(async ({ input, ctx }) => {
       const db = getDb();
-      return db
+      const rows = await db
         .select({
           id: orders.id,
           status: orders.status,
           total: orders.total,
           deliveryFee: orders.deliveryFee,
           deliveryAddress: orders.deliveryAddress,
-          customerPhone: orders.customerPhone,
           createdAt: orders.createdAt,
           updatedAt: orders.updatedAt,
+          deliveredAt: orders.deliveredAt,
+          cancellationReason: orders.cancellationReason,
+          cancelledBy: orders.cancelledBy,
+          earningAmount: driverEarnings.amount,
         })
         .from(orders)
+        .leftJoin(
+          driverEarnings,
+          and(
+            eq(driverEarnings.orderId, orders.id),
+            eq(driverEarnings.driverId, ctx.driver!.id),
+            eq(driverEarnings.type, "delivery_fee"),
+          ),
+        )
         .where(
           and(
             eq(orders.driverId, ctx.driver!.id),
-            inArray(orders.status, ["delivered", "cancelled"])
-          )
+            inArray(orders.status, ["delivered", "cancelled"]),
+          ),
         )
-        .orderBy(desc(orders.updatedAt));
+        .orderBy(desc(sql`coalesce(${orders.deliveredAt}, ${orders.updatedAt})`))
+        .limit(input.limit);
+
+      return rows.map((row) => ({
+        ...row,
+        earningAmount:
+          row.status === "delivered" && row.earningAmount !== null
+            ? Number(row.earningAmount).toFixed(2)
+            : "0.00",
+      }));
     }),
 
   refreshToken: publicQuery.mutation(async ({ ctx }) => {
@@ -205,9 +305,19 @@ export const driverRouter = createRouter({
     );
     const refreshToken = cookies["quickgo_driver_refresh"];
     if (!refreshToken) return { success: false };
-    const driverId = await verifyDriverRefreshToken(refreshToken);
-    if (!driverId) return { success: false };
-    await setDriverCookies(ctx.resHeaders, ctx.req.headers, driverId);
+    const payload = await verifyDriverRefreshTokenPayload(refreshToken);
+    if (!payload) return { success: false };
+    const db = getDb();
+    const rows = await db.select().from(drivers).where(eq(drivers.id, payload.driverId));
+    const driver = rows[0];
+    if (!driver) return { success: false };
+    if (
+      payload.sessionVersion !== null &&
+      (driver.sessionVersion ?? 0) !== payload.sessionVersion
+    ) {
+      return { success: false };
+    }
+    await setDriverCookies(ctx.resHeaders, ctx.req.headers, driver.id);
     return { success: true };
   }),
 
@@ -223,19 +333,66 @@ export const driverRouter = createRouter({
       const driverId = ctx.driver!.id;
 
       const result = await db.transaction(async (tx) => {
+        // Bloquear primero al driver para que dos pestañas no acepten dos pedidos.
+        const driverRows = await tx
+          .select()
+          .from(drivers)
+          .where(eq(drivers.id, driverId))
+          .for("update")
+          .limit(1);
+        const driver = driverRows[0];
+        if (!driver) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Repartidor no encontrado" });
+        }
+        if (driver.status === "offline") {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: "Estás desconectado. Actívate para aceptar pedidos.",
+          });
+        }
+
         const orderResult = await tx
           .select()
           .from(orders)
           .where(eq(orders.id, input.orderId))
           .for("update");
         const order = orderResult[0];
-        if (!order) throw new Error("Pedido no encontrado");
-        if (order.driverId) throw new Error("Pedido ya asignado");
-        if (!["preparing", "ready_for_pickup"].includes(order.status)) {
-          throw new Error("Pedido no está disponible para aceptar");
+        if (!order) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Pedido no encontrado" });
+        }
+        if (order.driverId) {
+          throw new TRPCError({ code: "CONFLICT", message: "Otro repartidor tomó este pedido." });
+        }
+        if (order.status !== "ready_for_pickup") {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: "El pedido todavía no está listo para retirar.",
+          });
         }
 
-        // Driver must not have any other active order
+        const commerceStatuses = await tx
+          .select()
+          .from(orderCommerceStatus)
+          .where(eq(orderCommerceStatus.orderId, input.orderId));
+        const commerceIds = await tx
+          .selectDistinct({ commerceId: orderItems.commerceId })
+          .from(orderItems)
+          .where(eq(orderItems.orderId, input.orderId));
+        const allReady =
+          commerceIds.length > 0 &&
+          commerceIds.every((row) =>
+            commerceStatuses.some(
+              (status) =>
+                status.commerceId === row.commerceId && status.status === "ready_for_pickup",
+            ),
+          );
+        if (!allReady) {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: "Todos los comercios deben marcar el pedido listo antes de asignarlo.",
+          });
+        }
+
         const activeOrders = await tx
           .select({ id: orders.id })
           .from(orders)
@@ -248,37 +405,55 @@ export const driverRouter = createRouter({
           )
           .limit(1);
         if (activeOrders.length > 0) {
-          throw new Error("Ya tienes un pedido activo. Finalízalo antes de aceptar otro.");
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "Ya tienes un pedido activo. Finalízalo antes de aceptar otro.",
+          });
         }
 
         await tx
           .update(orders)
           .set({
             driverId,
-            status: "ready_for_pickup",
-            updatedAt: new Date()
+            status: "driver_assigned",
+            updatedAt: new Date(),
           })
           .where(eq(orders.id, input.orderId));
 
         await tx.insert(orderStatusHistory).values({
           orderId: input.orderId,
-          status: "ready_for_pickup",
-          notes: "Repartidor asignado",
+          status: "driver_assigned",
+          notes: `Repartidor ${driver.name} asignado`,
         });
 
         await tx.update(drivers).set({ status: "busy" }).where(eq(drivers.id, driverId));
 
         const updated = await tx.select().from(orders).where(eq(orders.id, input.orderId));
-
-        // Emit SSE events to notify about order assignment
-        emit(`order:${input.orderId}`, { type: "status_update", status: "ready_for_pickup", driverId });
-        emit(`driver:${driverId}`, { type: "order_assigned", orderId: input.orderId });
-        emit("admin:dashboard", { type: "dashboard_update" });
-
         return updated[0];
       });
 
-      return result;
+      emit(`order:${input.orderId}`, {
+        type: "status_update",
+        status: "driver_assigned",
+        driverId,
+      });
+      emit(`driver:${driverId}`, { type: "order_assigned", orderId: input.orderId });
+      emit("admin:dashboard", { type: "dashboard_update" });
+
+      const commerceRows = await db
+        .select({ commerceId: orderItems.commerceId })
+        .from(orderItems)
+        .where(eq(orderItems.orderId, input.orderId));
+      for (const commerceId of new Set(commerceRows.map((row) => row.commerceId))) {
+        emit(`commerce:${commerceId}`, {
+          type: "order_status",
+          orderId: input.orderId,
+          status: "driver_assigned",
+        });
+      }
+
+      const { paymentReceipt: _receipt, ...safeOrder } = result;
+      return safeOrder;
     }),
 
   markCommercePickup: driverQuery
@@ -294,24 +469,50 @@ export const driverRouter = createRouter({
           .where(eq(orders.id, input.orderId))
           .for("update");
         const order = orderResult[0];
-        if (!order) throw new Error("Pedido no encontrado");
-        if (order.driverId !== driverId) throw new Error("No tienes este pedido asignado");
+        if (!order) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Pedido no encontrado" });
+        }
+        if (order.driverId !== driverId) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "No tienes este pedido asignado" });
+        }
+        if (["delivered", "cancelled", "on_the_way"].includes(order.status)) {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: "El pedido ya no está en una etapa de retiro.",
+          });
+        }
 
         // Check commerce status - must be ready_for_pickup
         const commerceStatus = await tx
           .select()
           .from(orderCommerceStatus)
           .where(and(eq(orderCommerceStatus.orderId, input.orderId), eq(orderCommerceStatus.commerceId, input.commerceId)));
-        if (commerceStatus.length === 0) throw new Error("Comercio no encontrado en este pedido");
+        if (commerceStatus.length === 0) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Comercio no encontrado en este pedido",
+          });
+        }
         const cs = commerceStatus[0].status;
         if (cs !== "ready_for_pickup") {
-          if (cs === "picked_up") throw new Error("Este comercio ya fue marcado como recogido");
-          throw new Error("Este comercio aún no está listo para retirar");
+          if (cs === "picked_up") {
+            throw new TRPCError({
+              code: "CONFLICT",
+              message: "Este comercio ya fue marcado como recogido",
+            });
+          }
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: "Este comercio aún no está listo para retirar",
+          });
         }
 
         const currentPicked = order.pickedUpCommerceIds || [];
         if (currentPicked.includes(input.commerceId)) {
-          throw new Error("Este comercio ya fue marcado como recogido");
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "Este comercio ya fue marcado como recogido",
+          });
         }
 
         // Get all unique commerce IDs in this order
@@ -362,8 +563,50 @@ export const driverRouter = createRouter({
         return updated[0];
       });
 
-      return result;
+      const { paymentReceipt: _receipt, ...safeOrder } = result;
+      return safeOrder;
     }),
+
+  unregisterDeviceToken: driverQuery.mutation(async ({ ctx }) => {
+    const db = getDb();
+    await db.update(drivers).set({ fcmToken: null }).where(eq(drivers.id, ctx.driver.id));
+    return { success: true };
+  }),
+
+  logoutSession: driverQuery.mutation(async ({ ctx }) => {
+    const db = getDb();
+    const activeOrders = await db
+      .select({ id: orders.id })
+      .from(orders)
+      .where(
+        and(
+          eq(orders.driverId, ctx.driver.id),
+          inArray(orders.status, [
+            "driver_assigned",
+            "ready_for_pickup",
+            "picked_up",
+            "on_the_way",
+          ]),
+        ),
+      )
+      .limit(1);
+    if (activeOrders.length > 0) {
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: "Finaliza tu pedido activo antes de cerrar sesión.",
+      });
+    }
+    await db
+      .update(drivers)
+      .set({
+        status: "offline",
+        fcmToken: null,
+        sessionVersion: sql`coalesce(${drivers.sessionVersion}, 0) + 1`,
+      })
+      .where(eq(drivers.id, ctx.driver.id));
+    clearDriverCookies(ctx.resHeaders);
+    return { success: true };
+  }),
 
   registerDeviceToken: driverQuery
     .input(z.object({ token: z.string() }))

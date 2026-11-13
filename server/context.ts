@@ -2,7 +2,11 @@ import type { FetchCreateContextFnOptions } from "@trpc/server/adapters/fetch";
 import type { Customer, User, Driver } from "@db/schema";
 import { verifyAccessTokenPayload, verifyRefreshTokenPayload, setCustomerCookies } from "./customer-auth";
 import { verifyAdminToken, verifyAdminRefreshToken, setAdminCookie } from "./admin-auth";
-import { verifyDriverToken, refreshDriverAccessToken } from "./driver-auth";
+import {
+  verifyDriverTokenPayload,
+  verifyDriverRefreshTokenPayload,
+  refreshDriverAccessToken,
+} from "./driver-auth";
 import { verifyMerchantToken, verifyMerchantRefreshToken } from "./merchant-auth";
 import { getDb } from "./queries/connection";
 import { customers, users, drivers } from "@db/schema";
@@ -96,21 +100,25 @@ async function getDriverFromCookie(headers: Headers, resHeaders: Headers): Promi
   const refreshToken = cookies["quickgo_driver_refresh"];
 
   let driverId: number | null = null;
+  let expectedSessionVersion: number | null = null;
 
   if (token) {
-    driverId = await verifyDriverToken(token);
+    const payload = await verifyDriverTokenPayload(token);
+    driverId = payload?.driverId ?? null;
+    expectedSessionVersion = payload?.sessionVersion ?? null;
   }
 
   // If access token expired, try refresh token and set new cookies
   if (!driverId && refreshToken) {
-    const tokens = await refreshDriverAccessToken(refreshToken);
-    if (tokens) {
-      driverId = await verifyDriverToken(tokens.access);
-      if (driverId) {
-        const cookieOpts = getSessionCookieOptions(headers);
-        resHeaders.append("Set-Cookie", serializeCookie("quickgo_driver_token", tokens.access, { ...cookieOpts, maxAge: 24 * 60 * 60, path: "/", httpOnly: true }));
-        resHeaders.append("Set-Cookie", serializeCookie("quickgo_driver_refresh", tokens.refresh, { ...cookieOpts, maxAge: 30 * 24 * 60 * 60, path: "/", httpOnly: true, sameSite: "None" }));
-      }
+    const payload = await verifyDriverRefreshTokenPayload(refreshToken);
+    driverId = payload?.driverId ?? null;
+    expectedSessionVersion = payload?.sessionVersion ?? null;
+    if (driverId) {
+      const tokens = await refreshDriverAccessToken(refreshToken);
+      if (!tokens) return null;
+      const cookieOpts = getSessionCookieOptions(headers);
+      resHeaders.append("Set-Cookie", serializeCookie("quickgo_driver_token", tokens.access, { ...cookieOpts, maxAge: 24 * 60 * 60, path: "/", httpOnly: true }));
+      resHeaders.append("Set-Cookie", serializeCookie("quickgo_driver_refresh", tokens.refresh, { ...cookieOpts, maxAge: 30 * 24 * 60 * 60, path: "/", httpOnly: true }));
     }
   }
 
@@ -118,7 +126,15 @@ async function getDriverFromCookie(headers: Headers, resHeaders: Headers): Promi
 
   const db = getDb();
   const result = await db.select().from(drivers).where(eq(drivers.id, driverId));
-  return result[0] || null;
+  const driver = result[0];
+  if (!driver) return null;
+  if (
+    expectedSessionVersion !== null &&
+    (driver.sessionVersion ?? 0) !== expectedSessionVersion
+  ) {
+    return null;
+  }
+  return driver;
 }
 
 async function getMerchantFromCookie(headers: Headers, resHeaders: Headers): Promise<User | null> {
