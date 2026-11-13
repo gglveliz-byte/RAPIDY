@@ -85,7 +85,7 @@ export function HomeFeaturedCommerces({
           {commerces.map((commerce) => (
             <div
               key={commerce.id}
-              onClick={() => navigate(`/commerce/${commerce.id}`)}
+              onClick={() => navigate(`/store/${commerce.id}`)}
               className="min-w-[190px] sm:min-w-[210px] bg-white dark:bg-[#1A1A1E] rounded-3xl overflow-hidden border border-zinc-100 dark:border-white/10 shadow-[0_6px_20px_rgba(0,0,0,0.06)] dark:shadow-[0_6px_20px_rgba(0,0,0,0.35)] hover:shadow-lg hover:-translate-y-1 active:scale-[0.98] transition-all cursor-pointer flex flex-col justify-between group"
             >
               {/* Cover Image */}

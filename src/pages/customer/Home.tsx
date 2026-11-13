@@ -245,7 +245,7 @@ function ProductCard({ product }: { product: any }) {
       <div
         className="h-28 bg-zinc-100 dark:bg-zinc-800 bg-cover bg-center cursor-pointer group-hover:scale-105 transition-transform duration-300 relative"
         style={{ backgroundImage: `url(${safeImage(product.image, "product")})` }}
-        onClick={() => navigate(`/commerce/${product.commerceId}`)}
+        onClick={() => navigate(`/store/${product.commerceId}`)}
       >
         {!available && (
           <span className="absolute top-2 left-2 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-bold text-white">
@@ -298,7 +298,7 @@ function CommerceCard({ commerce, featuredProducts = [] }: { commerce: any; feat
       <div
         className="h-32 bg-zinc-100 dark:bg-zinc-800 bg-cover bg-center cursor-pointer relative"
         style={{ backgroundImage: `url(${safeImage(commerce.coverImage, "cover")})` }}
-        onClick={() => navigate(`/commerce/${commerce.id}`)}
+        onClick={() => navigate(`/store/${commerce.id}`)}
       >
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
         <div className="flex justify-between items-start p-3 relative z-10">
@@ -315,7 +315,7 @@ function CommerceCard({ commerce, featuredProducts = [] }: { commerce: any; feat
         </div>
       </div>
 
-      <div className="p-4 cursor-pointer relative" onClick={() => navigate(`/commerce/${commerce.id}`)}>
+      <div className="p-4 cursor-pointer relative" onClick={() => navigate(`/store/${commerce.id}`)}>
         <div className="flex items-start gap-3">
           <img
             src={safeImage(commerce.logo, "logo")}
@@ -357,7 +357,7 @@ function CommerceCard({ commerce, featuredProducts = [] }: { commerce: any; feat
                 <div
                   className="w-full h-20 bg-zinc-100 dark:bg-zinc-800 bg-cover bg-center rounded-xl mb-1.5 cursor-pointer"
                   style={{ backgroundImage: `url(${safeImage(product.image, "product")})` }}
-                  onClick={() => navigate(`/commerce/${commerce.id}`)}
+                  onClick={() => navigate(`/store/${commerce.id}`)}
                 />
                 <p className="text-xs font-bold text-zinc-900 dark:text-white truncate">{product.name}</p>
                 <div className="flex items-center justify-between mt-1.5">

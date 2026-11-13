@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router'
+import { Routes, Route, Navigate, useParams } from 'react-router'
 import { lazy, Suspense, useEffect } from 'react'
 import { Loader2 } from 'lucide-react'
 import SessionGuard from '@/components/SessionGuard'
@@ -55,6 +55,14 @@ const NotFound = lazy(() => import('./pages/NotFound'))
 
 
 
+function LegacyCommerceRedirect() {
+  const { id } = useParams<{ id: string }>()
+  if (id && /^\d+$/.test(id)) {
+    return <Navigate to={`/store/${id}`} replace />
+  }
+  return <NotFound />
+}
+
 function LoadingFallback() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#0A0A0D]">
@@ -98,7 +106,8 @@ function AnimatedRoutes() {
         <Route path="/customer-login" element={<PageTransition><CustomerLogin /></PageTransition>} />
         <Route path="/home" element={<SessionGuard role="customer"><PageTransition><CustomerHome /></PageTransition></SessionGuard>} />
         <Route path="/search" element={<SessionGuard role="customer"><PageTransition><CustomerSearch /></PageTransition></SessionGuard>} />
-        <Route path="/commerce/:id" element={<SessionGuard role="customer"><PageTransition><CommerceDetail /></PageTransition></SessionGuard>} />
+        <Route path="/store/:id" element={<SessionGuard role="customer"><PageTransition><CommerceDetail /></PageTransition></SessionGuard>} />
+        <Route path="/commerce/:id" element={<LegacyCommerceRedirect />} />
         <Route path="/cart" element={<SessionGuard role="customer"><PageTransition><Cart /></PageTransition></SessionGuard>} />
         <Route path="/order/:id" element={<SessionGuard role="customer"><PageTransition><OrderTracking /></PageTransition></SessionGuard>} />
         <Route path="/chat/:orderId" element={<SessionGuard role="customer"><PageTransition><Chat /></PageTransition></SessionGuard>} />

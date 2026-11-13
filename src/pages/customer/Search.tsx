@@ -264,14 +264,14 @@ function ProductSearchCard({ product }: { product: any }) {
   return (
     <div
       className="bg-white dark:bg-[#1A1A1E] rounded-2xl border border-zinc-100 dark:border-white/10 shadow-[0_4px_16px_rgba(0,0,0,0.05)] dark:shadow-xs overflow-hidden flex flex-col justify-between group hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] dark:hover:border-white/20 transition-all cursor-pointer"
-      onClick={() => navigate(`/commerce/${product.commerceId}`)}
+      onClick={() => navigate(`/store/${product.commerceId}`)}
       role="button"
       tabIndex={0}
       aria-label={`${product.name} de ${product.commerceName}`}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
-          navigate(`/commerce/${product.commerceId}`);
+          navigate(`/store/${product.commerceId}`);
         }
       }}
     >
@@ -333,14 +333,14 @@ function CommerceSearchCard({ commerce }: { commerce: any }) {
   return (
     <div
       className="bg-white dark:bg-[#1A1A1E] rounded-2xl border border-zinc-100 dark:border-white/10 shadow-[0_4px_16px_rgba(0,0,0,0.05)] dark:shadow-xs p-3.5 flex gap-3.5 hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] dark:hover:border-white/20 transition-all cursor-pointer items-center"
-      onClick={() => navigate(`/commerce/${commerce.id}`)}
+      onClick={() => navigate(`/store/${commerce.id}`)}
       role="button"
       tabIndex={0}
       aria-label={`Abrir ${commerce.name}`}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
-          navigate(`/commerce/${commerce.id}`);
+          navigate(`/store/${commerce.id}`);
         }
       }}
     >

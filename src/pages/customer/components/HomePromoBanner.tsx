@@ -92,7 +92,7 @@ export function HomePromoBanner() {
   const handleActionClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (currentProduct?.commerceId) {
-      navigate(`/commerce/${currentProduct.commerceId}`);
+      navigate(`/store/${currentProduct.commerceId}`);
     } else {
       navigate("/search");
     }
