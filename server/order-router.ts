@@ -200,7 +200,9 @@ async function buildQuote(items: Array<z.infer<typeof quoteItemSchema>>) {
 type SanitizedOrder = Omit<typeof orders.$inferSelect, "paymentReceipt">;
 
 function sanitizeOrder(order: typeof orders.$inferSelect): SanitizedOrder {
-  return { ...order, paymentReceipt: undefined } as SanitizedOrder;
+  const safe = { ...order } as Partial<typeof orders.$inferSelect>;
+  delete safe.paymentReceipt;
+  return safe as SanitizedOrder;
 }
 
 async function notifyReadyDrivers(orderId: number) {

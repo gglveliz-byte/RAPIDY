@@ -64,7 +64,7 @@ export function CustomerSessionProvider({ children }: { children: ReactNode }) {
     try {
       localStorage.removeItem(CUSTOMER_STORAGE_KEY);
       localStorage.removeItem("qs_session");
-    } catch {}
+    } catch { /* sin acción */ }
     window.dispatchEvent(new Event("rapidy:logout"));
     queryClient.clear();
   }, [queryClient]);
@@ -99,7 +99,7 @@ export function CustomerSessionProvider({ children }: { children: ReactNode }) {
     try {
       localStorage.setItem(CUSTOMER_STORAGE_KEY, JSON.stringify(customerData));
       localStorage.setItem("qs_session", JSON.stringify({ role: "customer", ts: Date.now() }));
-    } catch {}
+    } catch { /* sin acción */ }
   }, []);
 
   const logout = useCallback(async () => {
@@ -111,7 +111,7 @@ export function CustomerSessionProvider({ children }: { children: ReactNode }) {
         headers: { "Content-Type": "application/json" },
         credentials: "include",
       });
-    } catch {}
+    } catch { /* sin acción */ }
   }, [clearLocalSession]);
 
   const refreshToken = useCallback(async () => {
@@ -130,7 +130,7 @@ export function CustomerSessionProvider({ children }: { children: ReactNode }) {
         return true;
       }
       clearLocalSession();
-    } catch {}
+    } catch { /* sin acción */ }
     return false;
   }, [clearLocalSession]);
 

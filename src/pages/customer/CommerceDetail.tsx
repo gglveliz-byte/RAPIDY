@@ -197,12 +197,13 @@ export default function CommerceDetail() {
             </span>
             <span>•</span>
             <span
-              className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider backdrop-blur-md ${
                 commerce.isOpen === "open"
-                  ? "bg-emerald-500 text-white shadow-xs"
-                  : "bg-rose-500 text-white shadow-xs"
+                  ? "bg-black/60 text-[#FF6A00] border border-[#FF6A00]/40 shadow-xs"
+                  : "bg-black/60 text-zinc-400 border border-white/10"
               }`}
             >
+              <span className={`w-1.5 h-1.5 rounded-full ${commerce.isOpen === "open" ? "bg-[#FF6A00] animate-pulse" : "bg-zinc-500"}`} />
               {commerce.isOpen === "open" ? "Abierto" : "Cerrado"}
             </span>
           </div>

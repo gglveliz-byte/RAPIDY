@@ -34,6 +34,10 @@ interface OptimisticMessage {
   status: "sending" | "failed";
 }
 
+function createTemporaryMessageId(): string {
+  return `temp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+}
+
 function groupMessagesByDate(messages: any[]) {
   const groups: { date: string; messages: any[] }[] = [];
   for (const msg of messages) {
@@ -75,7 +79,7 @@ export default function Chat() {
     try {
       const saved = localStorage.getItem(`rapidy:chat-draft:${chatOrderId}`);
       if (saved) setText(saved);
-    } catch {}
+    } catch { /* sin acción */ }
   }, [chatOrderId]);
 
   useEffect(() => {
@@ -83,7 +87,7 @@ export default function Chat() {
     try {
       if (text) localStorage.setItem(`rapidy:chat-draft:${chatOrderId}`, text);
       else localStorage.removeItem(`rapidy:chat-draft:${chatOrderId}`);
-    } catch {}
+    } catch { /* sin acción */ }
   }, [text, chatOrderId]);
 
   // Scroll al último mensaje solo si el usuario está cerca del final.
@@ -108,7 +112,7 @@ export default function Chat() {
     const message = rawMessage.trim();
     if (!message || !customer || !chatOrderId) return;
 
-    const temporaryId = `temp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const temporaryId = createTemporaryMessageId();
     const optimisticMessage: OptimisticMessage = {
       id: temporaryId,
       orderId: chatOrderId,
@@ -186,13 +190,13 @@ export default function Chat() {
         className="flex-1 overflow-y-auto px-4 py-3 space-y-3 min-h-0 bg-surface"
         aria-live="polite"
       >
-        {loading && messages.length === 0 && (
+        {loading && allMessages.length === 0 && (
           <div className="flex justify-center py-10">
             <Loader2 className="w-7 h-7 text-brand animate-spin" />
           </div>
         )}
 
-        {error && messages.length === 0 && (
+        {error && allMessages.length === 0 && (
           <div className="text-center py-10">
             <AlertCircle className="w-8 h-8 text-rose-400 mx-auto mb-2" />
             <p className="text-sm font-bold text-zinc-700">No pudimos cargar el chat</p>

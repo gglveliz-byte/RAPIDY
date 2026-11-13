@@ -23,7 +23,7 @@ function handleAuthError() {
     localStorage.removeItem("merchant_user")
     localStorage.removeItem("driver_user")
     localStorage.removeItem("cart")
-  } catch {}
+  } catch { /* sin acción */ }
   window.dispatchEvent(new Event("rapidy:logout"))
   const path = window.location.pathname;
   const isBackoffice = path.startsWith("/admin") || 

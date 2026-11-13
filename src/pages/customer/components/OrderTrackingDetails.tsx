@@ -43,11 +43,13 @@ export function OrderTrackingDetails({
         {/* Lista de Artículos */}
         <div className="space-y-3 mb-4">
           {order.items?.length ? (
-            order.items.map((item: any) => (
+            order.items.map((item: any) => {
+              const quantity = Number(item.quantity);
+              return (
               <div key={item.id} className="flex justify-between items-center text-xs sm:text-sm">
                 <div className="flex items-center gap-2 min-w-0 pr-2">
                   <span className="min-w-6 h-6 px-1.5 rounded-lg bg-orange-50 text-brand font-black text-[11px] flex items-center justify-center shrink-0">
-                    {Number(item.quantity) % 1 === 0 ? item.quantity : Number(item.quantity).toFixed(2)}x
+                    {quantity % 1 === 0 ? quantity : quantity.toFixed(2)}x
                   </span>
                   <span className="text-zinc-700 font-semibold truncate">{item.productName}</span>
                 </div>
@@ -55,7 +57,8 @@ export function OrderTrackingDetails({
                   ${parseFloat(item.total).toFixed(2)}
                 </span>
               </div>
-            ))
+              );
+            })
           ) : (
             <p className="text-xs text-zinc-500">No hay artículos registrados en este pedido.</p>
           )}

@@ -306,9 +306,9 @@ export function CartAddressModal({
 
             {/* Detalle si es Efectivo */}
             {paymentMethod === "cash" && (
-              <div className="mt-2.5 p-3.5 bg-emerald-50/60 border border-emerald-100 rounded-2xl flex items-start gap-2.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                <p className="text-xs text-emerald-800 leading-relaxed font-medium">
+              <div className="mt-2.5 p-3.5 bg-orange-50/70 border border-orange-200/80 rounded-2xl flex items-start gap-2.5">
+                <CheckCircle2 className="w-4 h-4 text-brand shrink-0 mt-0.5" />
+                <p className="text-xs text-zinc-800 leading-relaxed font-medium">
                   Pagarás <strong>${total} USD</strong> en efectivo directamente al repartidor cuando toque tu puerta.
                 </p>
               </div>
@@ -326,7 +326,7 @@ export function CartAddressModal({
                       onClick={handleCopyBank}
                       className="flex items-center gap-1 text-[11px] font-bold text-brand bg-white px-2.5 py-1 rounded-lg border border-orange-200 shadow-2xs hover:bg-orange-50 active:scale-95 transition-all cursor-pointer"
                     >
-                      {copiedBank ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                      {copiedBank ? <Check className="w-3 h-3 text-brand" /> : <Copy className="w-3 h-3" />}
                       <span>{copiedBank ? "¡Copiado!" : "Copiar datos"}</span>
                     </button>
                   )}
@@ -349,7 +349,7 @@ export function CartAddressModal({
                   </label>
 
                   {paymentReceipt ? (
-                    <div className="p-3 bg-white rounded-xl border border-emerald-200 flex items-center justify-between shadow-2xs">
+                    <div className="p-3 bg-orange-50/40 rounded-xl border border-brand/30 flex items-center justify-between shadow-2xs">
                       <div className="flex items-center gap-3 min-w-0">
                         <img
                           src={paymentReceipt}
@@ -357,7 +357,7 @@ export function CartAddressModal({
                           className="w-12 h-12 object-cover rounded-lg border border-zinc-200 shrink-0"
                         />
                         <div className="min-w-0">
-                          <p className="text-xs font-bold text-emerald-700 flex items-center gap-1">
+                          <p className="text-xs font-bold text-brand flex items-center gap-1">
                             <CheckCircle2 className="w-3.5 h-3.5" />
                             <span>Comprobante listo</span>
                           </p>
@@ -365,7 +365,7 @@ export function CartAddressModal({
                         </div>
                       </div>
 
-                      <label className="text-[11px] font-bold text-brand hover:underline cursor-pointer px-2 py-1 bg-orange-50 rounded-lg shrink-0">
+                      <label className="text-[11px] font-bold text-brand hover:underline cursor-pointer px-2 py-1 bg-white border border-brand/20 rounded-lg shrink-0">
                         Cambiar
                         <input
                           type="file"
@@ -442,7 +442,7 @@ export function CartAddressModal({
         </div>
 
         {/* PIE STICKY FIJO CON BOTÓN DE ACCIÓN (Siempre visible y accesible) */}
-        <div className="p-4 bg-white border-t border-zinc-200/80 sticky bottom-0 shrink-0 z-20 shadow-[0_-8px_24px_rgba(0,0,0,0.06)]">
+        <div className="p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] bg-white border-t border-zinc-200/80 sticky bottom-0 shrink-0 z-20 shadow-[0_-8px_24px_rgba(0,0,0,0.06)]">
           <button
             onClick={onConfirmOrder}
             disabled={loading || !canConfirm}

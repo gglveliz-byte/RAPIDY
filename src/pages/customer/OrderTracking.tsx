@@ -52,17 +52,17 @@ export default function OrderTracking() {
   const updateReceipt = useUpdatePaymentReceipt();
 
   // Posición inicial conocida del repartidor (antes del primer evento SSE).
-  useEffect(() => {
+  const initialDriverPos: GeoCoords | null = (() => {
     const lat = order?.driver?.currentLat;
     const lng = order?.driver?.currentLng;
-    if (lat && lng && !driverPos) {
-      const parsedLat = Number(lat);
-      const parsedLng = Number(lng);
-      if (Number.isFinite(parsedLat) && Number.isFinite(parsedLng)) {
-        setDriverPos({ lat: parsedLat, lng: parsedLng });
-      }
-    }
-  }, [order?.driver?.currentLat, order?.driver?.currentLng, driverPos]);
+    if (!lat || !lng) return null;
+    const parsedLat = Number(lat);
+    const parsedLng = Number(lng);
+    return Number.isFinite(parsedLat) && Number.isFinite(parsedLng)
+      ? { lat: parsedLat, lng: parsedLng }
+      : null;
+  })();
+  const currentDriverPos = driverPos ?? initialDriverPos;
 
   const handleReuploadReceipt = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -106,7 +106,7 @@ export default function OrderTracking() {
           return;
         }
       }
-    } catch {}
+    } catch { /* sin acción */ }
 
     const controller = new AbortController();
     setGeoLoading(true);
@@ -126,7 +126,7 @@ export default function OrderTracking() {
             setDeliveryCoords(coords);
             try {
               sessionStorage.setItem(cacheKey, JSON.stringify(coords));
-            } catch {}
+            } catch { /* sin acción */ }
           }
         }
       })
@@ -164,7 +164,7 @@ export default function OrderTracking() {
               setDriverPos({ lat, lng });
             }
           }
-        } catch {}
+        } catch { /* sin acción */ }
       });
       eventSource.onerror = () => {
         eventSource?.close();
@@ -192,13 +192,13 @@ export default function OrderTracking() {
     currentStepIndex >= 0 ? ((currentStepIndex + 1) / statusSteps.length) * 100 : 0;
 
   const estimatedMinutes = (() => {
-    if (!driverPos || !deliveryCoords) return null;
+    if (!currentDriverPos || !deliveryCoords) return null;
     const R = 6371;
-    const dLat = ((deliveryCoords.lat - driverPos.lat) * Math.PI) / 180;
-    const dLng = ((deliveryCoords.lng - driverPos.lng) * Math.PI) / 180;
+    const dLat = ((deliveryCoords.lat - currentDriverPos.lat) * Math.PI) / 180;
+    const dLng = ((deliveryCoords.lng - currentDriverPos.lng) * Math.PI) / 180;
     const a =
       Math.sin(dLat / 2) ** 2 +
-      Math.cos((driverPos.lat * Math.PI) / 180) *
+      Math.cos((currentDriverPos.lat * Math.PI) / 180) *
         Math.cos((deliveryCoords.lat * Math.PI) / 180) *
         Math.sin(dLng / 2) ** 2;
     const distanceKm = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
@@ -301,7 +301,7 @@ export default function OrderTracking() {
 
       <OrderTrackingMap
         order={order}
-        driverPos={driverPos}
+        driverPos={currentDriverPos}
         deliveryCoords={deliveryCoords}
         geoLoading={geoLoading}
         followDriver={followDriver}

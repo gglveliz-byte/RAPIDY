@@ -27,7 +27,7 @@
  *   - PostgreSQL (Neon): `orders`, `order_items`, `customers`, `settings`, `commerces`
  */
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import {
   ArrowLeft,
@@ -76,7 +76,7 @@ export default function Cart() {
   const [geoLoading, setGeoLoading] = useState(false);
   const [currentAddress, setCurrentAddress] = useState("");
   const [checkoutError, setCheckoutError] = useState("");
-  const [idempotencyKey, setIdempotencyKey] = useState(createIdempotencyKey);
+  const idempotencyKeyRef = useRef<string | null>(null);
 
   const settings = usePublicSettings();
   const { data: commerces, loading: loadingCommerces } = useCommerces();
@@ -176,6 +176,8 @@ export default function Cart() {
 
     setCheckoutError("");
     setLoading(true);
+    const idempotencyKey =
+      idempotencyKeyRef.current ?? (idempotencyKeyRef.current = createIdempotencyKey());
     try {
       const result: any = await createOrderMutation.mutateAsync({
         items: items.map((i) => ({
@@ -193,7 +195,7 @@ export default function Cart() {
         setOrderId(result.order.id);
         setOrderPlaced(true);
         clearCart();
-        setIdempotencyKey(createIdempotencyKey());
+        idempotencyKeyRef.current = null;
       } else {
         setCheckoutError("No pudimos crear el pedido. Inténtalo de nuevo.");
       }

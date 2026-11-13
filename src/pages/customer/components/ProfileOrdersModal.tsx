@@ -236,7 +236,7 @@ export function ProfileOrdersModal({
         </div>
 
         {/* Lista Scrollable de Pedidos con protección de borde inferior */}
-        <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-3 space-y-3 pb-8 min-h-0">
+        <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-3 space-y-3 pb-[calc(2.5rem+env(safe-area-inset-bottom,0px))] min-h-0">
           {filteredOrders.length === 0 ? (
             <div className="py-14 text-center">
               <div className="w-14 h-14 rounded-full bg-zinc-100 flex items-center justify-center mx-auto mb-3 text-zinc-400">

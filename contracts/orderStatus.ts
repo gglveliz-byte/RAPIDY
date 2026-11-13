@@ -142,9 +142,9 @@ export const ORDER_STATUS_META: Record<OrderStatus, OrderStatusMeta> = {
     description: "¡Tu pedido fue entregado! Gracias por comprar en Rapidy.",
     step: 5,
     terminal: true,
-    tone: "success",
-    badgeClass: "bg-emerald-50 text-emerald-700 border-emerald-200",
-    dotClass: "bg-emerald-500",
+    tone: "brand",
+    badgeClass: "bg-[#FF6A00]/10 text-[#FF6A00] border-[#FF6A00]/30",
+    dotClass: "bg-[#FF6A00]",
   },
   cancelled: {
     label: "Pedido cancelado",

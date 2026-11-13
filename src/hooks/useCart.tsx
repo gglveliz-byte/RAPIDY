@@ -59,7 +59,7 @@ function readStoredCart(): CartItem[] {
   } catch {
     try {
       localStorage.removeItem(CART_KEY);
-    } catch {}
+    } catch { /* sin acción */ }
     return [];
   }
 }
@@ -128,7 +128,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setItems([]);
     try {
       localStorage.removeItem(CART_KEY);
-    } catch {}
+    } catch { /* sin acción */ }
   }, []);
 
   // Sincronización entre pestañas y limpieza al cerrar sesión.
@@ -141,7 +141,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setItems([]);
       try {
         localStorage.removeItem(CART_KEY);
-      } catch {}
+      } catch { /* sin acción */ }
     };
     window.addEventListener("storage", onStorage);
     window.addEventListener("rapidy:logout", onLogout);

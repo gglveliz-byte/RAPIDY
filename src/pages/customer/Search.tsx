@@ -323,12 +323,13 @@ function CommerceSearchCard({ commerce }: { commerce: any }) {
           </span>
         </div>
         <span
-          className={`inline-block mt-1.5 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
+          className={`inline-flex items-center gap-1 mt-1.5 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
             commerce.isOpen === "open"
-              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-              : "bg-red-50 text-red-700 border border-red-200"
+              ? "bg-[#FF6A00]/10 text-[#FF6A00] border border-[#FF6A00]/30"
+              : "bg-zinc-100 text-zinc-500 border border-zinc-200"
           }`}
         >
+          <span className={`w-1.5 h-1.5 rounded-full ${commerce.isOpen === "open" ? "bg-[#FF6A00] animate-pulse" : "bg-zinc-400"}`} />
           {commerce.isOpen === "open" ? "Abierto" : "Cerrado"}
         </span>
       </div>

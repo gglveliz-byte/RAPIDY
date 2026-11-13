@@ -43,7 +43,6 @@ import {
   useFeaturedProducts,
   useCatalogProducts,
   useProductSearch,
-  useProductsByCommerce,
 } from "@/hooks/useDeliveryData";
 import { CustomerBottomNav } from "@/components/CustomerBottomNav";
 import { useProductEvents, useCommercesEvents } from "@/hooks/useOrderEvents";
@@ -214,7 +213,14 @@ export default function CustomerHome() {
           ) : (
             <div className="space-y-3">
               {filteredCommerces.map((commerce) => (
-                <CommerceCard key={commerce.id} commerce={commerce} />
+                <CommerceCard
+                  key={commerce.id}
+                  commerce={commerce}
+                  featuredProducts={(catalogProducts || []).filter(
+                    (product: any) =>
+                      product.commerceId === commerce.id && product.isFeatured === "yes"
+                  )}
+                />
               ))}
             </div>
           )}
@@ -277,11 +283,12 @@ function ProductCard({ product }: { product: any }) {
   );
 }
 
-function CommerceCard({ commerce }: { commerce: any }) {
+function CommerceCard({ commerce, featuredProducts = [] }: { commerce: any; featuredProducts?: any[] }) {
   const navigate = useNavigate();
   const { addItem } = useCart();
-  const { data: products } = useProductsByCommerce(commerce.id);
-  const featured = (products || []).filter((p: any) => p.isFeatured === "yes").slice(0, 3);
+  const featured = featuredProducts
+    .filter((product) => product.isFeatured === "yes")
+    .slice(0, 3);
   const commerceOpen = commerce.isOpen === "open";
 
   return (
@@ -294,10 +301,13 @@ function CommerceCard({ commerce }: { commerce: any }) {
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
         <div className="flex justify-between items-start p-3 relative z-10">
           <span
-            className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow-xs backdrop-blur-md ${
-              commerce.isOpen === "open" ? "bg-emerald-500/90 text-white" : "bg-red-500/90 text-white"
+            className={`inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow-xs backdrop-blur-md ${
+              commerce.isOpen === "open"
+                ? "bg-black/70 text-[#FF6A00] border border-[#FF6A00]/40"
+                : "bg-black/70 text-zinc-400 border border-white/10"
             }`}
           >
+            <span className={`w-1.5 h-1.5 rounded-full ${commerce.isOpen === "open" ? "bg-[#FF6A00] animate-pulse" : "bg-zinc-500"}`} />
             {commerce.isOpen === "open" ? "Abierto" : "Cerrado"}
           </span>
         </div>

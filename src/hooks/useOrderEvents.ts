@@ -20,7 +20,7 @@ function createReconnectingEventSource(
     if (eventSource) {
       try {
         eventSource.close();
-      } catch {}
+      } catch { /* sin acción */ }
       eventSource = null;
     }
   };

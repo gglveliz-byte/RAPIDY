@@ -70,7 +70,7 @@ function SessionRefresh() {
       if (!session) return
       try {
         await trpcMutate("login.refresh", {})
-      } catch {}
+      } catch { /* sin acción */ }
     }, 9 * 60 * 1000) // each 9 minutes
     return () => clearInterval(interval)
   }, [])
