@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { ArrowLeft, User, MapPin, Navigation } from "lucide-react";
+import { ArrowLeft, User, MapPin, Navigation, Sparkles, ArrowRight } from "lucide-react";
 import { useCustomerSession } from "@/hooks/useCustomerSession";
 import { registerCustomer } from "@/hooks/useDeliveryData";
 import PhoneInput from "@/components/PhoneInput";
+import RapidyCanvas from "@/components/RapidyCanvas";
 
 async function getAddressFromCoords(lat: number, lng: number): Promise<string> {
   try {
@@ -42,7 +43,7 @@ export default function Register() {
       const addr = await getAddressFromCoords(latitude, longitude);
       setForm((f) => ({ ...f, address: addr }));
     } catch {
-      setError("No pudimos obtener tu ubicación. Escribila manualmente.");
+      setError("No pudimos obtener tu ubicación. Por favor escríbela manualmente.");
     } finally {
       setGeoLoading(false);
     }
@@ -51,8 +52,8 @@ export default function Register() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    if (!form.firstName || !form.lastName || !form.phone || !form.address) {
-      setError("Todos los campos son obligatorios");
+    if (!form.firstName.trim() || !form.lastName.trim() || !form.phone.trim() || !form.address.trim()) {
+      setError("Todos los campos son obligatorios para tu entrega");
       return;
     }
     setLoading(true);
@@ -63,127 +64,195 @@ export default function Register() {
         localStorage.setItem("qs_session", JSON.stringify({ role: "customer", ts: Date.now() }));
         navigate("/home");
       } else {
-        setError(result?.message || "Error al registrar");
+        setError(result?.message || "Error al registrar la cuenta");
       }
     } catch (e) {
       console.error("[register] Error:", e);
-      setError("Error de conexión. Intenta de nuevo.");
+      setError("Error de conexión al servidor. Intenta de nuevo.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="mobile-container bg-gray-50 min-h-screen pb-safe">
-      {/* Header */}
-      <div className="bg-[#2E7D32] px-4 pt-safe pb-8 shadow-sm">
-        <button 
-          onClick={() => navigate("/")} 
-          className="w-10 h-10 rounded-xl bg-white/15 text-white flex items-center justify-center active:scale-90 transition-transform mb-3"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <h1 className="text-2xl font-bold text-white">Crear cuenta</h1>
-        <p className="text-white/80 text-sm mt-0.5">Regístrate con tu número de celular</p>
-      </div>
+    <div className="fixed inset-0 w-full h-[100dvh] max-h-[100dvh] bg-[#0A0A0D] overflow-hidden flex items-center justify-center p-3 sm:p-6 select-none">
+      {/* Living Interactive Constellation Canvas */}
+      <RapidyCanvas />
 
-      {/* Form */}
-      <div className="px-4 -mt-4">
-        <div className="bg-white rounded-2xl card-shadow p-6">
-          {error && (
-            <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg">{error}</div>
-          )}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-1 block">Nombre</label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  value={form.firstName}
-                  onChange={(e) => setForm({ ...form, firstName: e.target.value })}
-                  placeholder="Tu nombre"
-                  className="w-full h-12 pl-10 pr-4 border border-gray-200 rounded-xl focus:border-[#2E7D32] focus:ring-1 focus:ring-[#2E7D32] outline-none text-sm"
-                />
-              </div>
+      {/* Floating Glassmorphic Registration Card */}
+      <div className="relative z-10 w-full max-w-[440px] max-h-[96dvh] bg-[#141418]/80 backdrop-blur-2xl rounded-3xl border border-white/10 shadow-[0_24px_80px_rgba(0,0,0,0.85)] p-5 sm:p-7 flex flex-col justify-between overflow-y-auto no-scrollbar ring-1 ring-white/5">
+        
+        {/* Subtle Top Specular Sheen */}
+        <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-[#FF6A00]/40 to-transparent pointer-events-none" />
+
+        {/* Top Header Bar */}
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => navigate("/")}
+            className="w-10 h-10 rounded-2xl bg-white/5 border border-white/10 text-white flex items-center justify-center hover:bg-white/10 active:scale-95 transition-all cursor-pointer backdrop-blur-md"
+            aria-label="Volver"
+          >
+            <ArrowLeft className="w-5 h-5 text-white" />
+          </button>
+
+          <div className="flex items-center gap-1.5 px-3 py-1 bg-white/5 border border-white/10 rounded-full backdrop-blur-md">
+            <Sparkles className="w-3.5 h-3.5 text-[#FF6A00]" />
+            <span className="text-[11px] font-black tracking-widest text-zinc-200 uppercase">
+              Registro Rapidy
+            </span>
+          </div>
+
+          <div className="w-10" />
+        </div>
+
+        {/* Form Body */}
+        <div className="flex flex-col items-center text-center my-auto py-2">
+          {/* Rapidy Emblem */}
+          <div className="relative mb-2 group cursor-pointer" onClick={() => navigate("/")}>
+            <div className="absolute -inset-1 rounded-full bg-gradient-to-tr from-[#FF5E00] to-[#FFA000] opacity-50 blur-lg group-hover:opacity-80 transition-opacity duration-500 animate-pulse" />
+            <div className="relative w-14 h-14 rounded-full p-1 bg-gradient-to-tr from-[#FF5E00] via-[#FF8500] to-[#FFB829] shadow-[0_0_25px_rgba(255,106,0,0.5)] ring-2 ring-white/20">
+              <img
+                src="/image.png"
+                alt="Rapidy Emblem"
+                className="w-full h-full rounded-full object-cover"
+              />
             </div>
+          </div>
 
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-1 block">Apellido</label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  value={form.lastName}
-                  onChange={(e) => setForm({ ...form, lastName: e.target.value })}
-                  placeholder="Tu apellido"
-                  className="w-full h-12 pl-10 pr-4 border border-gray-200 rounded-xl focus:border-[#2E7D32] focus:ring-1 focus:ring-[#2E7D32] outline-none text-sm"
-                />
+          <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight leading-tight">
+            Crear Cuenta
+          </h1>
+          <p className="text-xs text-zinc-400 max-w-xs mt-1 mb-3">
+            Únete a <span className="text-[#FF6A00] font-bold">Rapidy</span> y recibe tus pedidos en minutos
+          </p>
+
+          {/* Error Banner */}
+          {error && (
+            <div className="w-full mb-3 p-3 bg-red-500/10 border border-red-500/30 rounded-2xl text-red-400 text-xs font-semibold animate-in fade-in duration-200">
+              {error}
+            </div>
+          )}
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="w-full space-y-3 text-left">
+            <div className="grid grid-cols-2 gap-2.5">
+              <div>
+                <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-300 mb-1 block">
+                  Nombre
+                </label>
+                <div className="relative flex rounded-2xl bg-[#242426] border border-white/10 focus-within:border-[#FF6A00] focus-within:ring-2 focus-within:ring-[#FF6A00]/25 transition-all">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                  <input
+                    type="text"
+                    value={form.firstName}
+                    onChange={(e) => setForm({ ...form, firstName: e.target.value })}
+                    placeholder="Lautaro"
+                    className="w-full h-11 pl-9 pr-3 bg-transparent text-white placeholder-zinc-500 text-sm font-medium outline-none rounded-2xl"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-300 mb-1 block">
+                  Apellido
+                </label>
+                <div className="relative flex rounded-2xl bg-[#242426] border border-white/10 focus-within:border-[#FF6A00] focus-within:ring-2 focus-within:ring-[#FF6A00]/25 transition-all">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                  <input
+                    type="text"
+                    value={form.lastName}
+                    onChange={(e) => setForm({ ...form, lastName: e.target.value })}
+                    placeholder="Ezequiel"
+                    className="w-full h-11 pl-9 pr-3 bg-transparent text-white placeholder-zinc-500 text-sm font-medium outline-none rounded-2xl"
+                  />
+                </div>
               </div>
             </div>
 
             <PhoneInput
               value={form.phone}
               onChange={(v) => setForm({ ...form, phone: v })}
+              dark={true}
+              error={error}
             />
 
             <div>
-              <label className="text-sm font-medium text-gray-700 mb-1 block">Dirección principal</label>
-              <div className="relative">
-                <MapPin className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-300 block">
+                  Dirección de Entrega
+                </label>
+                <button
+                  type="button"
+                  onClick={handleGetLocation}
+                  disabled={geoLoading}
+                  className="text-[11px] text-[#FF6A00] hover:text-[#FFA000] font-bold flex items-center gap-1 cursor-pointer disabled:opacity-50 transition-colors"
+                >
+                  <Navigation className={`w-3 h-3 ${geoLoading ? "animate-spin" : ""}`} />
+                  <span>{geoLoading ? "Localizando..." : "GPS actual"}</span>
+                </button>
+              </div>
+
+              <div className="relative flex rounded-2xl bg-[#242426] border border-white/10 focus-within:border-[#FF6A00] focus-within:ring-2 focus-within:ring-[#FF6A00]/25 transition-all">
+                <MapPin className="absolute left-3 top-3 w-4 h-4 text-zinc-500" />
                 <textarea
                   value={form.address}
                   onChange={(e) => setForm({ ...form, address: e.target.value })}
-                  placeholder="Calle, número, colonia, ciudad"
-                  rows={3}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:border-[#2E7D32] focus:ring-1 focus:ring-[#2E7D32] outline-none text-sm resize-none"
+                  placeholder="Calle, número, ciudad o referencia..."
+                  rows={2}
+                  className="w-full pl-9 pr-3 py-2.5 bg-transparent text-white placeholder-zinc-500 text-sm font-medium outline-none rounded-2xl resize-none"
                 />
               </div>
-              <button
-                type="button"
-                onClick={handleGetLocation}
-                disabled={geoLoading}
-                className="mt-2 w-full h-10 border border-gray-200 rounded-xl text-sm text-gray-600 font-medium flex items-center justify-center gap-2 hover:bg-gray-50 active:scale-[0.98] transition-all disabled:opacity-50"
-              >
-                <Navigation className="w-4 h-4 text-[#2E7D32]" />
-                {geoLoading ? "Obteniendo ubicación..." : "Usar mi ubicación actual"}
-              </button>
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full h-12 bg-[#2E7D32] text-white font-medium rounded-xl hover:bg-[#1B5E20] active:scale-[0.98] transition-all disabled:opacity-50 touch-target mt-6"
+              className="w-full h-13 mt-2 bg-gradient-to-r from-[#FF5E00] via-[#FF6A00] to-[#FF8500] hover:brightness-110 active:scale-[0.98] text-white font-black text-sm sm:text-base tracking-wider uppercase rounded-2xl shadow-[0_6px_24px_rgba(255,106,0,0.45)] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 touch-target"
             >
-              {loading ? "Registrando..." : "Crear cuenta"}
+              {loading ? (
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <>
+                  <span>Registrarme y Comenzar</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
             </button>
 
-            <p className="text-center text-[11px] text-gray-500 mt-3 leading-snug">
-              Al registrarte, aceptas nuestros{" "}
+            <p className="text-center text-[11px] text-zinc-400 mt-2 leading-tight">
+              Al continuar aceptas los{" "}
               <button
                 type="button"
                 onClick={() => navigate("/terminos-y-condiciones")}
-                className="text-[#2E7D32] underline font-medium hover:text-[#1B5E20]"
+                className="text-[#FF6A00] hover:underline"
               >
-                Términos y Condiciones
+                Términos
               </button>{" "}
               y la{" "}
               <button
                 type="button"
                 onClick={() => navigate("/politica-de-privacidad")}
-                className="text-[#2E7D32] underline font-medium hover:text-[#1B5E20]"
+                className="text-[#FF6A00] hover:underline"
               >
-                Política de Privacidad
-              </button>.
+                Privacidad
+              </button>{" "}
+              de Rapidy.
             </p>
           </form>
-          <p className="text-center text-sm text-gray-500 mt-6">
-            ¿Ya tenés cuenta?{" "}
-            <button onClick={() => navigate("/customer-login")} className="text-[#2E7D32] font-semibold underline hover:text-green-700">
-              Iniciá sesión
-            </button>
-          </p>
         </div>
+
+        {/* Footer */}
+        <div className="pt-2 border-t border-white/5 text-center">
+          <button
+            type="button"
+            onClick={() => navigate("/customer-login")}
+            className="text-xs text-zinc-400 hover:text-white transition-colors cursor-pointer"
+          >
+            ¿Ya tienes cuenta?{" "}
+            <span className="text-[#FF6A00] font-semibold underline ml-1">Iniciar sesión</span>
+          </button>
+        </div>
+
       </div>
     </div>
   );

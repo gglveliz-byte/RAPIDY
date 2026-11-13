@@ -97,13 +97,15 @@ export default function PhoneInput({ value, onChange, error, dark = false }: Pho
           <button
             type="button"
             onClick={() => setOpen(!open)}
-            className={`h-13 sm:h-14 px-3.5 flex items-center gap-1.5 transition-colors text-sm rounded-l-2xl ${
+            className={`h-13 sm:h-14 px-3 flex items-center gap-2 transition-colors text-sm rounded-l-2xl ${
               dark
                 ? "bg-[#2a2a2d] hover:bg-[#333337] text-white border-r border-white/10"
                 : "bg-gray-50 hover:bg-gray-100 text-gray-800 border-r border-gray-100"
             }`}
           >
-            <span className="text-lg">{getFlagEmoji(selected.code)}</span>
+            <span className={`px-1.5 py-0.5 rounded text-[10px] font-black tracking-wider ${dark ? "bg-white/10 text-[#FF6A00]" : "bg-gray-200 text-gray-800"}`}>
+              {selected.code}
+            </span>
             <span className="font-bold">{selected.dial}</span>
             <ChevronDown className={`w-3.5 h-3.5 transition-transform ${dark ? "text-zinc-400" : "text-gray-400"} ${open ? "rotate-180" : ""}`} />
           </button>

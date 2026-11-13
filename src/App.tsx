@@ -56,8 +56,8 @@ const NotFound = lazy(() => import('./pages/NotFound'))
 
 function LoadingFallback() {
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <Loader2 className="h-8 w-8 animate-spin text-[#2E7D32]" />
+    <div className="min-h-screen flex items-center justify-center bg-[#0A0A0D]">
+      <Loader2 className="h-8 w-8 animate-spin text-[#FF6A00]" />
     </div>
   )
 }
