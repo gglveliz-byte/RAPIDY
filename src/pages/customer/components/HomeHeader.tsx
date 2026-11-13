@@ -1,15 +1,19 @@
 /**
  * @archivo src/pages/customer/components/HomeHeader.tsx
- * @modulo 02-customer-home (Cabecera Principal, Identidad de Marca y Buscador)
+ * @modulo 02-customer-home (Cabecera Fija Sticky, Marca Rapidy y Buscador)
  * @proposito
- *   Encabezado superior del panel de clientes Rapidy.
- *   Contiene la barra de estado con saludo al cliente, dirección activa,
- *   el logotipo corporativo con el eslogan oficial "Todo lo que quieres, en un solo pedido",
- *   y la barra de búsqueda interactiva flotante.
+ *   Encabezado superior del panel de clientes Rapidy con posición fija/sticky.
+ *   Permanece anclado en la parte superior durante el desplazamiento de pantalla
+ *   con efecto Glassmorphism esmerilado, permitiendo que el catálogo y los comercios
+ *   se desplacen fluidamente por detrás.
  *
  * @resumen_contenido
- *   - Componente `HomeHeader`: Renderiza el saludo, la marca Rapidy con tipografía oficial
- *     y el campo de búsqueda rápida con soporte para tecla Enter y botón de borrado.
+ *   - Componente `HomeHeader`:
+ *     * Barra sticky con backdrop-blur-2xl a 60 FPS.
+ *     * Saludo y geolocalización activa del cliente.
+ *     * Logotipo Rapidy oficial con eslogan corporativo.
+ *     * Píldora de búsqueda flotante con autocompletado y botón de limpieza.
+ *     * Detección reactiva de scroll para compactar la cabecera dinámicamente.
  *
  * @dependencias_internas
  *   - Ninguna
@@ -17,11 +21,13 @@
  * @dependencias_externas
  *   - `lucide-react` (`Search`, `MapPin`, `User`, `Sparkles`)
  *   - `react-router` (`useNavigate`)
+ *   - `react` (`useState`, `useEffect`)
  *
  * @tablas_bd_o_redis
  *   - Ninguna (UI y navegación)
  */
 
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { Search, MapPin, User, Sparkles } from "lucide-react";
 
@@ -41,20 +47,39 @@ export function HomeHeader({
   onSearchSubmit,
 }: HomeHeaderProps) {
   const navigate = useNavigate();
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   return (
-    <div className="relative w-full bg-gradient-to-b from-[#0E0E12] via-[#16161B] to-[#121216] pt-safe px-4 pb-4 text-white shadow-xl">
+    <header
+      className={`fixed top-0 left-0 right-0 max-w-[480px] mx-auto z-40 transition-all duration-300 select-none ${
+        isScrolled
+          ? "bg-[#0E0E12]/95 backdrop-blur-2xl border-b border-white/10 shadow-[0_12px_36px_rgba(0,0,0,0.7)] pt-safe px-4 pb-3"
+          : "bg-gradient-to-b from-[#0E0E12] via-[#141419] to-[#0E0E12] border-b border-white/5 pt-safe px-4 pb-3.5 shadow-xl"
+      }`}
+    >
       {/* Background Subtle Flare */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-72 h-36 bg-[#FF6A00]/15 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-72 h-28 bg-[#FF6A00]/15 rounded-full blur-3xl pointer-events-none" />
 
-      {/* Top User & Location Bar */}
-      <div className="relative z-10 flex items-center justify-between pt-1 mb-3">
+      {/* Top User & Location Bar (Sin el botón de búsqueda redundante) */}
+      <div
+        className={`relative z-10 flex items-center justify-between transition-all duration-300 ${
+          isScrolled ? "mb-1.5 pt-0.5" : "mb-2.5 pt-1"
+        }`}
+      >
         <button
           onClick={() => navigate("/profile")}
           className="flex items-center gap-2 group cursor-pointer text-left"
         >
-          <div className="w-10 h-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-[#FF6A00] group-hover:bg-white/10 transition-colors shadow-sm">
-            <User className="w-5 h-5 text-white" />
+          <div className="w-9 h-9 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-[#FF6A00] group-hover:bg-white/10 transition-colors shadow-xs">
+            <User className="w-4 h-4 text-white" />
           </div>
           <div>
             <div className="flex items-center gap-1">
@@ -64,35 +89,28 @@ export function HomeHeader({
               </span>
               <Sparkles className="w-3 h-3 text-[#FF6A00]" />
             </div>
-            <div className="flex items-center gap-1 text-[11px] text-[#FF6A00] font-semibold max-w-[190px] truncate">
+            <div className="flex items-center gap-1 text-[11px] text-[#FF6A00] font-semibold max-w-[210px] sm:max-w-[260px] truncate">
               <MapPin className="w-3 h-3 shrink-0" />
               <span className="truncate">{customerAddress || "Seleccionar ubicación"}</span>
             </div>
           </div>
         </button>
-
-        <button
-          onClick={() => navigate("/search")}
-          className="w-10 h-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white hover:bg-white/10 active:scale-95 transition-all cursor-pointer"
-          aria-label="Buscar"
-        >
-          <Search className="w-4 h-4 text-zinc-300" />
-        </button>
       </div>
 
-      {/* Brand Hero: Logo + Slogan (Identidad Exacta del Mockup) */}
-      <div className="relative z-10 flex flex-col items-center text-center my-2">
+      {/* Brand Hero: Logo + Slogan (Se compacta suavemente al hacer scroll) */}
+      <div
+        className={`relative z-10 flex flex-col items-center text-center transition-all duration-300 ${
+          isScrolled ? "scale-90 my-0.5" : "my-1.5"
+        }`}
+      >
         <div className="flex items-center gap-2">
           <img
-            src="/public/image.png"
+            src="/image.png"
             alt="Rapidy Emblem"
-            className="w-10 h-10 rounded-full object-cover shadow-[0_0_18px_rgba(255,106,0,0.5)] ring-2 ring-[#FF6A00]/40"
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = "/image.png";
-            }}
+            className="w-9 h-9 rounded-full object-cover shadow-[0_0_16px_rgba(255,106,0,0.5)] ring-2 ring-[#FF6A00]/40"
           />
           <div className="text-left">
-            <div className="text-2xl font-black tracking-tight leading-none text-white flex items-baseline">
+            <div className="text-xl sm:text-2xl font-black tracking-tight leading-none text-white flex items-baseline">
               <span>RAPID</span>
               <span className="text-[#FF6A00]">Y</span>
             </div>
@@ -102,14 +120,16 @@ export function HomeHeader({
           </div>
         </div>
 
-        <p className="text-xs text-zinc-300 mt-1.5 font-medium tracking-tight">
-          Todo lo que quieres, en un solo pedido
-        </p>
+        {!isScrolled && (
+          <p className="text-[11px] sm:text-xs text-zinc-300 mt-1 font-medium tracking-tight animate-in fade-in duration-200">
+            Todo lo que quieres, en un solo pedido
+          </p>
+        )}
       </div>
 
-      {/* Floating White Pill Search Bar */}
-      <div className="relative z-10 mt-3">
-        <div className="relative flex items-center h-12 bg-white rounded-full shadow-[0_6px_20px_rgba(0,0,0,0.25)] px-4 gap-2.5 transition-all focus-within:ring-2 focus-within:ring-[#FF6A00]">
+      {/* Floating White Pill Search Bar (Permanece siempre fija y accesible) */}
+      <div className={`relative z-10 transition-all duration-300 ${isScrolled ? "mt-1.5" : "mt-2.5"}`}>
+        <div className="relative flex items-center h-11 sm:h-12 bg-white rounded-full shadow-[0_6px_20px_rgba(0,0,0,0.25)] px-4 gap-2.5 transition-all focus-within:ring-2 focus-within:ring-[#FF6A00]">
           <Search className="w-4 h-4 text-zinc-500 shrink-0" />
           <input
             type="text"
@@ -129,7 +149,6 @@ export function HomeHeader({
           )}
         </div>
       </div>
-    </div>
+    </header>
   );
 }
-

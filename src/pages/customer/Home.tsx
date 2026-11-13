@@ -106,7 +106,7 @@ export default function CustomerHome() {
   };
 
   return (
-    <div className="mobile-container bg-[#F7F7FA] min-h-screen pb-28 select-none">
+    <div className="mobile-container bg-[#F7F7FA] min-h-screen pb-32 select-none">
       {/* 1. Header with Logo, Slogan and Search */}
       <HomeHeader
         customerName={customer?.firstName}
@@ -116,8 +116,8 @@ export default function CustomerHome() {
         onSearchSubmit={handleSearchSubmit}
       />
 
-      {/* Main Content Body */}
-      <div className="px-4 space-y-5 mt-4">
+      {/* Main Content Body (Se desplaza fluidamente por detrás de la cabecera fija) */}
+      <div className="px-4 space-y-5 pt-44 sm:pt-48">
         {/* 2. Top Categories (Comida, Supermercado, Farmacia, Compras) */}
         <HomeCategories
           categories={activeCategories}
