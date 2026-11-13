@@ -16,7 +16,7 @@ Estado actual verificado al 2026-11-13.
 | `src/pages/customer/CustomerLogin.tsx` | Login OTP | `customer.requestOtp`, `customer.verifyOtp` | Corregido; redirige a `/home` si ya hay sesión |
 | `src/pages/customer/Register.tsx` | Registro con verificación de teléfono | `customer.requestOtp`, `customer.verifyOtp`, `customer.register` | Corregido; exige registrationToken; 1 OTP |
 | `src/pages/customer/Welcome.tsx` | Landing pública | Ninguno | Corregido; redirige a `/home` si hay sesión |
-| `src/pages/customer/CommerceDetail.tsx` | Menú del comercio y agregar al carrito | `commerce.getById`, `product.getByCommerce` | Funcional; usa `useProductsByCommerce` |
+| `src/pages/customer/CommerceDetail.tsx` | Vitrina `/store/:id`, menú y agregar al carrito | `commerce.getById`, `product.getByCommerce` | Corregido; usa `useProductsByCommerce` y `products:global`; no abre SSE merchant; deshabilita agregar si está cerrado |
 | `src/pages/customer/DownloadApp.tsx` | Descarga PWA/APK | Ninguno | Fuera del alcance de corrección |
 
 ## Componentes del cliente

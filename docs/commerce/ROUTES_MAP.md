@@ -52,13 +52,13 @@ sección 9 con `archivo:línea`.
 En desktop usa sidebar fija; en móvil usa header superior y bottom nav. El badge
 de pedidos se calcula con `order.getCommerceOrders`.
 
-### Colisión de rutas
+### Rutas separadas
 
-`src/App.tsx:98` define `/commerce/:id` para el cliente (detalle del comercio).
-`src/App.tsx:113-117` define las rutas estáticas del negocio. React Router
-resuelve primero las estáticas, pero una URL desconocida como `/commerce/foo`
-cae en `/commerce/:id` y termina bajo `SessionGuard role="customer"`, no en el
-panel del negocio ni en `NotFound`.
+La vitrina del cliente vive en `/store/:id`. `/commerce/:id` solo se conserva
+como redirect legacy para IDs numéricos; una URL inválida como `/commerce/foo`
+muestra `NotFound` sin entrar al guard de cliente ni expulsar al merchant.
+Las rutas estáticas del negocio (`/commerce`, `/commerce/orders`,
+`/commerce/products`, `/commerce/stats`, `/commerce/profile`) tienen prioridad.
 
 ## 3. Flujo por ruta
 
@@ -224,9 +224,8 @@ Las rutas HTTP reales son `GET/POST /api/trpc/<procedimiento>`.
 |---|---|---|---|---|---|
 | `login.login` | mutation | pública | `{ email?, phone?, password }` | `{ success, role, user, commerceId? }` | `users`, `commerces`, `drivers` |
 | `login.refresh` | mutation | pública (cookie refresh) | — | `{ success, role }` | `users`, `drivers`, `customers` |
-| `login.logout` | mutation | pública | — | `{ success: true }` | — |
-| `login.checkAuth` | query | pública (cookies) | — | `{ authenticated, role, user }` | `users`, `drivers`, `customers` |
-| `login.seedAdmin` | mutation | pública | — | `{ success: true }` | `users` |
+| `login.logout` | mutation | pública | `{ scope?: "all"\|"admin"\|"driver"\|"merchant"\|"customer" }` | `{ success, scope }` | — |
+| `login.checkAuth` | query | pública (cookies) | — | `{ authenticated, role, user }` | `users`, `drivers`, `customers`, `commerces` |
 
 ### 4.2 Comercio
 
@@ -402,15 +401,18 @@ necesariamente un bug, pero es una política distinta que hay que decidir.
 | `/admin/commerces` | admin | Crea merchant/comercio, cambia `status`, `commissionRate`, elimina |
 | `/admin/orders` | admin | Pasa `pending_payment` a `received`, asigna driver, cancela, valida pagos |
 | `/admin/products` | admin | Modera disponibilidad, destacado y catálogo |
-| `/commerce/:id` | cliente | Vitrina pública que lee `commerce.getById` + `product.getByCommerce` |
+| `/store/:id` | cliente | Vitrina pública que lee `commerce.getById` + `product.getByCommerce` |
 | `/order/:id` | cliente | Seguimiento que refleja los estados que escribe el negocio |
 | `/driver/order/:id` | driver | Retira pedidos y actualiza `order_commerce_status` a `picked_up` |
 | `/chat/:orderId` | cliente | Chat del pedido; el negocio tiene API pero no pantalla |
 
-## 9. Hallazgos detectados durante el mapeo (sin corregir)
+## 9. Hallazgos detectados durante el mapeo (histórico)
 
-> No es una lista de tareas ni un backlog. Es evidencia para decidir el orden de
-> corrección. No se tocó código de negocio en este paso.
+> **Estado:** los P0/P1 de esta sección fueron corregidos y verificados.
+> El consolidado con estado y evidencia está en
+> [`audit/MASTER_TRIAGE.md`](./audit/MASTER_TRIAGE.md) y
+> [`VERIFICATION.md`](./VERIFICATION.md). Esta sección queda como registro
+> histórico del hallazgo original, no como lista de tareas.
 
 ### P0 — integridad y autorización
 
@@ -503,19 +505,19 @@ documentado; si no, el comercio pierde pedidos.
 
 ### P2 — UX, consistencia y rendimiento
 
-**F-13. Ruta desconocida del panel cae en el flujo cliente.**  
-`/commerce/foo` coincide con `/commerce/:id` (`App.tsx:98`) antes que con
-`NotFound`, y queda bajo guard de cliente.
+**F-13. Ruta desconocida del panel cae en el flujo cliente. (Corregido)**  
+La vitrina se movió a `/store/:id`; `/commerce/:id` solo redirige IDs numéricos
+legacy y `/commerce/foo` muestra `NotFound` sin tocar la sesión del merchant.
 
-**F-14. Logout incompleto en el panel.**  
-`CommerceLayout.tsx:68-77` y `Profile.tsx:209-214` limpian `merchant_user` y
-`qs_session`, pero no limpian la caché de React Query ni emiten
-`rapidy:logout`. Los datos del comercio pueden quedar en memoria hasta recargar.
+**F-14. Logout incompleto en el panel. (Corregido)**  
+`CommerceLayout.tsx` y `Profile.tsx` limpian solo las claves del merchant, la
+caché de React Query y emiten `rapidy:logout` con `detail.role="merchant"`. No
+tocan `customer_session` ni el carrito del cliente.
 
-**F-15. La vitrina pública no filtra estado del comercio.**  
-`commerce.getById` devuelve el comercio y sus productos sin filtrar
-`status`/`isOpen` (`commerce-router.ts:44-60`). El catálogo sí filtra, pero un
-cliente con la URL directa puede abrir un comercio suspendido/inactivo.
+**F-15. La vitrina pública no filtra estado del comercio. (Corregido)**  
+`commerce.getById` devuelve `null` a no-owner si el comercio no está `active`;
+`product.getByCommerce` filtra el estado del comercio para el público. La
+vitrina `/store/:id` deshabilita “Agregar” si el local está cerrado.
 
 **F-16. El pedido que recibe el comercio trae más PII de la necesaria.**  
 `sanitizeOrder` solo elimina `paymentReceipt` (`order-router.ts:200-206`);

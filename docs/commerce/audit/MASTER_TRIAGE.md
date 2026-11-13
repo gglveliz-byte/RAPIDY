@@ -226,3 +226,38 @@ npx tsx scripts/redirect-smoke.ts
 - Polling de 30 s como respaldo, no 4–5 s.
 - `order_items.commerce_id` como frontera multi-comercio.
 - Comisión y estado solo editables por admin.
+
+## 10. Estado de corrección (2026-11-13)
+
+Los P0 y P1 se corrigieron y verificaron. Evidencia completa en
+[`../VERIFICATION.md`](../VERIFICATION.md).
+
+| Problema | Estado | Evidencia |
+|---|---|---|
+| C-01 sesión multi-rol / `qs_session` | Corregido | `SessionGuard` cookie-first; `useCustomerSession` no toca sesión profesional; E2E reload |
+| C-02 logout/401 global | Corregido | `login.logout { scope }`; 401 role-scoped; E2E logout merchant no borra cookies customer |
+| C-03 rate limit login | Corregido | 8 fallos/10 min + bloqueo 15 min; hash dummy; `login.seedAdmin` eliminado |
+| C-06 `markReady` revive terminales | Corregido | `server/lib/order-ready.ts`; E2E rechaza `cancelled`/`payment_rejected` |
+| C-07 pago rechazado/pendiente | Corregido | proyección por comercio + tarjeta bloquea acciones |
+| C-08 estados por comercio | Corregido | enum `received`/`accepted`; backfill; tabs y badge únicos |
+| C-09 multi-comercio | Corregido | merchant path solo sobre sus items; cancelación multi-comercio bloqueada |
+| C-10 SSE incompleto | Corregido | layout SSE; eventos a `commerce:` en cancelación/admin/retiro |
+| C-11 `getCommerceOrders` pesado/PII | Corregido | límite, orden, customers filtrados, proyección explícita |
+| C-12 auto-reactivación | Corregido | `status` fuera de `commerce.update`; E2E status sigue `active` |
+| C-13 vitrina sin status | Corregido | `getById`/`getByCommerce` filtran `active`; cerrar deshabilita agregar |
+| C-14 stats/comisión | Corregido | consulta única, 7 días reales, `delivered_at`, snapshot por comercio |
+| C-15 precios | Corregido | Zod positivo/máximo; E2E -5 y 0 rechazados |
+| C-16 ProductModal | Corregido | reset por apertura + `key` lógica |
+| C-17 imágenes | Corregido | compresión cliente + límite servidor |
+| C-18 errores catálogo | Corregido | `error/refetch`, error inline, FK `err.cause.code` |
+| C-19 perfil | Corregido | email no se envía, coordenadas opcionales, toggle atómico |
+| C-20 identidad/nombre | Corregido | layout y dashboard usan `commerce.me` |
+| C-21 carrito vs quote | Corregido | líneas desde `quote.data.lines` + aviso de cambio |
+| C-24 routing `/commerce/foo` | Corregido | vitrina en `/store/:id`; legacy redirect; E2E no expulsa |
+| C-30 rechazo con motivo | Corregido | modal de confirmación + `cancellationReason` |
+| C-33 E2E negocio | Corregido | `scripts/e2e-commerce-smoke.mjs` 20/20 |
+
+El flujo actual queda cerrado y verificado. El comportamiento vigente de
+multi-sucursal, TTL de tokens y acabado visual está documentado en `README.md`,
+`FILE_MAP.md` y `VERIFICATION.md` como estado actual del sistema, no como una
+lista de tareas.
