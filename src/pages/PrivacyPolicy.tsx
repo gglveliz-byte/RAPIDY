@@ -11,7 +11,7 @@ export default function PrivacyPolicy() {
 
   return (
     <div className="mobile-container max-w-2xl mx-auto bg-gray-50 min-h-screen pb-12">
-      {/* Header oficial estilo Ya Llega */}
+      {/* Header oficial estilo Rapidy */}
       <div className="bg-[#2E7D32] px-4 pt-4 pb-8">
         <button
           onClick={() => navigate(-1)}
@@ -110,7 +110,7 @@ export default function PrivacyPolicy() {
             2. Uso y Cero Venta de Información
           </h2>
           <p className="text-xs text-gray-600 leading-relaxed">
-            <strong>Ya Llega no vende ni alquila tus datos personales a empresas de publicidad.</strong> Tu información solo se transmite al comercio aliado (para preparar tu pedido) y al repartidor independiente asignado (para la entrega física).
+            <strong>Rapidy no vende ni alquila tus datos personales a empresas de publicidad.</strong> Tu información solo se transmite al comercio aliado (para preparar tu pedido) y al repartidor independiente asignado (para la entrega física).
           </p>
         </div>
 
@@ -183,7 +183,7 @@ export default function PrivacyPolicy() {
           </button>
           {openSection === 2 && (
             <div className="px-4 pb-4 text-xs text-gray-600 border-t border-gray-100 pt-2 leading-relaxed">
-              Para consultas legales o pedidos de rectificación de datos, puedes escribir a <strong className="text-gray-900">soporte@yallega.app</strong>. Respondemos en un plazo máximo de 48 horas hábiles.
+              Para consultas legales o pedidos de rectificación de datos, puedes escribir a <strong className="text-gray-900">soporte@rapidy.app</strong>. Respondemos en un plazo máximo de 48 horas hábiles.
             </div>
           )}
         </div>
@@ -192,7 +192,7 @@ export default function PrivacyPolicy() {
         <div className="text-center pt-4 pb-6">
           <div className="flex items-center justify-center gap-1.5 text-xs text-gray-400">
             <ShieldCheck className="w-4 h-4 text-[#2E7D32]" />
-            <span>Tus datos están protegidos en Ya Llega</span>
+            <span>Tus datos están protegidos en Rapidy</span>
           </div>
         </div>
 

@@ -8,7 +8,7 @@ export default function RefundPolicy() {
 
   return (
     <div className="mobile-container max-w-2xl mx-auto bg-gray-50 min-h-screen pb-12">
-      {/* Header oficial estilo Ya Llega */}
+      {/* Header oficial estilo Rapidy */}
       <div className="bg-[#2E7D32] px-4 pt-4 pb-8">
         <button
           onClick={() => navigate(-1)}
@@ -19,7 +19,7 @@ export default function RefundPolicy() {
         </button>
         <div className="flex items-center gap-2">
           <span className="text-[11px] font-bold uppercase tracking-wider bg-white/20 text-white px-2.5 py-0.5 rounded-full">
-            Garantía Ya Llega
+            Garantía Rapidy
           </span>
           <span className="text-[11px] text-white/80">Protección al Consumidor</span>
         </div>
@@ -166,7 +166,7 @@ export default function RefundPolicy() {
         <div className="text-center pt-4 pb-6">
           <div className="flex items-center justify-center gap-1.5 text-xs text-gray-400">
             <ShieldCheck className="w-4 h-4 text-[#2E7D32]" />
-            <span>Compromiso de entrega garantizado • Ya Llega</span>
+            <span>Compromiso de entrega garantizado • Rapidy</span>
           </div>
         </div>
 

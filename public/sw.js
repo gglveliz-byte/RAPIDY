@@ -1,4 +1,4 @@
-const CACHE_NAME = 'yallega-v3';
+const CACHE_NAME = 'rapidy-v3';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

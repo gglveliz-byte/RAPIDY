@@ -27,6 +27,6 @@ export function serveStaticFiles(app: App) {
       c.header("Content-Type", "text/html; charset=utf-8");
       return c.html(content, 200);
     }
-    return c.text("Ya Llega App", 200);
+    return c.text("Rapidy App", 200);
   });
 }

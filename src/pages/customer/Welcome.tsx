@@ -9,11 +9,11 @@ export default function Welcome() {
       <div className="flex-1 flex flex-col items-center justify-center px-6 text-center py-4">
         <img
           src="/logotipo.jpeg"
-          alt="YA LLEGA"
+          alt="Rapidy"
           className="w-24 h-24 sm:w-28 sm:h-28 object-contain mb-4 rounded-2xl shadow-sm"
         />
         <h1 className="text-3xl sm:text-4xl font-bold text-[#2E7D32] mb-1.5 tracking-tight">
-          YA LLEGA
+          RAPIDY
         </h1>
         <p className="text-gray-500 text-sm sm:text-base mb-6 max-w-xs">
           Todo lo que necesitás, a un toque de distancia

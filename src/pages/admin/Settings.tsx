@@ -27,7 +27,7 @@ export default function AdminSettings() {
   const [settings, setSettings] = useState({
     deliveryFee: "2.50",
     minOrderAmount: "3.00",
-    appName: "YA LLEGA",
+    appName: "RAPIDY",
     supportPhone: "555-HELP",
     bankTransferInfo: "",
   });
@@ -43,7 +43,7 @@ export default function AdminSettings() {
     setSettings({
       deliveryFee: map.delivery_fee || "2.50",
       minOrderAmount: map.min_order_amount || "3.00",
-      appName: map.app_name || "YA LLEGA",
+      appName: map.app_name || "RAPIDY",
       supportPhone: map.support_phone || "555-HELP",
       bankTransferInfo: map.bank_transfer_info || "",
     });
@@ -80,7 +80,7 @@ export default function AdminSettings() {
       if (format === "pdf") {
         const doc = new jsPDF();
         doc.setFontSize(14);
-        doc.text(`YA LLEGA — Reporte de ${type}`, 14, 18);
+        doc.text(`RAPIDY — Reporte de ${type}`, 14, 18);
         doc.setFontSize(10);
         const rangeText =
           dateFrom || dateTo

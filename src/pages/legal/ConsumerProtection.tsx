@@ -30,7 +30,7 @@ export default function ConsumerProtection() {
 
   return (
     <div className="mobile-container max-w-2xl mx-auto bg-gray-50 min-h-screen pb-12">
-      {/* Header oficial estilo Ya Llega */}
+      {/* Header oficial estilo Rapidy */}
       <div className="bg-[#2E7D32] px-4 pt-4 pb-8">
         <button
           onClick={() => navigate(-1)}
@@ -143,7 +143,7 @@ export default function ConsumerProtection() {
           <div className="flex items-center gap-2 mb-2">
             <MessageSquare className="w-4 h-4 text-[#2E7D32]" />
             <h2 className="text-sm font-bold text-gray-900">
-              Libro de Reclamos Digital Ya Llega
+              Libro de Reclamos Digital Rapidy
             </h2>
           </div>
           <p className="text-xs text-gray-500 mb-4 leading-relaxed">
@@ -235,7 +235,7 @@ export default function ConsumerProtection() {
         <div className="text-center pt-4 pb-6">
           <div className="flex items-center justify-center gap-1.5 text-xs text-gray-400">
             <ShieldCheck className="w-4 h-4 text-[#2E7D32]" />
-            <span>Atención al usuario y resolución transparente • Ya Llega</span>
+            <span>Atención al usuario y resolución transparente • Rapidy</span>
           </div>
         </div>
 

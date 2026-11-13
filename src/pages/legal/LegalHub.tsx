@@ -68,7 +68,7 @@ export default function LegalHub() {
 
   return (
     <div className="mobile-container max-w-2xl mx-auto bg-gray-50 min-h-screen pb-12">
-      {/* Header oficial estilo Ya Llega */}
+      {/* Header oficial estilo Rapidy */}
       <div className="bg-[#2E7D32] px-4 pt-4 pb-8">
         <button
           onClick={() => navigate(-1)}
@@ -84,7 +84,7 @@ export default function LegalHub() {
           <span className="text-[11px] text-white/80">Ecuador & Argentina</span>
         </div>
         <h1 className="text-2xl font-bold text-white tracking-tight mt-1">
-          Centro Legal Ya Llega
+          Centro Legal Rapidy
         </h1>
         <p className="text-white/80 text-xs mt-0.5">
           Toda la documentación regulatoria y protección al usuario
@@ -97,11 +97,11 @@ export default function LegalHub() {
         {/* Tarjeta de bienvenida legal */}
         <div className="bg-white rounded-2xl card-shadow p-4">
           <p className="text-xs text-gray-600 leading-relaxed">
-            En <strong>Ya Llega</strong> operamos con total apego a la legislación de comercio electrónico, protección al consumidor y resguardo de datos personales vigente en la <strong>República del Ecuador 🇪🇨</strong> y la <strong>República Argentina 🇦🇷</strong>.
+            En <strong>Rapidy</strong> operamos con total apego a la legislación de comercio electrónico, protección al consumidor y resguardo de datos personales vigente en la <strong>República del Ecuador 🇪🇨</strong> y la <strong>República Argentina 🇦🇷</strong>.
           </p>
         </div>
 
-        {/* Lista de enlaces estilo Ya Llega */}
+        {/* Lista de enlaces estilo Rapidy */}
         <div className="space-y-2">
           {legalDocuments.map((doc) => {
             const Icon = doc.icon;
@@ -143,11 +143,11 @@ export default function LegalHub() {
             </div>
             <div>
               <span className="text-xs font-bold text-gray-900 block">Soporte y Consultas</span>
-              <span className="text-[11px] text-gray-500">soporte@yallega.app</span>
+              <span className="text-[11px] text-gray-500">soporte@rapidy.app</span>
             </div>
           </div>
           <a
-            href="mailto:soporte@yallega.app"
+            href="mailto:soporte@rapidy.app"
             className="px-3 py-1.5 bg-[#2E7D32]/10 text-[#2E7D32] rounded-xl text-xs font-semibold hover:bg-[#2E7D32]/20 transition-colors"
           >
             Contactar
@@ -158,7 +158,7 @@ export default function LegalHub() {
         <div className="text-center pt-4 pb-6">
           <div className="flex items-center justify-center gap-1.5 text-xs text-gray-400">
             <ShieldCheck className="w-4 h-4 text-[#2E7D32]" />
-            <span>Ya Llega App • Transparencia garantizada</span>
+            <span>Rapidy App • Transparencia garantizada</span>
           </div>
         </div>
 

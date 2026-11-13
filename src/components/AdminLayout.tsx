@@ -34,7 +34,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               <Package className="w-5 h-5 text-white" />
             </div>
             <div>
-              <span className="font-extrabold text-base tracking-tight text-gray-900 block leading-none">YA LLEGA</span>
+              <span className="font-extrabold text-base tracking-tight text-gray-900 block leading-none">RAPIDY</span>
               <span className="text-[10px] text-gray-400 font-medium tracking-wide uppercase">Panel Admin</span>
             </div>
           </div>

@@ -13,7 +13,7 @@ export default function TermsAndConditions() {
 
   return (
     <div className="mobile-container max-w-2xl mx-auto bg-gray-50 min-h-screen pb-12">
-      {/* Header oficial estilo Ya Llega */}
+      {/* Header oficial estilo Rapidy */}
       <div className="bg-[#2E7D32] px-4 pt-4 pb-8">
         <button
           onClick={() => navigate(-1)}
@@ -32,14 +32,14 @@ export default function TermsAndConditions() {
           Términos y Condiciones
         </h1>
         <p className="text-white/80 text-xs mt-0.5">
-          Plataforma de Intermediación Tecnológica "Ya Llega"
+          Plataforma de Intermediación Tecnológica "Rapidy"
         </p>
       </div>
 
       {/* Contenedor superpuesto -mt-4 idéntico al resto de la app */}
       <div className="px-4 -mt-4 space-y-3">
         
-        {/* Selector de país estilo chips / pills de Ya Llega */}
+        {/* Selector de país estilo chips / pills de Rapidy */}
         <div className="bg-white rounded-2xl card-shadow p-3.5">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-semibold text-gray-700 flex items-center gap-1.5">
@@ -86,12 +86,12 @@ export default function TermsAndConditions() {
             1. Naturaleza del Servicio y Objeto
           </h2>
           <p className="text-xs text-gray-600 mt-1 leading-relaxed">
-            <strong>Ya Llega</strong> actúa exclusivamente como una plataforma tecnológica de intermediación que conecta a 
+            <strong>Rapidy</strong> actúa exclusivamente como una plataforma tecnológica de intermediación que conecta a 
             <strong> usuarios consumidores</strong> con <strong>comercios gastronómicos/tiendas aliadas</strong> y 
             <strong> repartidores independientes</strong>.
           </p>
           <div className="bg-amber-50 rounded-xl p-2.5 mt-2.5 text-[11px] text-amber-900 border border-amber-200/70">
-            <strong>Aviso importante:</strong> Ya Llega no produce, cocina, manipula ni empaqueta alimentos. La calidad, sabor, inocuidad y correcta entrega bromatológica es responsabilidad directa del comercio elaborador.
+            <strong>Aviso importante:</strong> Rapidy no produce, cocina, manipula ni empaqueta alimentos. La calidad, sabor, inocuidad y correcta entrega bromatológica es responsabilidad directa del comercio elaborador.
           </div>
         </div>
 
@@ -101,7 +101,7 @@ export default function TermsAndConditions() {
             2. Capacidad Legal y Cuenta de Usuario
           </h2>
           <p className="text-xs text-gray-600 mt-1 leading-relaxed">
-            Para ordenar a través de Ya Llega, debes ser mayor de 18 años y aportar datos verídicos (nombre, teléfono y dirección). Las credenciales de acceso son de uso personal e intransferible.
+            Para ordenar a través de Rapidy, debes ser mayor de 18 años y aportar datos verídicos (nombre, teléfono y dirección). Las credenciales de acceso son de uso personal e intransferible.
           </p>
         </div>
 
@@ -231,7 +231,7 @@ export default function TermsAndConditions() {
         <div className="text-center pt-2 pb-6">
           <div className="flex items-center justify-center gap-1.5 text-xs text-gray-400">
             <ShieldCheck className="w-4 h-4 text-[#2E7D32]" />
-            <span>Ya Llega App • Todos los derechos reservados</span>
+            <span>Rapidy App • Todos los derechos reservados</span>
           </div>
         </div>
 

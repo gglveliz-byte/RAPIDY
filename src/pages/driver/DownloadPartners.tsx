@@ -49,11 +49,11 @@ export default function DownloadPartners() {
       <div className="w-full max-w-sm flex flex-col items-center">
         <img
           src="/logotipo.jpeg"
-          alt="YA LLEGA Socios"
+          alt="Rapidy Socios"
           className="w-32 h-32 object-contain mb-6 rounded-3xl shadow-lg ring-4 ring-gray-800"
         />
         <h1 className="text-3xl font-bold text-white mb-3 tracking-tight">
-          YA LLEGA <span className="text-gray-400">Socios</span>
+          RAPIDY <span className="text-gray-400">Socios</span>
         </h1>
         
         {installed ? (

@@ -183,7 +183,7 @@ async function seed() {
   // Seed app settings
   console.log("Seeding app settings...");
   await db.insert(appSettings).values([
-    { key: "app_name", value: "YA LLEGA" },
+    { key: "app_name", value: "RAPIDY" },
     { key: "support_phone", value: "+54 9 11 1234-5678" },
     { key: "delivery_fee", value: "500" },
     { key: "commission_rate", value: "15" },

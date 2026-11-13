@@ -1,4 +1,4 @@
-package com.yallega.app;
+package com.rapidy.app;
 
 import com.getcapacitor.BridgeActivity;
 

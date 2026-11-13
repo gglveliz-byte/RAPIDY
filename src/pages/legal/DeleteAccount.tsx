@@ -32,7 +32,7 @@ export default function DeleteAccount() {
 
   return (
     <div className="mobile-container max-w-2xl mx-auto bg-gray-50 min-h-screen pb-12">
-      {/* Header oficial estilo Ya Llega */}
+      {/* Header oficial estilo Rapidy */}
       <div className="bg-[#2E7D32] px-4 pt-4 pb-8">
         <button
           onClick={() => navigate(-1)}
@@ -65,7 +65,7 @@ export default function DeleteAccount() {
             <span>Consecuencias de la baja de cuenta</span>
           </div>
           <p className="text-xs text-gray-600 leading-relaxed">
-            Al confirmar la baja de tu cuenta en <strong>Ya Llega</strong>, eliminaremos permanentemente tu número de teléfono, direcciones registradas e historial de actividad en la plataforma.
+            Al confirmar la baja de tu cuenta en <strong>Rapidy</strong>, eliminaremos permanentemente tu número de teléfono, direcciones registradas e historial de actividad en la plataforma.
           </p>
           <p className="text-[11px] text-gray-500 mt-2 bg-amber-50/70 p-2.5 rounded-xl border border-amber-200/60">
             *Obligación contable: Los registros fiscales de órdenes o pagos ya completados se conservarán por el plazo legal mínimo obligatorio para cumplir con la AFIP (Argentina) o SRI (Ecuador).
@@ -179,7 +179,7 @@ export default function DeleteAccount() {
         <div className="text-center pt-4 pb-6">
           <div className="flex items-center justify-center gap-1.5 text-xs text-gray-400">
             <ShieldCheck className="w-4 h-4 text-[#2E7D32]" />
-            <span>Privacidad y soberanía de datos del usuario • Ya Llega</span>
+            <span>Privacidad y soberanía de datos del usuario • Rapidy</span>
           </div>
         </div>
 

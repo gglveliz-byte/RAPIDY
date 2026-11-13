@@ -1,15 +1,15 @@
 {
     "project_info": {
         "project_number": "931790413436",
-        "project_id": "ya-llega-a43cb",
-        "storage_bucket": "ya-llega-a43cb.firebasestorage.app"
+        "project_id": "rapidy-app",
+        "storage_bucket": "rapidy-app.firebasestorage.app"
     },
     "client": [
         {
             "client_info": {
                 "mobilesdk_app_id": "1:931790413436:android:89b508d8705c65d6d333f9",
                 "android_client_info": {
-                    "package_name": "com.yallega.app"
+                    "package_name": "com.rapidy.app"
                 }
             },
             "oauth_client": [],

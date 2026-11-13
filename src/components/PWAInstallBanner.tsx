@@ -64,7 +64,7 @@ export function PWAInstallBanner() {
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="text-sm font-semibold text-gray-900 mb-1">
-              {isBackoffice ? "Instalá YA LLEGA Socios" : "Instalá YA LLEGA en tu celular"}
+              {isBackoffice ? "Instalá Rapidy Socios" : "Instalá Rapidy en tu celular"}
             </h3>
             <p className="text-xs text-gray-600 mb-3">
               {isBackoffice ? "Gestioná pedidos y ganancias desde tu celular" : "Accedé más rápido y pedí lo que quieras"}

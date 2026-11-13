@@ -1,6 +1,6 @@
 {
-  "appId": "com.yallega.app",
-  "appName": "Ya Llega",
+  "appId": "com.rapidy.app",
+  "appName": "Rapidy",
   "webDir": "dist/public",
   "bundledWebRuntime": false,
   "server": {

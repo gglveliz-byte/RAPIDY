@@ -1,6 +1,6 @@
 {
-  "name": "YA LLEGA",
-  "short_name": "YA LLEGA",
+  "name": "Rapidy",
+  "short_name": "Rapidy",
   "description": "Plataforma de delivery multi-comercio",
   "id": "/?app=cliente",
   "start_url": "/?source=pwa",

@@ -62,7 +62,7 @@ export default function CommerceLayout({ children }: { children: ReactNode }) {
               <Store className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <h2 className="font-bold text-slate-900 text-sm truncate leading-tight">YA LLEGA</h2>
+              <h2 className="font-bold text-slate-900 text-sm truncate leading-tight">RAPIDY</h2>
               <p className="text-[11px] text-slate-400 font-medium truncate">Panel Comercio</p>
             </div>
           </div>

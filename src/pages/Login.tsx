@@ -63,7 +63,7 @@ export default function Login() {
           </button>
           <div className="flex items-center gap-2">
             <ShoppingBag className="w-5 h-5 text-white" />
-            <span className="text-white font-semibold">YA LLEGA</span>
+            <span className="text-white font-semibold">RAPIDY</span>
           </div>
           <div className="w-10" />
         </div>

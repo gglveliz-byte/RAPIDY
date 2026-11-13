@@ -45,7 +45,7 @@ export default function CustomerLogin() {
           </button>
           <div className="flex items-center gap-2">
             <ShoppingBag className="w-5 h-5 text-white" />
-            <span className="text-white font-bold tracking-tight">YA LLEGA</span>
+            <span className="text-white font-bold tracking-tight">RAPIDY</span>
           </div>
           <div className="w-10" />
         </div>

@@ -88,7 +88,7 @@ export default function DriverOrder() {
     if (!order?.deliveryAddress || destCoords) return;
     const q = encodeURIComponent(order.deliveryAddress);
     fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1&accept-language=es`, {
-      headers: { "User-Agent": "YALlega-App/1.0" },
+      headers: { "User-Agent": "Rapidy-App/1.0" },
     })
       .then((r) => r.json())
       .then((data) => {

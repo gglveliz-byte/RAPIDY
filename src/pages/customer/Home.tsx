@@ -95,7 +95,7 @@ export default function CustomerHome() {
       <div className="bg-[#2E7D32] px-4 pt-safe pb-5 shadow-sm">
         <div className="flex items-center justify-between mb-3.5">
           <div className="flex items-center gap-2.5">
-            <img src="/logotipo.jpeg" alt="YA LLEGA" className="w-9 h-9 rounded-full object-cover border-2 border-white/20 shadow-sm" />
+            <img src="/logotipo.jpeg" alt="Rapidy" className="w-9 h-9 rounded-full object-cover border-2 border-white/20 shadow-sm" />
             <div>
               <p className="text-white/75 text-xs font-medium">Hola,</p>
               <p className="text-white font-bold text-sm tracking-tight">{customer?.firstName || "Invitado"}</p>
