@@ -108,20 +108,67 @@ export const commerceRouter = createRouter({
   update: merchantQuery
     .input(
       z.object({
-        id: z.number(),
-        name: z.string().optional(),
-        description: z.string().optional(),
-        address: z.string().optional(),
-        phone: z.string().optional(),
-        email: z.string().optional(),
-        logo: z.string().optional(),
-        coverImage: z.string().optional(),
-        minOrder: z.string().optional(),
-        deliveryTime: z.string().optional(),
+        id: z.number().int().positive(),
+        name: z.string().trim().min(1, "El nombre es obligatorio").max(200).optional(),
+        description: z.string().trim().max(2000).optional(),
+        address: z.string().trim().min(3, "La dirección es obligatoria").max(500).optional(),
+        phone: z
+          .string()
+          .trim()
+          .max(20)
+          .refine(
+            (value) => value === "" || /^[+0-9 ()-]{6,20}$/.test(value),
+            "El teléfono no es válido",
+          )
+          .optional(),
+        logo: z
+          .string()
+          .trim()
+          .max(2_000_000, "El logo es demasiado grande")
+          .refine(
+            (value) =>
+              value === "" ||
+              /^https:\/\//i.test(value) ||
+              /^data:image\/(jpeg|jpg|png|webp);base64,/i.test(value),
+            "El logo debe ser una URL HTTPS o una imagen JPG/PNG/WEBP",
+          )
+          .optional(),
+        coverImage: z
+          .string()
+          .trim()
+          .max(2_000_000, "La portada es demasiado grande")
+          .refine(
+            (value) =>
+              value === "" ||
+              /^https:\/\//i.test(value) ||
+              /^data:image\/(jpeg|jpg|png|webp);base64,/i.test(value),
+            "La portada debe ser una URL HTTPS o una imagen JPG/PNG/WEBP",
+          )
+          .optional(),
+        minOrder: z
+          .string()
+          .trim()
+          .regex(
+            /^(?:0|[1-9]\d{0,7})(?:\.\d{1,2})?$/,
+            "El mínimo debe ser un decimal válido",
+          )
+          .optional()
+          .or(z.literal("")),
+        deliveryTime: z.string().trim().max(50).optional(),
         isOpen: z.enum(["open", "closed"]).optional(),
-        openHours: z.string().optional(),
-        lat: z.string().optional(),
-        lng: z.string().optional(),
+        openHours: z.string().trim().max(200).optional(),
+        lat: z
+          .string()
+          .trim()
+          .regex(/^-?\d{1,2}(\.\d{1,8})?$/, "Latitud inválida")
+          .optional()
+          .or(z.literal("")),
+        lng: z
+          .string()
+          .trim()
+          .regex(/^-?\d{1,3}(\.\d{1,8})?$/, "Longitud inválida")
+          .optional()
+          .or(z.literal("")),
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -136,7 +183,9 @@ export const commerceRouter = createRouter({
 
       const updateData: Record<string, any> = {};
       for (const [key, val] of Object.entries(data)) {
-        if (val !== undefined) updateData[key] = val;
+        if (val === undefined) continue;
+        if (val === "" && ["minOrder", "lat", "lng"].includes(key)) continue;
+        updateData[key] = key === "minOrder" ? Number(val).toFixed(2) : val;
       }
       if (Object.keys(updateData).length > 0) {
         await db.update(commerces).set(updateData).where(eq(commerces.id, id));
@@ -153,21 +202,34 @@ export const commerceRouter = createRouter({
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input, ctx }) => {
       const db = getDb();
-      const commerce = await db.select().from(commerces).where(eq(commerces.id, input.id));
-      if (commerce.length === 0) return null;
+      const updated = await db.transaction(async (tx) => {
+        const rows = await tx
+          .select()
+          .from(commerces)
+          .where(eq(commerces.id, input.id))
+          .for("update")
+          .limit(1);
+        const commerce = rows[0];
+        if (!commerce) return null;
+        if (commerce.merchantUserId !== ctx.merchant.id) {
+          throw new Error("No tienes autorización para alterar el estado de este comercio");
+        }
 
-      // Verificación estricta de propiedad anti-IDOR
-      if (commerce[0].merchantUserId !== ctx.merchant.id) {
-        throw new Error("No tienes autorización para alterar el estado de este comercio");
-      }
+        const newStatus = commerce.isOpen === "open" ? "closed" : "open";
+        const result = await tx
+          .update(commerces)
+          .set({ isOpen: newStatus })
+          .where(eq(commerces.id, input.id))
+          .returning();
+        return result[0];
+      });
 
-      const newStatus = commerce[0].isOpen === "open" ? "closed" : "open";
-      await db.update(commerces).set({ isOpen: newStatus }).where(eq(commerces.id, input.id));
+      if (!updated) return null;
       emit("admin:dashboard", { type: "dashboard_update" });
       emit("commerces:global", { type: "commerce_update", commerceId: input.id });
       emit(`commerce:${input.id}`, { type: "commerce_update", commerceId: input.id });
       emit("products:global", { type: "products_update", action: "commerce_update", commerceId: input.id });
-      return { ...commerce[0], isOpen: newStatus };
+      return updated;
     }),
 
   getStats: merchantQuery
