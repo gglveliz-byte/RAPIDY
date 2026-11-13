@@ -66,9 +66,9 @@ export function HomeCategories({
   if (categories.length === 0) return null;
 
   return (
-    <div className="w-full">
-      <div className="flex items-center justify-between mb-2.5">
-        <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+    <div className="w-full pt-1">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-[11px] font-black uppercase tracking-wider text-zinc-400">
           Categorías
         </span>
         {selectedCategory && (

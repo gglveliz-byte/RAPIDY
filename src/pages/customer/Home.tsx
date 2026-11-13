@@ -117,7 +117,7 @@ export default function CustomerHome() {
       />
 
       {/* Main Content Body (Se desplaza fluidamente por detrás de la cabecera fija) */}
-      <div className="px-4 space-y-4 pt-[116px] sm:pt-[122px]">
+      <div className="px-4 space-y-5 pt-[calc(env(safe-area-inset-top,0px)+132px)]">
         {/* 2. Top Categories (Comida, Supermercado, Farmacia, Compras) */}
         <HomeCategories
           categories={activeCategories}
