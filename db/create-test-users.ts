@@ -62,7 +62,7 @@ async function main() {
   }
 
   // 3. REPARTIDOR / MOTOCICLETA (Driver)
-  const driverPhone = "1122334455";
+  const driverPhone = "0991234567";
   const driverPassword = "moto123";
   const driverHash = await bcrypt.hash(driverPassword, 10);
 
@@ -73,10 +73,10 @@ async function main() {
       phone: driverPhone,
       passwordHash: driverHash,
       vehicle: "Motocicleta Honda GLH 150",
-      licensePlate: "A123BCD",
+      licensePlate: "PCQ-1234",
       status: "online",
-      currentLat: "-34.6037",
-      currentLng: "-58.3816",
+      currentLat: "-0.1807",
+      currentLng: "-78.4678",
       rating: "4.9",
       commissionRate: "75.00",
     });
@@ -86,6 +86,8 @@ async function main() {
       passwordHash: driverHash,
       status: "online",
       vehicle: "Motocicleta Honda GLH 150",
+      currentLat: "-0.1807",
+      currentLng: "-78.4678",
     }).where(eq(drivers.id, existingDriver[0].id));
     console.log(`✅ Repartidor Moto actualizado: Teléfono: ${driverPhone} / Clave: ${driverPassword}`);
   }
