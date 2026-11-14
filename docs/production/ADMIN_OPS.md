@@ -59,3 +59,24 @@ sección **Comercios**.
 - Si el comercio no tiene merchant asignado, la acción no aparece en la UI.
 - No reiniciar `localhost:3000`, no ejecutar migraciones y no crear tablas para
   este procedimiento.
+
+## Rotación de la contraseña del admin raíz
+
+El `ADMIN_PASSWORD` de Render debe coincidir con el hash real de la tabla
+`users`. Cambiar solo la variable de entorno **no** actualiza un admin ya
+creado, porque `seedAdminUser` solo inserta si no existe.
+
+Procedimiento:
+
+1. Generar una contraseña aleatoria de 12+ caracteres (sin “admin”, “rapidy”,
+   “123456” ni palabras predecibles).
+2. Guardarla en el gestor de secretos y en `ADMIN_PASSWORD` de Render.
+3. Con `DATABASE_URL` y `ADMIN_EMAIL` de producción:
+
+```bash
+ENV_FILE=.env.production node scripts/set-admin-password.mjs
+```
+
+El script hashea con bcrypt, actualiza `users.password_hash`, incrementa
+`session_version` y revoca todas las sesiones admin. Nunca imprime la
+contraseña. Verificar login y que el refresh anterior ya no funcione.
