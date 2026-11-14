@@ -37,7 +37,8 @@ FROM node:20-bookworm-slim AS runtime
 WORKDIR /app
 
 ENV NODE_ENV=production \
-    PORT=3000
+    PORT=3000 \
+    HOST=0.0.0.0
 
 RUN groupadd --system --gid 1001 nodejs \
  && useradd --system --uid 1001 --gid nodejs --create-home --shell /usr/sbin/nologin app
@@ -48,7 +49,7 @@ COPY --from=build --chown=app:nodejs /app/dist ./dist
 
 USER app
 
-EXPOSE 3000
+EXPOSE 3000 10000
 
 STOPSIGNAL SIGTERM
 
