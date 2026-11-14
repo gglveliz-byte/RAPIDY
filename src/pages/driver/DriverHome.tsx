@@ -17,6 +17,7 @@ import { trpc } from "@/providers/trpc";
 import { useDriverSession } from "@/hooks/useDeliveryData";
 import { useDriverEvents } from "@/hooks/useOrderEvents";
 import { useDriverNotification } from "@/hooks/useDriverNotification";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { getOrderStatusMeta } from "@contracts/orderStatus";
 
 function getDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -144,10 +145,10 @@ export default function DriverHome() {
   };
 
   return (
-    <div className="mobile-container bg-gray-50 dark:bg-[#0A0A0D] min-h-screen pb-24">
-      <div className="bg-[#2E7D32] px-4 pt-safe pb-6">
+    <div className="mobile-container bg-[#F7F7FA] dark:bg-[#0A0A0D] min-h-screen pb-24">
+      <div className="bg-gradient-to-br from-brand to-brand-strong px-4 pt-safe pb-6">
         <div className="flex items-center justify-between pt-4 mb-4">
-          <div>
+          <div className="min-w-0">
             <h1 className="text-xl font-bold text-white">Pedidos disponibles</h1>
             <p className="text-white/80 text-sm mt-0.5">
               {profileQuery.isLoading ? (
@@ -164,7 +165,11 @@ export default function DriverHome() {
               )}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
+            <ThemeToggle
+              size="lg"
+              className="!bg-white/20 !border-white/20 !text-white hover:!bg-white/30"
+            />
             <button
               onClick={handleToggleOnline}
               disabled={!driverProfile || isBusy || updateStatusMutation.isPending}
@@ -230,13 +235,13 @@ export default function DriverHome() {
 
       <div className="px-4 mt-4">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-base font-semibold text-gray-800 dark:text-zinc-100">
+          <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
             Cerca de ti
           </h2>
           <button
             type="button"
             onClick={() => availableQuery.refetch()}
-            className="text-xs font-bold text-[#2E7D32] dark:text-emerald-400"
+            className="inline-flex items-center min-h-11 px-2 -mr-2 text-xs font-bold text-brand"
           >
             Actualizar
           </button>
@@ -244,10 +249,10 @@ export default function DriverHome() {
 
         {availableQuery.isLoading ? (
           <div className="flex justify-center py-8">
-            <Loader2 className="w-6 h-6 animate-spin text-[#2E7D32]" />
+            <Loader2 className="w-6 h-6 animate-spin text-brand" />
           </div>
         ) : availableQuery.isError ? (
-          <div className="bg-white dark:bg-[#16161B] rounded-xl p-5 text-center border border-red-200 dark:border-red-900/50">
+          <div className="bg-white dark:bg-[#1A1A1E] rounded-xl p-5 text-center border border-red-200 dark:border-red-900/50">
             <p className="text-sm font-semibold text-red-700 dark:text-red-400">
               No se pudieron cargar los pedidos
             </p>
@@ -286,14 +291,14 @@ export default function DriverHome() {
               return (
                 <div
                   key={order.id}
-                  className="bg-white dark:bg-[#16161B] rounded-xl card-shadow p-4 border border-zinc-100 dark:border-white/10"
+                  className="bg-white dark:bg-[#1A1A1E] rounded-xl card-shadow dark:shadow-none p-4 border border-zinc-100 dark:border-white/10"
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="min-w-0">
-                      <h3 className="font-medium text-gray-800 dark:text-zinc-100 truncate">
+                      <h3 className="font-medium text-zinc-900 dark:text-zinc-100 truncate">
                         {commerceLabel}
                       </h3>
-                      <div className="flex items-center gap-1 mt-0.5 text-xs text-gray-500 dark:text-zinc-400">
+                      <div className="flex items-center gap-1 mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
                         <MapPin className="w-3 h-3" />
                         <span>{distanceKm !== null ? `${distanceKm.toFixed(1)} km` : "Distancia no disponible"}</span>
                         {distanceKm !== null && (
@@ -306,39 +311,39 @@ export default function DriverHome() {
                       </div>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="text-sm font-bold text-[#2E7D32] dark:text-emerald-400">
+                      <p className="text-sm font-bold text-brand">
                         ${earning.toFixed(2)}
                       </p>
-                      <p className="text-xs text-gray-400">ganancia estimada</p>
+                      <p className="text-xs text-zinc-400 dark:text-zinc-500">ganancia estimada</p>
                     </div>
                   </div>
 
                   <div className="space-y-1.5 mb-3">
-                    <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-zinc-300">
-                      <div className="w-2 h-2 bg-[#2E7D32] rounded-full flex-shrink-0" />
-                      <Navigation className="w-3 h-3 text-gray-400" />
+                    <div className="flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-300">
+                      <div className="w-2 h-2 bg-brand rounded-full flex-shrink-0" />
+                      <Navigation className="w-3 h-3 text-zinc-400 dark:text-zinc-500" />
                       <span className="truncate">
                         Recojo en {order.commerceName || "comercio"}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-zinc-300">
+                    <div className="flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-300">
                       <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0" />
-                      <MapPin className="w-3 h-3 text-gray-400" />
+                      <MapPin className="w-3 h-3 text-zinc-400 dark:text-zinc-500" />
                       <span className="truncate">
                         {order.commerceAddress || "Dirección del local no disponible"}
                       </span>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-white/5 gap-2">
-                    <span className="text-xs text-gray-500 dark:text-zinc-400 truncate">
+                  <div className="flex items-center justify-between pt-2 border-t border-zinc-100 dark:border-white/5 gap-2">
+                    <span className="text-xs text-zinc-500 dark:text-zinc-400 truncate">
                       {order.itemCount ?? 0} items | Total: ${order.total} |{" "}
                       {order.paymentMethod === "cash" ? "💵 Efectivo" : "💳 Transferencia"}
                     </span>
                     <button
                       onClick={() => handleAcceptOrder(order.id)}
                       disabled={acceptOrderMutation.isPending || !!activeOrder || !isOnline}
-                      className="h-11 px-5 bg-[#2E7D32] text-white text-sm font-medium rounded-lg hover:bg-[#1B5E20] active:scale-95 transition-all disabled:opacity-50 shrink-0"
+                      className="h-11 px-5 bg-brand text-white text-sm font-medium rounded-lg hover:bg-brand-strong active:scale-95 transition-all disabled:opacity-50 shrink-0"
                     >
                       {acceptOrderMutation.isPending ? "..." : "Aceptar"}
                     </button>
@@ -348,13 +353,13 @@ export default function DriverHome() {
             })}
           </div>
         ) : (
-          <div className="bg-white dark:bg-[#16161B] rounded-xl p-6 text-center border border-zinc-100 dark:border-white/10">
-            <Package className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-            <p className="text-gray-500 dark:text-zinc-400 text-sm">
+          <div className="bg-white dark:bg-[#1A1A1E] rounded-xl p-6 text-center border border-zinc-100 dark:border-white/10">
+            <Package className="w-8 h-8 text-zinc-300 dark:text-zinc-600 mx-auto mb-2" />
+            <p className="text-zinc-500 dark:text-zinc-400 text-sm">
               No hay pedidos disponibles
             </p>
             {!isOnline && (
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">
                 Actívate para recibir pedidos.
               </p>
             )}
@@ -362,7 +367,7 @@ export default function DriverHome() {
         )}
       </div>
 
-      <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-[#16161B] border-t border-gray-100 dark:border-white/10 px-4 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] flex justify-around items-center z-50" style={{ maxWidth: "480px", margin: "0 auto" }}>
+      <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-[#111115] border-t border-zinc-100 dark:border-white/10 px-4 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] flex justify-around items-center z-50" style={{ maxWidth: "480px", margin: "0 auto" }}>
         <button onClick={() => navigate("/driver")} className="bottom-nav-item active min-h-11">
           <List className="w-5 h-5" />
           <span className="text-[10px]">Pedidos</span>

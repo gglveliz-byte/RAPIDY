@@ -97,7 +97,7 @@ async function loadDeliveredCommissions(cutoff?: Date) {
       commerces.commissionRate,
     );
 
-  return rows.map((row) => {
+  const withCommission = rows.map((row) => {
     const sales = Number(row.sales || 0);
     const commission =
       row.commissionAmount !== null && row.commissionAmount !== undefined
@@ -110,6 +110,56 @@ async function loadDeliveredCommissions(cutoff?: Date) {
       effectiveAt: row.deliveredAt ?? row.createdAt,
     };
   });
+
+  // Pedidos legacy sin filas en order_commerce_status: se reconstruye la
+  // comisión por comercio con la tasa actual solo para no perder la venta.
+  const existingKeys = new Set(
+    withCommission.map((row) => `${row.orderId}:${row.commerceId}`),
+  );
+  const legacyGroups = await db
+    .select({
+      orderId: orderItems.orderId,
+      commerceId: orderItems.commerceId,
+      sales: sql<string>`coalesce(sum(${orderItems.total}), 0)`,
+      createdAt: orders.createdAt,
+      deliveredAt: orders.deliveredAt,
+      rate: commerces.commissionRate,
+    })
+    .from(orderItems)
+    .innerJoin(orders, eq(orderItems.orderId, orders.id))
+    .innerJoin(commerces, eq(orderItems.commerceId, commerces.id))
+    .where(
+      and(
+        eq(orders.status, "delivered"),
+        cutoff ? gte(sql`coalesce(${orders.deliveredAt}, ${orders.createdAt})`, cutoff) : undefined,
+      ),
+    )
+    .groupBy(
+      orderItems.orderId,
+      orderItems.commerceId,
+      orders.createdAt,
+      orders.deliveredAt,
+      commerces.commissionRate,
+    );
+
+  for (const row of legacyGroups) {
+    const key = `${row.orderId}:${row.commerceId}`;
+    if (existingKeys.has(key)) continue;
+    const sales = Number(row.sales || 0);
+    withCommission.push({
+      orderId: row.orderId,
+      commerceId: row.commerceId,
+      commissionAmount: null,
+      sales: Number(row.sales || 0),
+      createdAt: row.createdAt,
+      deliveredAt: row.deliveredAt,
+      rate: row.rate,
+      commission: sales * (Number(row.rate || "10") / 100),
+      effectiveAt: row.deliveredAt ?? row.createdAt,
+    });
+  }
+
+  return withCommission;
 }
 
 async function periodSalesTotal(from: Date, to: Date) {

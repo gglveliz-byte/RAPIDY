@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate, useLocation } from "react-router";
 import {
   LayoutDashboard, ShoppingBag, Store, Truck, Package, Settings, LogOut,
@@ -6,6 +6,7 @@ import {
 import { trpcMutate } from "@/hooks/useDeliveryData";
 import { queryClient } from "@/providers/trpc";
 import { clearRoleUser, clearSession, dispatchLogout } from "@/hooks/useSessionSync";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/admin" },
@@ -19,6 +20,20 @@ const navItems = [
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
+  // Un solo ThemeToggle montado a la vez para que su estado no se desincronice
+  // entre el sidebar (desktop) y la barra inferior (mobile).
+  const [isDesktop, setIsDesktop] = useState(() =>
+    typeof window !== "undefined" ? window.matchMedia("(min-width: 1024px)").matches : true,
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const media = window.matchMedia("(min-width: 1024px)");
+    const handleChange = (event: MediaQueryListEvent) => setIsDesktop(event.matches);
+    setIsDesktop(media.matches);
+    media.addEventListener("change", handleChange);
+    return () => media.removeEventListener("change", handleChange);
+  }, []);
 
   const handleLogout = async () => {
     await trpcMutate("login.logout", { scope: "admin" }).catch(() => {});
@@ -30,17 +45,17 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div className="min-h-[100dvh] h-screen bg-gray-50 flex overflow-hidden">
+    <div className="min-h-[100dvh] h-screen bg-[#F7F7FA] dark:bg-[#0A0A0D] text-zinc-900 dark:text-zinc-100 flex overflow-hidden antialiased">
       {/* Sidebar — desktop */}
-      <aside className="hidden lg:flex w-64 bg-white border-r border-gray-200 flex-col fixed h-full z-30">
-        <div className="p-6 border-b border-gray-100">
+      <aside className="hidden lg:flex w-64 bg-white dark:bg-[#111115] border-r border-zinc-100 dark:border-white/10 flex-col fixed h-full z-30">
+        <div className="p-6 border-b border-zinc-100 dark:border-white/10">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 bg-[#2E7D32] rounded-xl flex items-center justify-center shadow-sm">
+            <div className="w-9 h-9 bg-brand rounded-xl flex items-center justify-center shadow-sm shadow-brand/30">
               <Package className="w-5 h-5 text-white" />
             </div>
             <div>
-              <span className="font-extrabold text-base tracking-tight text-gray-900 block leading-none">RAPIDY</span>
-              <span className="text-[10px] text-gray-400 font-medium tracking-wide uppercase">Panel Admin</span>
+              <span className="font-extrabold text-base tracking-tight text-zinc-900 dark:text-zinc-100 block leading-none">RAPIDY</span>
+              <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-medium tracking-wide uppercase">Panel Admin</span>
             </div>
           </div>
         </div>
@@ -50,11 +65,13 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             return (
               <button
                 key={item.path}
+                type="button"
                 onClick={() => navigate(item.path)}
-                className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                aria-current={isActive ? "page" : undefined}
+                className={`w-full min-h-[44px] flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                   isActive
-                    ? "bg-[#2E7D32] text-white shadow-sm shadow-[#2E7D32]/20"
-                    : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                    ? "bg-brand/10 text-brand"
+                    : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-white/5 hover:text-zinc-900 dark:hover:text-zinc-100"
                 }`}
               >
                 <item.icon className="w-5 h-5 shrink-0" />
@@ -63,10 +80,17 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             );
           })}
         </nav>
-        <div className="p-4 border-t border-gray-100">
+        <div className="p-4 border-t border-zinc-100 dark:border-white/10 space-y-1.5">
+          {isDesktop && (
+            <div className="flex items-center justify-between px-3.5 py-1.5 bg-zinc-50 dark:bg-white/5 rounded-xl border border-zinc-100 dark:border-white/10">
+              <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">Tema</span>
+              <ThemeToggle size="sm" />
+            </div>
+          )}
           <button
+            type="button"
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-3.5 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+            className="w-full min-h-[44px] flex items-center gap-3 px-3.5 py-2.5 text-sm font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl transition-colors"
           >
             <LogOut className="w-5 h-5 shrink-0" />
             Cerrar Sesión
@@ -75,31 +99,52 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       </aside>
 
       {/* Main scroll container — handles mobile bottom nav padding and desktop full height */}
-      <main className="flex-1 lg:ml-64 pb-20 sm:pb-24 lg:pb-0 flex flex-col overflow-y-auto">
+      <main className="flex-1 lg:ml-64 pb-32 sm:pb-36 lg:pb-0 flex flex-col overflow-y-auto">
         {children}
       </main>
 
       {/* Bottom nav — mobile */}
-      <nav className="lg:hidden fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-gray-200 flex items-center justify-around px-1 pt-1 pb-[max(0.35rem,env(safe-area-inset-bottom,6px))] z-30 shadow-lg">
-        {navItems.map((item) => {
-          const isActive = location.pathname === item.path;
-          return (
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 bg-white dark:bg-[#111115] border-t border-zinc-100 dark:border-white/10 z-30 shadow-lg dark:shadow-black/40 px-1 pt-1 pb-[max(0.35rem,env(safe-area-inset-bottom,6px))]">
+        {/* Utilidades: tema + logout accesible */}
+        <div className="flex items-center justify-between gap-2 px-2 pb-0.5">
+          <span className="text-[9px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Panel Admin</span>
+          <div className="flex items-center gap-1.5">
+            {!isDesktop && <ThemeToggle size="sm" className="!w-11 !h-11 !rounded-xl" />}
             <button
-              key={item.path}
-              onClick={() => navigate(item.path)}
-              className={`flex-1 min-h-[44px] max-w-[54px] flex flex-col items-center justify-center gap-0.5 px-0.5 py-1 rounded-xl transition-all active:scale-95 ${
-                isActive
-                  ? "text-[#2E7D32] font-bold"
-                  : "text-gray-400 hover:text-gray-600 font-medium"
-              }`}
+              type="button"
+              onClick={handleLogout}
+              aria-label="Cerrar sesión"
+              title="Cerrar sesión"
+              className="min-h-[44px] flex items-center gap-1.5 px-3 rounded-xl text-xs font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 border border-red-200 dark:border-red-500/30 transition-colors active:scale-95"
             >
-              <item.icon className={`w-4 h-4 sm:w-5 sm:h-5 transition-transform ${isActive ? "scale-110" : ""}`} />
-              <span className="text-[7.5px] sm:text-[9px] leading-tight text-center truncate max-w-full font-medium">
-                {item.label}
-              </span>
+              <LogOut className="w-4 h-4" />
+              Salir
             </button>
-          );
-        })}
+          </div>
+        </div>
+        <div className="flex items-center justify-around">
+          {navItems.map((item) => {
+            const isActive = location.pathname === item.path;
+            return (
+              <button
+                key={item.path}
+                type="button"
+                onClick={() => navigate(item.path)}
+                aria-current={isActive ? "page" : undefined}
+                className={`flex-1 min-h-[44px] max-w-[56px] flex flex-col items-center justify-center gap-0.5 px-0.5 py-1 rounded-xl transition-all active:scale-95 ${
+                  isActive
+                    ? "text-brand bg-brand/10 font-bold"
+                    : "text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 font-medium"
+                }`}
+              >
+                <item.icon className={`w-4 h-4 sm:w-5 sm:h-5 transition-transform ${isActive ? "scale-110" : ""}`} />
+                <span className="text-[7.5px] sm:text-[9px] leading-tight text-center truncate max-w-full font-medium">
+                  {item.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </nav>
     </div>
   );

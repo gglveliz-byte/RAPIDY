@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { ArrowLeft, DollarSign, TrendingUp, Clock, Bike, Loader2 } from "lucide-react";
 import { trpc } from "@/providers/trpc";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { useDriverSession } from "@/hooks/useDeliveryData";
 import { useDriverEvents } from "@/hooks/useOrderEvents";
 
@@ -66,21 +67,21 @@ export default function DriverEarnings() {
 
   if (isLoading) {
     return (
-      <div className="mobile-container bg-gray-50 min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-[#2E7D32]" />
+      <div className="mobile-container bg-zinc-50 dark:bg-[#0A0A0D] min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-brand" />
       </div>
     );
   }
 
   if (isError) {
     return (
-      <div className="mobile-container bg-gray-50 min-h-screen flex flex-col items-center justify-center px-6 text-center">
-        <p className="text-sm font-bold text-red-700">No se pudieron cargar tus ganancias</p>
-        <p className="text-xs text-gray-500 mt-1">{error.message}</p>
+      <div className="mobile-container bg-zinc-50 dark:bg-[#0A0A0D] min-h-screen flex flex-col items-center justify-center px-6 text-center">
+        <p className="text-sm font-bold text-red-700 dark:text-red-400">No se pudieron cargar tus ganancias</p>
+        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{error.message}</p>
         <button
           type="button"
           onClick={() => refetch()}
-          className="mt-4 px-4 py-2 rounded-lg bg-[#2E7D32] text-white text-xs font-bold"
+          className="mt-4 px-4 py-2 rounded-lg bg-brand hover:bg-brand-strong text-white text-xs font-bold transition-colors"
         >
           Reintentar
         </button>
@@ -89,21 +90,27 @@ export default function DriverEarnings() {
   }
 
   return (
-    <div className="mobile-container bg-gray-50 min-h-screen pb-6">
+    <div className="mobile-container bg-zinc-50 dark:bg-[#0A0A0D] min-h-screen pb-6">
       {/* Header */}
-      <div className="bg-[#2E7D32] px-4 pt-4 pb-6">
-        <button onClick={() => navigate("/driver")} className="text-white/80 hover:text-white mb-4 touch-target">
-          <ArrowLeft className="w-6 h-6" />
-        </button>
+      <div className="bg-gradient-to-br from-brand to-brand-strong px-4 pt-4 pb-6">
+        <div className="flex items-center justify-between mb-4">
+          <button onClick={() => navigate("/driver")} className="text-white/80 hover:text-white touch-target">
+            <ArrowLeft className="w-6 h-6" />
+          </button>
+          <ThemeToggle
+            size="lg"
+            className="!bg-white/15 !border-white/30 !text-white hover:!bg-white/25 hover:!text-white shadow-sm"
+          />
+        </div>
         <h1 className="text-xl font-bold text-white">Mis ganancias</h1>
       </div>
 
       {/* Total Card */}
       <div className="px-4 -mt-3">
-        <div className="bg-white rounded-xl card-shadow p-5">
-          <p className="text-sm text-gray-500 mb-1">{period === "day" ? "Ganancias de hoy" : period === "week" ? "Ganancias de la semana" : "Ganancias del mes"}</p>
-          <p className="text-3xl font-bold text-[#2E7D32]">${periodEarnings.toFixed(2)}</p>
-          <div className="flex items-center gap-1 mt-1 text-xs text-green-600">
+        <div className="bg-white dark:bg-[#1A1A1E] rounded-2xl card-shadow dark:shadow-none border border-zinc-100 dark:border-white/10 p-5">
+          <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-1">{period === "day" ? "Ganancias de hoy" : period === "week" ? "Ganancias de la semana" : "Ganancias del mes"}</p>
+          <p className="text-3xl font-bold text-brand">${periodEarnings.toFixed(2)}</p>
+          <div className="flex items-center gap-1 mt-1 text-xs text-green-600 dark:text-green-400">
             <TrendingUp className="w-3 h-3" />
             <span>Ganancias acumuladas</span>
           </div>
@@ -112,15 +119,15 @@ export default function DriverEarnings() {
 
       {/* Period Tabs */}
       <div className="px-4 mt-4">
-        <div className="flex bg-gray-100 rounded-xl p-1">
+        <div className="flex bg-zinc-100 dark:bg-[#16161B] rounded-xl p-1 border border-zinc-200/60 dark:border-white/5">
           {(["day", "week", "month"] as const).map((p) => (
             <button
               key={p}
               onClick={() => setPeriod(p)}
               className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${
                 period === p
-                  ? "bg-white text-[#2E7D32] shadow-sm"
-                  : "text-gray-500"
+                  ? "bg-white dark:bg-[#1A1A1E] text-brand shadow-sm"
+                  : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
               }`}
             >
               {p === "day" ? "Hoy" : p === "week" ? "Semana" : "Mes"}
@@ -132,47 +139,47 @@ export default function DriverEarnings() {
       {/* Stats */}
       <div className="px-4 mt-4">
         <div className="grid grid-cols-3 gap-3">
-          <div className="bg-white rounded-xl card-shadow p-3 text-center">
-            <Bike className="w-5 h-5 text-[#2E7D32] mx-auto mb-1" />
-            <p className="text-lg font-bold text-gray-800">{totalDeliveries}</p>
-            <p className="text-xs text-gray-500">Entregas</p>
+          <div className="bg-white dark:bg-[#1A1A1E] rounded-2xl card-shadow dark:shadow-none border border-zinc-100 dark:border-white/10 p-3 text-center">
+            <Bike className="w-5 h-5 text-brand mx-auto mb-1" />
+            <p className="text-lg font-bold text-zinc-900 dark:text-zinc-100">{totalDeliveries}</p>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">Entregas</p>
           </div>
-          <div className="bg-white rounded-xl card-shadow p-3 text-center">
-            <Clock className="w-5 h-5 text-[#2E7D32] mx-auto mb-1" />
-            <p className="text-lg font-bold text-gray-800">{periodDeliveries}</p>
-            <p className="text-xs text-gray-500">Entregas (período)</p>
+          <div className="bg-white dark:bg-[#1A1A1E] rounded-2xl card-shadow dark:shadow-none border border-zinc-100 dark:border-white/10 p-3 text-center">
+            <Clock className="w-5 h-5 text-brand mx-auto mb-1" />
+            <p className="text-lg font-bold text-zinc-900 dark:text-zinc-100">{periodDeliveries}</p>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">Entregas (período)</p>
           </div>
-          <div className="bg-white rounded-xl card-shadow p-3 text-center">
-            <DollarSign className="w-5 h-5 text-[#2E7D32] mx-auto mb-1" />
-            <p className="text-lg font-bold text-gray-800">${avgEarnings.toFixed(2)}</p>
-            <p className="text-xs text-gray-500">Promedio</p>
+          <div className="bg-white dark:bg-[#1A1A1E] rounded-2xl card-shadow dark:shadow-none border border-zinc-100 dark:border-white/10 p-3 text-center">
+            <DollarSign className="w-5 h-5 text-brand mx-auto mb-1" />
+            <p className="text-lg font-bold text-zinc-900 dark:text-zinc-100">${avgEarnings.toFixed(2)}</p>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">Promedio</p>
           </div>
         </div>
       </div>
 
       {/* Daily History */}
       <div className="px-4 mt-6">
-        <h2 className="text-base font-semibold text-gray-800 mb-3">Historial</h2>
-        <div className="bg-white rounded-xl card-shadow divide-y divide-gray-50">
+        <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-3">Historial</h2>
+        <div className="bg-white dark:bg-[#1A1A1E] rounded-2xl card-shadow dark:shadow-none border border-zinc-100 dark:border-white/10 divide-y divide-zinc-100 dark:divide-white/5 overflow-hidden">
           {dailyHistory.length > 0 ? (
             dailyHistory.map((day: any) => (
               <div key={day.date} className="p-4 flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-800">
+                  <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
                     {new Date(`${day.date}T12:00:00`).toLocaleDateString("es-ES", {
                       weekday: "short",
                       day: "numeric",
                       month: "short",
                     })}
                   </p>
-                  <p className="text-xs text-gray-500">{day.deliveries} entregas</p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">{day.deliveries} entregas</p>
                 </div>
-                <span className="text-sm font-bold text-[#2E7D32]">${day.earnings.toFixed(2)}</span>
+                <span className="text-sm font-bold text-brand">${day.earnings.toFixed(2)}</span>
               </div>
             ))
           ) : (
             <div className="p-6 text-center">
-              <p className="text-gray-500 text-sm">Sin historial de ganancias</p>
+              <p className="text-zinc-500 dark:text-zinc-400 text-sm">Sin historial de ganancias</p>
             </div>
           )}
         </div>

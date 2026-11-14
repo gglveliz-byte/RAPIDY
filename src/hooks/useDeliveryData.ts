@@ -1,6 +1,7 @@
 import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
 import superjson from "superjson";
 import { useState, useEffect } from "react";
+import { useLocation } from "react-router";
 import { useDebouncedValue } from "./useDebouncedValue";
 import { invalidateCustomerAuthCache } from "@/lib/customerAuthCache";
 import {
@@ -131,6 +132,10 @@ export function useCommerce(id: number) {
 
 export function useMerchantCommerceId() {
   const [commerceId, setCommerceId] = useState<number | null>(null);
+  const { pathname } = useLocation();
+  // Las queries de merchant solo viven en el panel de negocio. Evita 401 y
+  // sesiones cruzadas cuando el mismo navegador entra como driver o admin.
+  const isMerchantRoute = pathname.startsWith("/commerce");
 
   // El servidor es la única fuente de verdad. Nunca se infiere el comercio
   // por nombre ni se confía en un id cacheado sin revalidar.
@@ -138,7 +143,15 @@ export function useMerchantCommerceId() {
     queryKey: ["commerce.me"],
     queryFn: () => trpcCall<any>("commerce.me"),
     staleTime: 30_000,
+    enabled: isMerchantRoute,
   });
+
+  useEffect(() => {
+    if (!isMerchantRoute) {
+      setCommerceId(null);
+      return;
+    }
+  }, [isMerchantRoute]);
 
   useEffect(() => {
     if (!meQuery.isSuccess) return;
@@ -307,10 +320,11 @@ export function useCustomerOrders(customerId: number) {
 }
 
 export function useCommerceOrders(commerceId: number) {
+  const { pathname } = useLocation();
   const query = useQuery({
     queryKey: ["order.getCommerceOrders", commerceId],
     queryFn: () => trpcCall<any[]>("order.getCommerceOrders", { commerceId, limit: 100 }),
-    enabled: Boolean(commerceId),
+    enabled: Boolean(commerceId) && pathname.startsWith("/commerce"),
     refetchInterval: 30_000,
   });
   return {

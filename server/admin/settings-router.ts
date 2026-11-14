@@ -186,7 +186,7 @@ export const adminSettingsProcedures = {
         );
 
       if (input.type === "sales") {
-        const [orderRows, commissionRows] = await Promise.all([
+        const [orderRows, commissionRows, legacyCommissionRows] = await Promise.all([
           db
             .select({
               id: orders.id,
@@ -199,6 +199,7 @@ export const adminSettingsProcedures = {
           db
             .select({
               orderId: orderCommerceStatus.orderId,
+              commerceId: orderCommerceStatus.commerceId,
               commissionAmount: orderCommerceStatus.commissionAmount,
               sales: sql<string>`coalesce(sum(${orderItems.total}), 0)`,
               rate: commerces.commissionRate,
@@ -216,17 +217,46 @@ export const adminSettingsProcedures = {
             .where(and(eq(orders.status, "delivered"), effectiveInRange()))
             .groupBy(
               orderCommerceStatus.orderId,
+              orderCommerceStatus.commerceId,
               orderCommerceStatus.commissionAmount,
+              commerces.commissionRate,
+            ),
+          db
+            .select({
+              orderId: orderItems.orderId,
+              commerceId: orderItems.commerceId,
+              sales: sql<string>`coalesce(sum(${orderItems.total}), 0)`,
+              rate: commerces.commissionRate,
+            })
+            .from(orderItems)
+            .innerJoin(orders, eq(orderItems.orderId, orders.id))
+            .innerJoin(commerces, eq(orderItems.commerceId, commerces.id))
+            .where(and(eq(orders.status, "delivered"), effectiveInRange()))
+            .groupBy(
+              orderItems.orderId,
+              orderItems.commerceId,
               commerces.commissionRate,
             ),
         ]);
 
         const commissionByOrder = new Map<number, number>();
+        const statusKeys = new Set(
+          commissionRows.map((row) => `${row.orderId}:${row.commerceId}`),
+        );
         for (const row of commissionRows) {
           const commission =
             row.commissionAmount !== null && row.commissionAmount !== undefined
               ? Number(row.commissionAmount)
               : Number(row.sales || 0) * (Number(row.rate || "10") / 100);
+          commissionByOrder.set(
+            row.orderId,
+            (commissionByOrder.get(row.orderId) ?? 0) + commission,
+          );
+        }
+        for (const row of legacyCommissionRows) {
+          if (statusKeys.has(`${row.orderId}:${row.commerceId}`)) continue;
+          const commission =
+            Number(row.sales || 0) * (Number(row.rate || "10") / 100);
           commissionByOrder.set(
             row.orderId,
             (commissionByOrder.get(row.orderId) ?? 0) + commission,
@@ -453,11 +483,46 @@ export const adminSettingsProcedures = {
         .orderBy(desc(sql`coalesce(${orders.deliveredAt}, ${orders.createdAt})`))
         .limit(10_000);
 
+      const statusKeys = new Set(rows.map((row) => `${row.orderId}:${row.commerceId}`));
+      const legacyRows = await db
+        .select({
+          orderId: orderItems.orderId,
+          commerceId: orderItems.commerceId,
+          sales: sql<string>`coalesce(sum(${orderItems.total}), 0)`,
+          orderTotal: orders.total,
+          createdAt: orders.createdAt,
+          deliveredAt: orders.deliveredAt,
+          rate: commerces.commissionRate,
+          commerceName: commerces.name,
+        })
+        .from(orderItems)
+        .innerJoin(orders, eq(orderItems.orderId, orders.id))
+        .innerJoin(commerces, eq(orderItems.commerceId, commerces.id))
+        .where(and(eq(orders.status, "delivered"), effectiveInRange()))
+        .groupBy(
+          orderItems.orderId,
+          orderItems.commerceId,
+          orders.total,
+          orders.createdAt,
+          orders.deliveredAt,
+          commerces.commissionRate,
+          commerces.name,
+        )
+        .orderBy(desc(sql`coalesce(${orders.deliveredAt}, ${orders.createdAt})`))
+        .limit(10_000);
+
+      const allRows = [
+        ...rows,
+        ...legacyRows
+          .filter((row) => !statusKeys.has(`${row.orderId}:${row.commerceId}`))
+          .map((row) => ({ ...row, commissionAmount: null })),
+      ];
+
       return {
         type: "commissions",
         generatedAt: new Date().toISOString(),
         columns: ["Comercio", "Pedido ID", "Comision", "Total Pedido", "Fecha"],
-        rows: rows.map((row) => {
+        rows: allRows.map((row) => {
           const commission =
             row.commissionAmount !== null && row.commissionAmount !== undefined
               ? Number(row.commissionAmount)

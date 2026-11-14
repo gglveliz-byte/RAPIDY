@@ -31,7 +31,13 @@ import { Mail, Lock, ArrowLeft, Shield, Briefcase, Eye, EyeOff } from "lucide-re
 import PhoneInput from "@/components/PhoneInput";
 import RapidyCanvas from "@/components/RapidyCanvas";
 import { trpcMutate } from "@/hooks/useDeliveryData";
-import { setRoleUser, setSession, type AppRole } from "@/hooks/useSessionSync";
+import {
+  clearRoleUser,
+  setRoleUser,
+  setSession,
+  type AppRole,
+} from "@/hooks/useSessionSync";
+import { queryClient } from "@/providers/trpc";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -77,6 +83,11 @@ export default function Login() {
           setError("Este tipo de cuenta no tiene acceso al panel profesional.");
           return;
         }
+        for (const otherRole of ["admin", "driver", "merchant"] as const) {
+          if (otherRole !== role) clearRoleUser(otherRole);
+        }
+        // Evita que datos del rol anterior sigan visibles al cambiar de panel.
+        queryClient.clear();
         if (result.user) {
           setRoleUser(role, result.user);
           setSession(role, result.user.id);

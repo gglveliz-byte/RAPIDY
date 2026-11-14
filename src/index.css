@@ -204,6 +204,14 @@ input, textarea {
   box-shadow: 0 4px 16px rgba(0,0,0,0.12);
 }
 
+/* Leaflet tiles adapt to the app theme without a paid tile provider */
+.dark .leaflet-tile {
+  filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9);
+}
+.dark .leaflet-container {
+  background: #16161b;
+}
+
 /* Map placeholder */
 .map-container {
   @apply w-full h-52 bg-gray-100 relative overflow-hidden rounded-xl;
@@ -212,7 +220,7 @@ input, textarea {
 
 /* Bottom nav active */
 .bottom-nav-item {
-  @apply flex flex-col items-center gap-0.5 text-gray-400 transition-colors;
+  @apply flex flex-col items-center gap-0.5 text-zinc-400 dark:text-zinc-500 transition-colors;
 }
 .bottom-nav-item.active {
   @apply text-brand;

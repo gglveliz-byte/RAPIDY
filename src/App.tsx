@@ -115,6 +115,7 @@ function AnimatedRoutes() {
 
         {/* Driver App Routes */}
         <Route path="/driver" element={<SessionGuard role="driver"><DriverHome /></SessionGuard>} />
+        <Route path="/driver/order" element={<Navigate to="/driver" replace />} />
         <Route path="/driver/order/:id" element={<SessionGuard role="driver"><DriverOrder /></SessionGuard>} />
         <Route path="/driver/earnings" element={<SessionGuard role="driver"><DriverEarnings /></SessionGuard>} />
         <Route path="/driver/profile" element={<SessionGuard role="driver"><DriverProfile /></SessionGuard>} />

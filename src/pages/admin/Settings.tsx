@@ -187,238 +187,240 @@ export default function AdminSettings() {
 
   return (
     <AdminLayout>
-      <header className="bg-white border-b border-gray-200 px-3 lg:px-4 pt-safe-top pb-2 lg:py-4">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 lg:gap-3 min-w-0">
-            <button onClick={() => navigate("/admin")} className="touch-target shrink-0">
-              <ArrowLeft className="w-4 h-4 lg:w-5 lg:h-5 text-gray-600" />
-            </button>
-            <h1 className="text-base lg:text-lg font-bold text-gray-800 truncate">Configuración</h1>
-          </div>
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors border border-red-200 shrink-0 shadow-2xs active:scale-95"
-            title="Cerrar sesión"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            <span className="hidden xs:inline sm:inline">Cerrar sesión</span>
-          </button>
-        </div>
-      </header>
-
-      <div className="lg:flex-1 lg:overflow-y-auto p-3 sm:p-4 lg:p-6 max-w-2xl mx-auto space-y-4 lg:space-y-6 pb-20 sm:pb-24 lg:pb-8">
-        {settingsQuery.isLoading ? (
-          <div className="flex flex-col items-center justify-center py-20 text-gray-500">
-            <div className="w-8 h-8 border-4 border-[#2E7D32] border-t-transparent rounded-full animate-spin mb-4" />
-            <p className="text-sm font-medium">Cargando configuración...</p>
-          </div>
-        ) : settingsQuery.isError ? (
-          <div className="bg-white rounded-2xl card-shadow p-6 text-center border border-red-200">
-            <p className="text-sm font-bold text-red-700">
-              No se pudo cargar la configuración
-            </p>
-            <p className="text-xs text-gray-500 mt-1">{settingsQuery.error.message}</p>
+      <div className="flex flex-1 flex-col min-h-full bg-[#F7F7FA] dark:bg-[#0A0A0D]">
+        <header className="bg-white dark:bg-[#111115] border-b border-zinc-100 dark:border-white/10 px-3 lg:px-4 pt-safe-top pb-2 lg:py-4">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 lg:gap-3 min-w-0">
+              <button onClick={() => navigate("/admin")} className="touch-target shrink-0">
+                <ArrowLeft className="w-4 h-4 lg:w-5 lg:h-5 text-zinc-600 dark:text-zinc-300" />
+              </button>
+              <h1 className="text-base lg:text-lg font-bold text-zinc-900 dark:text-zinc-100 truncate">Configuración</h1>
+            </div>
             <button
-              type="button"
-              onClick={() => settingsQuery.refetch()}
-              className="mt-4 min-h-[44px] px-4 rounded-xl bg-red-600 text-white text-xs font-bold"
+              onClick={handleLogout}
+              className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50 rounded-xl transition-colors border border-red-200 dark:border-red-900/40 shrink-0 shadow-2xs active:scale-95"
+              title="Cerrar sesión"
             >
-              Reintentar
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden xs:inline sm:inline">Cerrar sesión</span>
             </button>
           </div>
-        ) : (
-          <>
-            {saved && (
-              <div role="status" aria-live="polite" className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl flex items-center gap-2.5 text-xs sm:text-sm animate-fade-in shadow-xs">
-                <CheckCircle className="w-4 h-4 text-green-600 shrink-0" />
-                <span className="font-semibold">Configuración guardada exitosamente</span>
-              </div>
-            )}
+        </header>
 
-            {/* App Settings */}
-            <div className="bg-white rounded-2xl card-shadow p-4 sm:p-5">
-              <h2 className="text-sm sm:text-base font-bold text-gray-800 mb-1 flex items-center gap-2">
-                <Settings className="w-4 h-4 text-[#2E7D32]" />
-                General
-              </h2>
-              <p className="text-xs text-gray-500 mb-4 leading-relaxed">
-                Configura los datos principales que los usuarios verán en la aplicación, como el nombre de tu marca y el teléfono de atención al cliente.
-              </p>
-              <div className="space-y-3.5 sm:space-y-4">
-                <div>
-                  <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Nombre de la app</label>
-                  <input
-                    type="text"
-                    value={settings.appName}
-                    onChange={(e) => setSettings({ ...settings, appName: e.target.value })}
-                    className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Teléfono de soporte</label>
-                  <input
-                    type="text"
-                    value={settings.supportPhone}
-                    onChange={(e) => setSettings({ ...settings, supportPhone: e.target.value })}
-                    className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20"
-                  />
-                </div>
-              </div>
+        <div className="lg:flex-1 lg:overflow-y-auto p-3 sm:p-4 lg:p-6 max-w-2xl mx-auto space-y-4 lg:space-y-6 pb-20 sm:pb-24 lg:pb-8">
+          {settingsQuery.isLoading ? (
+            <div className="flex flex-col items-center justify-center py-20 text-zinc-500 dark:text-zinc-400">
+              <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-full animate-spin mb-4" />
+              <p className="text-sm font-medium">Cargando configuración...</p>
             </div>
-
-            {/* Financial Settings */}
-            <div className="bg-white rounded-2xl card-shadow p-4 sm:p-5">
-              <h2 className="text-sm sm:text-base font-bold text-gray-800 mb-1 flex items-center gap-2">
-                <DollarSign className="w-4 h-4 text-[#2E7D32]" />
-                Financiero
-              </h2>
-              <p className="text-xs text-gray-500 mb-4 leading-relaxed">
-                Establece las reglas de dinero globales: cuánto cuesta el envío base por defecto y el pedido mínimo permitido. Las comisiones se configuran individualmente en cada comercio.
+          ) : settingsQuery.isError ? (
+            <div className="bg-white dark:bg-[#1A1A1E] rounded-2xl card-shadow dark:shadow-none p-6 text-center border border-red-200 dark:border-red-900/40">
+              <p className="text-sm font-bold text-red-700 dark:text-red-400">
+                No se pudo cargar la configuración
               </p>
-              <div className="space-y-3.5 sm:space-y-4">
-                <div>
-                  <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Costo de envío base ($)</label>
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    min={0}
-                    max={100000}
-                    step="0.01"
-                    value={settings.deliveryFee}
-                    onChange={(e) => setSettings({ ...settings, deliveryFee: e.target.value })}
-                    className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Monto mínimo de pedido ($)</label>
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    min={0}
-                    max={100000}
-                    step="0.01"
-                    value={settings.minOrderAmount}
-                    onChange={(e) => setSettings({ ...settings, minOrderAmount: e.target.value })}
-                    className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Bank Transfer Settings */}
-            <div className="bg-white rounded-2xl card-shadow p-4 sm:p-5">
-              <h2 className="text-sm sm:text-base font-bold text-gray-800 mb-1 flex items-center gap-2">
-                <DollarSign className="w-4 h-4 text-[#2E7D32]" />
-                Datos de Transferencia Bancaria
-              </h2>
-              <p className="text-xs text-gray-500 mb-4 leading-relaxed">
-                Escribe aquí el banco, número de cuenta, titular y RUC. Esta información aparecerá para los clientes cuando decidan pagar un pedido por transferencia bancaria.
-              </p>
-              <div className="space-y-3.5 sm:space-y-4">
-                <div>
-                  <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">
-                    Instrucciones para clientes (Banco, Cuenta, Titular, RUC)
-                  </label>
-                  <textarea
-                    value={settings.bankTransferInfo}
-                    onChange={(e) => setSettings({ ...settings, bankTransferInfo: e.target.value })}
-                    placeholder="Ej: Banco Pichincha, Cuenta: 123..., Titular: Juan Pérez, RUC: 1712345678001"
-                    rows={4}
-                    className="w-full p-3.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20 resize-none leading-relaxed"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <button
-              onClick={handleSave}
-              disabled={saving || !hasLoadedSettings}
-              className="w-full h-11 sm:h-12 bg-[#2E7D32] text-white font-semibold rounded-xl hover:bg-[#1B5E20] active:scale-[0.99] transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-sm shadow-sm shadow-[#2E7D32]/20"
-            >
-              <Save className="w-4 h-4" />
-              {saving ? "Guardando..." : "Guardar configuración"}
-            </button>
-
-            {/* Reports Export */}
-            <div className="bg-white rounded-2xl card-shadow p-4 sm:p-5">
-              <h2 className="text-sm sm:text-base font-bold text-gray-800 mb-1 flex items-center gap-2">
-                <Download className="w-4 h-4 text-[#2E7D32]" />
-                Reportes exportables
-              </h2>
-              <p className="text-xs text-gray-500 mb-4 leading-relaxed">
-                Genera reportes de ventas, comisiones o ganancias en formato PDF o Excel. Puedes filtrar por fechas específicas para descargar solo lo que necesitas.
-              </p>
-
-              {/* Date range inputs */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-                <div>
-                  <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Desde</label>
-                  <input
-                    type="date"
-                    value={dateFrom}
-                    onChange={(e) => setDateFrom(e.target.value)}
-                    className="w-full h-11 px-3 border border-gray-200 rounded-xl text-xs sm:text-sm outline-none focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20 bg-white"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Hasta</label>
-                  <input
-                    type="date"
-                    value={dateTo}
-                    onChange={(e) => setDateTo(e.target.value)}
-                    className="w-full h-11 px-3 border border-gray-200 rounded-xl text-xs sm:text-sm outline-none focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20 bg-white"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2.5 sm:space-y-3">
-                {[
-                  { label: "Ventas", type: "sales" },
-                  { label: "Pedidos", type: "orders" },
-                  { label: "Comercios", type: "commerces" },
-                  { label: "Repartidores", type: "drivers" },
-                  { label: "Ganancias", type: "earnings" },
-                  { label: "Comisiones", type: "commissions" },
-                ].map((report) => (
-                  <div key={report.type} className="flex items-center gap-2">
-                    <span className="text-xs sm:text-sm font-semibold text-gray-800 w-24 sm:w-28 shrink-0">{report.label}</span>
-                    <button
-                      onClick={() => handleExport(report.type, "pdf")}
-                      disabled={Boolean(exporting)}
-                      className="flex-1 min-h-[44px] px-2.5 border border-gray-200 rounded-xl text-xs sm:text-sm font-semibold text-gray-700 hover:bg-gray-50 hover:border-[#2E7D32] active:scale-95 transition-all flex items-center justify-center gap-1.5 shadow-2xs disabled:opacity-50"
-                    >
-                      <FileText className="w-3.5 h-3.5 text-[#2E7D32]" />
-                      {exporting === `${report.type}:pdf` ? "Generando..." : "PDF"}
-                    </button>
-                    <button
-                      onClick={() => handleExport(report.type, "excel")}
-                      disabled={Boolean(exporting)}
-                      className="flex-1 min-h-[44px] px-2.5 border border-gray-200 rounded-xl text-xs sm:text-sm font-semibold text-gray-700 hover:bg-gray-50 hover:border-[#2E7D32] active:scale-95 transition-all flex items-center justify-center gap-1.5 shadow-2xs disabled:opacity-50"
-                    >
-                      <FileSpreadsheet className="w-3.5 h-3.5 text-[#2E7D32]" />
-                      {exporting === `${report.type}:excel` ? "Generando..." : "Excel"}
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Logout Card */}
-            <div className="bg-red-50/70 border border-red-200/80 rounded-2xl p-4 sm:p-5 flex items-center justify-between gap-3 shadow-xs">
-              <div>
-                <h3 className="text-xs sm:text-sm font-bold text-red-900">Sesión de Administrador</h3>
-                <p className="text-[11px] text-red-600 font-medium">Cierra tu sesión en este dispositivo</p>
-              </div>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{settingsQuery.error.message}</p>
               <button
-                onClick={handleLogout}
-                className="flex items-center gap-1.5 px-3.5 py-2 bg-red-600 text-white text-xs font-bold rounded-xl shadow-xs hover:bg-red-700 active:scale-95 transition-all shrink-0"
+                type="button"
+                onClick={() => settingsQuery.refetch()}
+                className="mt-4 min-h-[44px] px-4 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold transition-colors"
               >
-                <LogOut className="w-4 h-4" />
-                <span>Cerrar sesión</span>
+                Reintentar
               </button>
             </div>
-          </>
-        )}
+          ) : (
+            <>
+              {saved && (
+                <div role="status" aria-live="polite" className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900/40 text-green-700 dark:text-green-300 px-4 py-3 rounded-xl flex items-center gap-2.5 text-xs sm:text-sm animate-fade-in shadow-xs">
+                  <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400 shrink-0" />
+                  <span className="font-semibold">Configuración guardada exitosamente</span>
+                </div>
+              )}
+
+              {/* App Settings */}
+              <div className="bg-white dark:bg-[#1A1A1E] rounded-2xl card-shadow dark:shadow-none border border-zinc-100 dark:border-white/10 p-4 sm:p-5">
+                <h2 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-100 mb-1 flex items-center gap-2">
+                  <Settings className="w-4 h-4 text-brand" />
+                  General
+                </h2>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-4 leading-relaxed">
+                  Configura los datos principales que los usuarios verán en la aplicación, como el nombre de tu marca y el teléfono de atención al cliente.
+                </p>
+                <div className="space-y-3.5 sm:space-y-4">
+                  <div>
+                    <label className="text-[10px] uppercase font-bold text-zinc-500 dark:text-zinc-400 mb-1 block">Nombre de la app</label>
+                    <input
+                      type="text"
+                      value={settings.appName}
+                      onChange={(e) => setSettings({ ...settings, appName: e.target.value })}
+                      className="w-full h-11 px-4 bg-white dark:bg-[#16161B] border border-zinc-200 dark:border-white/10 rounded-xl text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] uppercase font-bold text-zinc-500 dark:text-zinc-400 mb-1 block">Teléfono de soporte</label>
+                    <input
+                      type="text"
+                      value={settings.supportPhone}
+                      onChange={(e) => setSettings({ ...settings, supportPhone: e.target.value })}
+                      className="w-full h-11 px-4 bg-white dark:bg-[#16161B] border border-zinc-200 dark:border-white/10 rounded-xl text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-colors"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Financial Settings */}
+              <div className="bg-white dark:bg-[#1A1A1E] rounded-2xl card-shadow dark:shadow-none border border-zinc-100 dark:border-white/10 p-4 sm:p-5">
+                <h2 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-100 mb-1 flex items-center gap-2">
+                  <DollarSign className="w-4 h-4 text-brand" />
+                  Financiero
+                </h2>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-4 leading-relaxed">
+                  Establece las reglas de dinero globales: cuánto cuesta el envío base por defecto y el pedido mínimo permitido. Las comisiones se configuran individualmente en cada comercio.
+                </p>
+                <div className="space-y-3.5 sm:space-y-4">
+                  <div>
+                    <label className="text-[10px] uppercase font-bold text-zinc-500 dark:text-zinc-400 mb-1 block">Costo de envío base ($)</label>
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      min={0}
+                      max={100000}
+                      step="0.01"
+                      value={settings.deliveryFee}
+                      onChange={(e) => setSettings({ ...settings, deliveryFee: e.target.value })}
+                      className="w-full h-11 px-4 bg-white dark:bg-[#16161B] border border-zinc-200 dark:border-white/10 rounded-xl text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] uppercase font-bold text-zinc-500 dark:text-zinc-400 mb-1 block">Monto mínimo de pedido ($)</label>
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      min={0}
+                      max={100000}
+                      step="0.01"
+                      value={settings.minOrderAmount}
+                      onChange={(e) => setSettings({ ...settings, minOrderAmount: e.target.value })}
+                      className="w-full h-11 px-4 bg-white dark:bg-[#16161B] border border-zinc-200 dark:border-white/10 rounded-xl text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-colors"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Bank Transfer Settings */}
+              <div className="bg-white dark:bg-[#1A1A1E] rounded-2xl card-shadow dark:shadow-none border border-zinc-100 dark:border-white/10 p-4 sm:p-5">
+                <h2 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-100 mb-1 flex items-center gap-2">
+                  <DollarSign className="w-4 h-4 text-brand" />
+                  Datos de Transferencia Bancaria
+                </h2>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-4 leading-relaxed">
+                  Escribe aquí el banco, número de cuenta, titular y RUC. Esta información aparecerá para los clientes cuando decidan pagar un pedido por transferencia bancaria.
+                </p>
+                <div className="space-y-3.5 sm:space-y-4">
+                  <div>
+                    <label className="text-[10px] uppercase font-bold text-zinc-500 dark:text-zinc-400 mb-1 block">
+                      Instrucciones para clientes (Banco, Cuenta, Titular, RUC)
+                    </label>
+                    <textarea
+                      value={settings.bankTransferInfo}
+                      onChange={(e) => setSettings({ ...settings, bankTransferInfo: e.target.value })}
+                      placeholder="Ej: Banco Pichincha, Cuenta: 123..., Titular: Juan Pérez, RUC: 1712345678001"
+                      rows={4}
+                      className="w-full p-3.5 bg-white dark:bg-[#16161B] border border-zinc-200 dark:border-white/10 rounded-xl text-sm text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-colors resize-none leading-relaxed"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={handleSave}
+                disabled={saving || !hasLoadedSettings}
+                className="w-full h-11 sm:h-12 bg-brand text-white font-semibold rounded-xl hover:bg-brand-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[#0A0A0D] active:scale-[0.99] transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-sm shadow-sm shadow-brand/20"
+              >
+                <Save className="w-4 h-4" />
+                {saving ? "Guardando..." : "Guardar configuración"}
+              </button>
+
+              {/* Reports Export */}
+              <div className="bg-white dark:bg-[#1A1A1E] rounded-2xl card-shadow dark:shadow-none border border-zinc-100 dark:border-white/10 p-4 sm:p-5">
+                <h2 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-100 mb-1 flex items-center gap-2">
+                  <Download className="w-4 h-4 text-brand" />
+                  Reportes exportables
+                </h2>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-4 leading-relaxed">
+                  Genera reportes de ventas, comisiones o ganancias en formato PDF o Excel. Puedes filtrar por fechas específicas para descargar solo lo que necesitas.
+                </p>
+
+                {/* Date range inputs */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                  <div>
+                    <label className="text-[10px] uppercase font-bold text-zinc-500 dark:text-zinc-400 mb-1 block">Desde</label>
+                    <input
+                      type="date"
+                      value={dateFrom}
+                      onChange={(e) => setDateFrom(e.target.value)}
+                      className="w-full h-11 px-3 bg-white dark:bg-[#16161B] border border-zinc-200 dark:border-white/10 rounded-xl text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-colors [color-scheme:light] dark:[color-scheme:dark]"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] uppercase font-bold text-zinc-500 dark:text-zinc-400 mb-1 block">Hasta</label>
+                    <input
+                      type="date"
+                      value={dateTo}
+                      onChange={(e) => setDateTo(e.target.value)}
+                      className="w-full h-11 px-3 bg-white dark:bg-[#16161B] border border-zinc-200 dark:border-white/10 rounded-xl text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 transition-colors [color-scheme:light] dark:[color-scheme:dark]"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2.5 sm:space-y-3">
+                  {[
+                    { label: "Ventas", type: "sales" },
+                    { label: "Pedidos", type: "orders" },
+                    { label: "Comercios", type: "commerces" },
+                    { label: "Repartidores", type: "drivers" },
+                    { label: "Ganancias", type: "earnings" },
+                    { label: "Comisiones", type: "commissions" },
+                  ].map((report) => (
+                    <div key={report.type} className="flex items-center gap-2">
+                      <span className="text-xs sm:text-sm font-semibold text-zinc-900 dark:text-zinc-100 w-24 sm:w-28 shrink-0">{report.label}</span>
+                      <button
+                        onClick={() => handleExport(report.type, "pdf")}
+                        disabled={Boolean(exporting)}
+                        className="flex-1 min-h-[44px] px-2.5 bg-white dark:bg-[#16161B] border border-zinc-200 dark:border-white/10 rounded-xl text-xs sm:text-sm font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-white/5 hover:border-brand dark:hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30 active:scale-95 transition-all flex items-center justify-center gap-1.5 shadow-2xs dark:shadow-none disabled:opacity-50"
+                      >
+                        <FileText className="w-3.5 h-3.5 text-brand" />
+                        {exporting === `${report.type}:pdf` ? "Generando..." : "PDF"}
+                      </button>
+                      <button
+                        onClick={() => handleExport(report.type, "excel")}
+                        disabled={Boolean(exporting)}
+                        className="flex-1 min-h-[44px] px-2.5 bg-white dark:bg-[#16161B] border border-zinc-200 dark:border-white/10 rounded-xl text-xs sm:text-sm font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-white/5 hover:border-brand dark:hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30 active:scale-95 transition-all flex items-center justify-center gap-1.5 shadow-2xs dark:shadow-none disabled:opacity-50"
+                      >
+                        <FileSpreadsheet className="w-3.5 h-3.5 text-brand" />
+                        {exporting === `${report.type}:excel` ? "Generando..." : "Excel"}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Logout Card */}
+              <div className="bg-red-50/70 dark:bg-red-950/20 border border-red-200/80 dark:border-red-900/40 rounded-2xl p-4 sm:p-5 flex items-center justify-between gap-3 shadow-xs dark:shadow-none">
+                <div>
+                  <h3 className="text-xs sm:text-sm font-bold text-red-900 dark:text-red-300">Sesión de Administrador</h3>
+                  <p className="text-[11px] text-red-600 dark:text-red-400 font-medium">Cierra tu sesión en este dispositivo</p>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-1.5 px-3.5 py-2 bg-red-600 text-white text-xs font-bold rounded-xl shadow-xs hover:bg-red-700 active:scale-95 transition-all shrink-0"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Cerrar sesión</span>
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </AdminLayout>
   );

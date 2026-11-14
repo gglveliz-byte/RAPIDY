@@ -16,6 +16,7 @@ import { trpc } from "@/providers/trpc";
 import { useDriverSession } from "@/hooks/useDeliveryData";
 import { useOrderEvents } from "@/hooks/useOrderEvents";
 import { getOrderStatusMeta } from "@contracts/orderStatus";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import ChatBubble from "@/components/ChatBubble";
@@ -29,7 +30,7 @@ L.Icon.Default.mergeOptions({
 
 if (typeof document !== "undefined") {
   const style = document.createElement("style");
-  style.textContent = `@keyframes driverPulse { 0% { box-shadow: 0 3px 12px rgba(46,125,50,0.4); } 50% { box-shadow: 0 3px 20px rgba(46,125,50,0.7); } 100% { box-shadow: 0 3px 12px rgba(46,125,50,0.4); } }`;
+  style.textContent = `@keyframes driverPulse { 0% { box-shadow: 0 3px 12px rgba(21,101,192,0.35); } 50% { box-shadow: 0 3px 20px rgba(21,101,192,0.65); } 100% { box-shadow: 0 3px 12px rgba(21,101,192,0.35); } }`;
   document.head.appendChild(style);
 }
 
@@ -205,7 +206,7 @@ export default function DriverOrder() {
     if (!order || mapRef.current) return;
 
     const mapContainer = document.getElementById("driver-map");
-    if (!mapContainer || !mapContainer.offsetWidth) return;
+    if (!mapContainer) return;
 
     const firstCommerce = order.commerces?.find((c: any) => c.lat && c.lng);
     const initialLat = firstCommerce ? Number(firstCommerce.lat) : -0.1807;
@@ -216,9 +217,9 @@ export default function DriverOrder() {
       attributionControl: true,
     }).setView([initialLat, initialLng], 13);
 
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
-      attribution: '&copy; OpenStreetMap &copy; CARTO',
+      attribution: '&copy; OpenStreetMap contributors',
     }).addTo(newMap);
 
     newMap.whenReady(() => {
@@ -240,10 +241,10 @@ export default function DriverOrder() {
               icon: L.divIcon({
                 className: "",
                 html: `<div style="display:flex;flex-direction:column;align-items:center;">
-                  <div style="width:36px;height:36px;background:${isPicked ? "linear-gradient(135deg,#43A047,#2E7D32)" : isReady ? "linear-gradient(135deg,#2E7D32,#1B5E20)" : "linear-gradient(135deg,#9E9E9E,#757575)"};border:3px solid white;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.2);">
+                  <div style="width:36px;height:36px;background:${isPicked ? "linear-gradient(135deg,#34D399,#059669)" : isReady ? "linear-gradient(135deg,#FF8A00,#E85D00)" : "linear-gradient(135deg,#9E9E9E,#757575)"};border:3px solid white;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.2);">
                     ${isPicked ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' : isReady ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>' : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>'}
                   </div>
-                  <div style="margin-top:2px;background:${isPicked ? "#43A047" : isReady ? "#2E7D32" : "#9E9E9E"};color:white;font-size:7px;font-weight:700;padding:1px 6px;border-radius:4px;border:1px solid white;white-space:nowrap;">${escapeHtml(c.name || "Comercio")}</div>
+                  <div style="margin-top:2px;background:${isPicked ? "#059669" : isReady ? "#FF6A00" : "#9E9E9E"};color:white;font-size:7px;font-weight:700;padding:1px 6px;border-radius:4px;border:1px solid white;white-space:nowrap;">${escapeHtml(c.name || "Comercio")}</div>
                 </div>`,
               }),
             }).addTo(newMap);
@@ -305,7 +306,13 @@ export default function DriverOrder() {
 
     mapRef.current = newMap;
 
+    // Ensure Leaflet measures the container after the first layout pass.
+    const resizeFrame = window.requestAnimationFrame(() => {
+      if (mapRef.current === newMap) newMap.invalidateSize();
+    });
+
     return () => {
+      window.cancelAnimationFrame(resizeFrame);
       mapRef.current = null;
       newMap.remove();
     };
@@ -313,52 +320,61 @@ export default function DriverOrder() {
 
   if (isLoading) {
     return (
-      <div className="mobile-container bg-gray-50 min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-[#2E7D32]" />
+      <div className="mobile-container bg-[#F7F7FA] dark:bg-[#0A0A0D] min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-brand" />
       </div>
     );
   }
 
   if (!order) {
     return (
-      <div className="mobile-container bg-gray-50 min-h-screen flex items-center justify-center">
-        <p className="text-gray-500">Pedido no encontrado</p>
+      <div className="mobile-container bg-[#F7F7FA] dark:bg-[#0A0A0D] min-h-screen flex items-center justify-center">
+        <p className="text-zinc-500 dark:text-zinc-400">Pedido no encontrado</p>
       </div>
     );
   }
 
   return (
-    <div className="mobile-container bg-gray-50 min-h-screen">
+    <div className="mobile-container bg-[#F7F7FA] dark:bg-[#0A0A0D] min-h-screen">
       {/* Header */}
-      <div className="bg-[#2E7D32] px-4 pt-4 pb-6">
-        <button onClick={() => navigate("/driver")} className="text-white/80 hover:text-white mb-4 touch-target">
-          <ArrowLeft className="w-6 h-6" />
-        </button>
+      <div className="bg-gradient-to-br from-brand to-brand-strong px-4 pt-safe pb-6 shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+          <button onClick={() => navigate("/driver")} className="text-white/80 hover:text-white touch-target">
+            <ArrowLeft className="w-6 h-6" />
+          </button>
+          <ThemeToggle
+            size="lg"
+            className="!bg-white/20 !border-white/20 !text-white hover:!bg-white/30"
+          />
+        </div>
         <h1 className="text-xl font-bold text-white">Pedido #{id}</h1>
-        <p className="text-white/70 text-sm mt-1">
+        <p className="text-white/80 text-sm mt-1">
           {getOrderStatusMeta(order.status).label}
         </p>
       </div>
 
       {/* Map */}
-      <div id="driver-map" className="h-52 mx-4 -mt-3 rounded-xl shadow-lg overflow-hidden" />
+      <div
+        id="driver-map"
+        className="relative z-0 h-52 mx-4 -mt-3 rounded-xl shadow-lg overflow-hidden bg-zinc-200 dark:bg-[#121216] border border-zinc-200 dark:border-white/10 [&_.leaflet-control-attribution]:bg-white/85 [&_.leaflet-control-attribution]:text-zinc-600 dark:[&_.leaflet-control-attribution]:bg-[#1A1A1E]/90 dark:[&_.leaflet-control-attribution]:text-zinc-400 [&_.leaflet-control-attribution_a]:text-brand"
+      />
 
       {/* Order Info */}
       <div className="px-4 mt-4">
-        <div className="bg-white rounded-xl card-shadow p-4">
-          <h3 className="text-sm font-semibold text-gray-800 mb-3">Detalles</h3>
+        <div className="bg-white dark:bg-[#1A1A1E] rounded-xl card-shadow p-4 border border-zinc-100 dark:border-white/10">
+          <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-3">Detalles</h3>
           <div className="space-y-3">
             <div className="flex items-start gap-3">
-              <div className="w-9 h-9 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                <Store className="w-5 h-5 text-[#2E7D32]" />
+              <div className="w-9 h-9 bg-brand-soft dark:bg-brand/15 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Store className="w-5 h-5 text-brand" />
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-800">
+                <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
                   {order.commerces?.length === 1
                     ? order.commerces[0].name
                     : `${order.commerces?.length || 0} comercios`}
                 </p>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
                   {allCommerceIds.length > 0
                     ? `Recogidos: ${pickedUpCommerceIds.length}/${allCommerceIds.length}`
                     : "Comercios del pedido"}
@@ -366,15 +382,15 @@ export default function DriverOrder() {
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <div className="w-9 h-9 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                <Home className="w-5 h-5 text-blue-600" />
+              <div className="w-9 h-9 bg-blue-100 dark:bg-sky-500/15 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Home className="w-5 h-5 text-blue-600 dark:text-sky-400" />
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-800">Cliente</p>
-                <p className="text-xs text-gray-500">{order.deliveryAddress}</p>
+                <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Cliente</p>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">{order.deliveryAddress}</p>
                 {!isTerminal && (
                   <div className="flex gap-2 mt-1">
-                    <a href={`tel:${order.customerPhone || ""}`} className="text-xs text-blue-600 flex items-center gap-0.5">
+                    <a href={`tel:${order.customerPhone || ""}`} className="text-xs text-blue-600 dark:text-sky-400 flex items-center gap-0.5">
                       <Phone className="w-3 h-3" /> {order.customerPhone || "Llamar"}
                     </a>
                   </div>
@@ -388,8 +404,8 @@ export default function DriverOrder() {
       {/* Commerce Pickup Checklist — only when driver is assigned but not fully picked up */}
       {isAssigned && !allPickedUp && !delivered && (
         <div className="px-4 mt-4">
-          <div className="bg-white rounded-xl card-shadow p-4">
-            <h3 className="text-sm font-semibold text-gray-800 mb-3">Recoger en comercios</h3>
+          <div className="bg-white dark:bg-[#1A1A1E] rounded-xl card-shadow p-4 border border-zinc-100 dark:border-white/10">
+            <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-3">Recoger en comercios</h3>
             <div className="space-y-2">
               {order.commerces?.map((c: any) => {
                 const picked = pickedUpCommerceIds.includes(c.id);
@@ -397,20 +413,24 @@ export default function DriverOrder() {
                 const isReady = cStatus === "ready_for_pickup";
                 const isPreparing = cStatus === "preparing";
                 const statusLabel = isPreparing ? "Preparando" : isReady ? "Listo" : "Recogido";
-                const statusColor = isPreparing ? "text-indigo-700 bg-indigo-50" : isReady ? "text-purple-700 bg-purple-50" : "text-green-700 bg-green-50";
+                const statusColor = isPreparing
+                  ? "text-amber-700 bg-amber-50 dark:text-amber-300 dark:bg-amber-500/10"
+                  : isReady
+                    ? "text-brand bg-brand-soft dark:bg-brand/15"
+                    : "text-emerald-700 bg-emerald-50 dark:text-emerald-300 dark:bg-emerald-500/10";
                 return (
-                  <div key={c.id} className="flex items-center justify-between gap-3 p-2 rounded-lg bg-gray-50">
+                  <div key={c.id} className="flex items-center justify-between gap-3 p-2 rounded-lg bg-zinc-50 dark:bg-[#16161B] border border-zinc-100 dark:border-white/5">
                     <div className="flex items-center gap-2">
-                      <Store className="w-4 h-4 text-[#2E7D32]" />
+                      <Store className="w-4 h-4 text-brand" />
                       <div>
-                        <p className="text-sm font-medium text-gray-800">{c.name}</p>
-                        {c.address && <p className="text-xs text-gray-500">{c.address}</p>}
+                        <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{c.name}</p>
+                        {c.address && <p className="text-xs text-zinc-500 dark:text-zinc-400">{c.address}</p>}
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${statusColor}`}>{statusLabel}</span>
                       {picked ? (
-                        <div className="flex items-center gap-1 text-green-700 text-xs font-medium">
+                        <div className="flex items-center gap-1 text-emerald-700 dark:text-emerald-400 text-xs font-medium">
                           <Check className="w-4 h-4" />
                           Recogido
                         </div>
@@ -418,7 +438,7 @@ export default function DriverOrder() {
                         <button
                           onClick={() => handleMarkCommercePickup(c.id)}
                           disabled={markCommercePickupMutation.isPending}
-                          className="h-8 px-3 bg-[#2E7D32] text-white text-xs font-medium rounded-lg hover:bg-[#1B5E20] active:scale-[0.97] transition-all flex items-center gap-1 touch-target"
+                          className="h-8 px-3 bg-brand text-white text-xs font-medium rounded-lg hover:bg-brand-strong active:scale-[0.97] transition-all flex items-center gap-1 touch-target disabled:opacity-60 disabled:cursor-not-allowed"
                         >
                           {markCommercePickupMutation.isPending ? (
                             <Loader2 className="w-3 h-3 animate-spin" />
@@ -428,7 +448,7 @@ export default function DriverOrder() {
                           Recoger
                         </button>
                       ) : (
-                        <span className="text-xs text-gray-400">Esperando preparación</span>
+                        <span className="text-xs text-zinc-400 dark:text-zinc-500">Esperando preparación</span>
                       )}
                     </div>
                   </div>
@@ -441,16 +461,20 @@ export default function DriverOrder() {
 
       {/* Progress Steps */}
       <div className="px-4 mt-4">
-        <div className="bg-white rounded-xl card-shadow p-4">
-          <h3 className="text-sm font-semibold text-gray-800 mb-4">Progreso</h3>
+        <div className="bg-white dark:bg-[#1A1A1E] rounded-xl card-shadow p-4 border border-zinc-100 dark:border-white/10">
+          <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-4">Progreso</h3>
           <div className="relative">
-            <div className="absolute left-3.5 top-3 bottom-3 w-0.5 bg-gray-200" />
+            <div className="absolute left-3.5 top-3 bottom-3 w-0.5 bg-zinc-200 dark:bg-white/10" />
             <div className="space-y-4">
               {orderSteps.map((step, i) => (
                 <div key={step.key} className="flex items-center gap-3 relative z-10">
                   <div
                     className={`w-7 h-7 rounded-full flex items-center justify-center ${
-                      i <= currentStep ? "bg-[#2E7D32] text-white" : "bg-gray-200 text-gray-400"
+                      delivered && i === orderSteps.length - 1
+                        ? "bg-emerald-500 text-white"
+                        : i <= currentStep
+                          ? "bg-brand text-white"
+                          : "bg-zinc-200 dark:bg-white/10 text-zinc-500 dark:text-zinc-400"
                     }`}
                   >
                     {(i < currentStep || (i === currentStep && delivered)) ? (
@@ -460,7 +484,7 @@ export default function DriverOrder() {
                     )}
                   </div>
                   <span
-                    className={`text-sm ${i <= currentStep ? "text-gray-800 font-medium" : "text-gray-400"}`}
+                    className={`text-sm ${i <= currentStep ? "text-zinc-900 dark:text-zinc-100 font-medium" : "text-zinc-400 dark:text-zinc-500"}`}
                   >
                     {step.label}
                   </span>
@@ -477,7 +501,7 @@ export default function DriverOrder() {
           <button
             onClick={handleAcceptOrder}
             disabled={acceptOrderMutation.isPending}
-            className="w-full h-12 bg-[#2E7D32] text-white font-medium rounded-xl hover:bg-[#1B5E20] active:scale-[0.98] transition-all"
+            className="w-full h-12 bg-brand text-white font-medium rounded-xl hover:bg-brand-strong active:scale-[0.98] transition-all disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {acceptOrderMutation.isPending ? "Aceptando..." : "Aceptar pedido"}
           </button>
@@ -489,7 +513,7 @@ export default function DriverOrder() {
           {order.status === "picked_up" && (
             <button
               onClick={handleNextStep}
-              className="w-full h-12 bg-[#2E7D32] text-white font-medium rounded-xl hover:bg-[#1B5E20] active:scale-[0.98] transition-all"
+              className="w-full h-12 bg-brand text-white font-medium rounded-xl hover:bg-brand-strong active:scale-[0.98] transition-all"
             >
               Camino al cliente
             </button>
@@ -497,7 +521,7 @@ export default function DriverOrder() {
           {order.status === "on_the_way" && (
             <button
               onClick={handleNextStep}
-              className="w-full h-12 bg-[#2E7D32] text-white font-medium rounded-xl hover:bg-[#1B5E20] active:scale-[0.98] transition-all"
+              className="w-full h-12 bg-brand text-white font-medium rounded-xl hover:bg-brand-strong active:scale-[0.98] transition-all"
             >
               Completar entrega
             </button>
@@ -508,9 +532,9 @@ export default function DriverOrder() {
       {!isTerminal && (
         <button
           onClick={openRoute}
-          className="mx-4 mb-2 h-10 bg-white border border-gray-200 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-all flex items-center justify-center gap-2"
+          className="mx-4 mb-2 h-10 bg-white dark:bg-[#1A1A1E] border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200 font-medium rounded-xl hover:bg-zinc-50 dark:hover:bg-white/5 transition-all flex items-center justify-center gap-2"
         >
-          <Navigation className="w-4 h-4 text-[#2E7D32]" />
+          <Navigation className="w-4 h-4 text-brand" />
           Abrir en Google Maps
         </button>
       )}
@@ -519,14 +543,14 @@ export default function DriverOrder() {
 
       {delivered && (
         <div className="px-4 mt-4 mb-6">
-          <div className="bg-green-50 rounded-xl p-4 text-center">
-            <CheckCircle className="w-10 h-10 text-[#2E7D32] mx-auto mb-2" />
-            <p className="text-sm font-medium text-gray-800">Entrega completada!</p>
-            <p className="text-xs text-gray-500 mt-1">Ganancia acreditada: ${earningAmount}</p>
+          <div className="bg-emerald-50 dark:bg-emerald-500/10 rounded-xl p-4 text-center border border-emerald-100 dark:border-emerald-500/20">
+            <CheckCircle className="w-10 h-10 text-emerald-600 dark:text-emerald-400 mx-auto mb-2" />
+            <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Entrega completada!</p>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Ganancia acreditada: ${earningAmount}</p>
             <button
               type="button"
               onClick={() => navigate("/driver/history")}
-              className="mt-3 px-4 py-2 rounded-lg bg-[#2E7D32] text-white text-xs font-bold"
+              className="mt-3 px-4 py-2 rounded-lg bg-brand hover:bg-brand-strong text-white text-xs font-bold transition-colors"
             >
               Ver historial
             </button>

@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { trpc, queryClient } from "@/providers/trpc";
 import { trpcMutate, useDriverSession } from "@/hooks/useDeliveryData";
 import { clearRoleUser, clearSession, dispatchLogout } from "@/hooks/useSessionSync";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default function DriverProfile() {
   const navigate = useNavigate();
@@ -109,21 +110,21 @@ export default function DriverProfile() {
 
   if (isLoading) {
     return (
-      <div className="mobile-container bg-gray-50 min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-[#2E7D32]" />
+      <div className="mobile-container bg-surface dark:bg-[#0E0E12] min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-brand" />
       </div>
     );
   }
 
   if (isError) {
     return (
-      <div className="mobile-container bg-gray-50 min-h-screen flex flex-col items-center justify-center px-6 text-center">
-        <p className="text-sm font-bold text-red-700">No se pudo cargar tu perfil</p>
-        <p className="text-xs text-gray-500 mt-1">{error.message}</p>
+      <div className="mobile-container bg-surface dark:bg-[#0E0E12] min-h-screen flex flex-col items-center justify-center px-6 text-center">
+        <p className="text-sm font-bold text-red-600 dark:text-red-400">No se pudo cargar tu perfil</p>
+        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{error.message}</p>
         <button
           type="button"
           onClick={() => refetch()}
-          className="mt-4 px-4 py-2 rounded-lg bg-[#2E7D32] text-white text-xs font-bold"
+          className="mt-4 px-4 py-2 rounded-lg bg-brand hover:bg-brand-strong text-white text-xs font-bold transition-colors"
         >
           Reintentar
         </button>
@@ -133,37 +134,43 @@ export default function DriverProfile() {
 
   if (!driver) {
     return (
-      <div className="mobile-container bg-gray-50 min-h-screen flex items-center justify-center">
-        <p className="text-sm text-gray-500">Repartidor no encontrado</p>
+      <div className="mobile-container bg-surface dark:bg-[#0E0E12] min-h-screen flex items-center justify-center">
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">Repartidor no encontrado</p>
       </div>
     );
   }
 
   return (
-    <div className="mobile-container bg-gray-50 min-h-screen">
+    <div className="mobile-container bg-surface dark:bg-[#0E0E12] min-h-screen">
       {/* Header */}
-      <div className="bg-[#2E7D32] px-4 pt-4 pb-8">
+      <div className="bg-gradient-to-br from-brand to-brand-strong px-4 pt-4 pb-8">
         <div className="flex items-center justify-between mb-4">
           <button onClick={() => navigate("/driver")} className="text-white/80 hover:text-white touch-target">
             <ArrowLeft className="w-6 h-6" />
           </button>
-          {!isEditing ? (
-            <button onClick={handleStartEdit} className="text-white/80 hover:text-white touch-target">
-              <Edit3 className="w-5 h-5" />
-            </button>
-          ) : (
-            <div className="flex items-center gap-2">
-              <button onClick={handleCancelEdit} className="text-white/80 hover:text-white touch-target" disabled={updateProfileMutation.isPending}>
-                <X className="w-5 h-5" />
+          <div className="flex items-center gap-2">
+            <ThemeToggle
+              size="lg"
+              className="!bg-white/20 !border-white/30 !text-white hover:!bg-white/30 hover:!text-white backdrop-blur-sm"
+            />
+            {!isEditing ? (
+              <button onClick={handleStartEdit} className="text-white/80 hover:text-white touch-target" aria-label="Editar perfil">
+                <Edit3 className="w-5 h-5" />
               </button>
-              <button onClick={handleSaveProfile} className="text-white/80 hover:text-white touch-target" disabled={updateProfileMutation.isPending}>
-                <Save className="w-5 h-5" />
-              </button>
-            </div>
-          )}
+            ) : (
+              <div className="flex items-center gap-2">
+                <button onClick={handleCancelEdit} className="text-white/80 hover:text-white touch-target disabled:opacity-50" disabled={updateProfileMutation.isPending} aria-label="Cancelar edición">
+                  <X className="w-5 h-5" />
+                </button>
+                <button onClick={handleSaveProfile} className="text-white/80 hover:text-white touch-target disabled:opacity-50" disabled={updateProfileMutation.isPending} aria-label="Guardar cambios">
+                  <Save className="w-5 h-5" />
+                </button>
+              </div>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
+          <div className="w-16 h-16 bg-white/20 ring-2 ring-white/20 rounded-full flex items-center justify-center">
             <User className="w-8 h-8 text-white" />
           </div>
           <div>
@@ -174,7 +181,7 @@ export default function DriverProfile() {
                 type="text"
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
-                className="text-xl font-bold text-gray-800 bg-white rounded-lg px-2 py-1 w-full"
+                className="text-xl font-bold text-zinc-900 dark:text-zinc-100 bg-white dark:bg-[#16161B] border border-transparent dark:border-white/15 rounded-lg px-2 py-1 w-full placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-white/60"
                 placeholder="Nombre"
               />
             )}
@@ -190,32 +197,48 @@ export default function DriverProfile() {
 
       {/* Online Toggle */}
       <div className="px-4 -mt-4">
-        <div className="bg-white rounded-xl card-shadow p-4">
+        <div className="bg-white dark:bg-[#1A1A1E] rounded-xl card-shadow dark:shadow-none border border-zinc-100 dark:border-white/10 p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${driver?.status === "online" ? "bg-green-100" : "bg-gray-100"}`}>
-                <Bike className={`w-5 h-5 ${driver?.status === "online" ? "text-[#2E7D32]" : "text-gray-400"}`} />
+              <div
+                className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                  driver?.status === "online"
+                    ? "bg-green-100 dark:bg-green-500/15"
+                    : driver?.status === "busy"
+                      ? "bg-amber-100 dark:bg-amber-500/15"
+                      : "bg-zinc-100 dark:bg-white/10"
+                }`}
+              >
+                <Bike
+                  className={`w-5 h-5 ${
+                    driver?.status === "online"
+                      ? "text-green-600 dark:text-green-400"
+                      : driver?.status === "busy"
+                        ? "text-amber-600 dark:text-amber-400"
+                        : "text-zinc-400 dark:text-zinc-500"
+                  }`}
+                />
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-800">
+                <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
                   {driver?.status === "online" ? "En línea" : driver?.status === "busy" ? "Ocupado" : "Desconectado"}
                 </p>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
                   {driver?.status === "online" ? "Recibiendo pedidos" : driver?.status === "busy" ? "Pedido en curso" : "No recibirás pedidos"}
                 </p>
               </div>
             </div>
             <button
               onClick={handleToggleOnline}
-              className="touch-target"
+              className="touch-target disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={updateStatusMutation.isPending || driver.status === "busy"}
               aria-label={driver.status === "online" ? "Desconectarse" : "Conectarse"}
               aria-pressed={driver.status === "online"}
             >
               {driver?.status === "online" ? (
-                <ToggleRight className="w-10 h-10 text-[#2E7D32]" />
+                <ToggleRight className="w-10 h-10 text-brand" />
               ) : (
-                <ToggleLeft className="w-10 h-10 text-gray-300" />
+                <ToggleLeft className="w-10 h-10 text-zinc-300 dark:text-zinc-600" />
               )}
             </button>
           </div>
@@ -224,43 +247,43 @@ export default function DriverProfile() {
 
       {/* Info */}
       <div className="px-4 mt-4">
-        <div className="bg-white rounded-xl card-shadow divide-y divide-gray-50">
+        <div className="bg-white dark:bg-[#1A1A1E] rounded-xl card-shadow dark:shadow-none border border-zinc-100 dark:border-white/10 divide-y divide-zinc-100 dark:divide-white/5">
           <div className="p-4 flex items-center gap-3">
-            <Phone className="w-5 h-5 text-gray-400" />
+            <Phone className="w-5 h-5 text-zinc-400 dark:text-zinc-500" />
             <div>
-              <p className="text-xs text-gray-500">Telefono</p>
-              <p className="text-sm text-gray-800">{driver?.phone || "-"}</p>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">Telefono</p>
+              <p className="text-sm text-zinc-900 dark:text-zinc-100">{driver?.phone || "-"}</p>
             </div>
           </div>
           <div className="p-4 flex items-center gap-3">
-            <Bike className="w-5 h-5 text-gray-400" />
+            <Bike className="w-5 h-5 text-zinc-400 dark:text-zinc-500" />
             <div className="flex-1">
-              <p className="text-xs text-gray-500">Vehiculo</p>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">Vehiculo</p>
               {!isEditing ? (
-                <p className="text-sm text-gray-800">{driver?.vehicle || "-"}</p>
+                <p className="text-sm text-zinc-900 dark:text-zinc-100">{driver?.vehicle || "-"}</p>
               ) : (
                 <input
                   type="text"
                   value={editVehicle}
                   onChange={(e) => setEditVehicle(e.target.value)}
-                  className="text-sm text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 w-full mt-0.5"
+                  className="text-sm text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-[#16161B] border border-zinc-200 dark:border-white/15 rounded-lg px-2 py-1 w-full mt-0.5 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:border-brand focus:ring-1 focus:ring-brand focus:outline-none"
                   placeholder="Vehiculo"
                 />
               )}
             </div>
           </div>
           <div className="p-4 flex items-center gap-3">
-            <MapPin className="w-5 h-5 text-gray-400" />
+            <MapPin className="w-5 h-5 text-zinc-400 dark:text-zinc-500" />
             <div className="flex-1">
-              <p className="text-xs text-gray-500">Placa</p>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">Placa</p>
               {!isEditing ? (
-                <p className="text-sm text-gray-800">{driver?.licensePlate || "-"}</p>
+                <p className="text-sm text-zinc-900 dark:text-zinc-100">{driver?.licensePlate || "-"}</p>
               ) : (
                 <input
                   type="text"
                   value={editLicensePlate}
                   onChange={(e) => setEditLicensePlate(e.target.value)}
-                  className="text-sm text-gray-800 bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 w-full mt-0.5"
+                  className="text-sm text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-[#16161B] border border-zinc-200 dark:border-white/15 rounded-lg px-2 py-1 w-full mt-0.5 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:border-brand focus:ring-1 focus:ring-brand focus:outline-none"
                   placeholder="Placa"
                 />
               )}
@@ -275,7 +298,7 @@ export default function DriverProfile() {
           <button
             onClick={handleSaveProfile}
             disabled={updateProfileMutation.isPending}
-            className="w-full bg-[#2E7D32] text-white rounded-xl card-shadow p-4 flex items-center justify-center gap-2 text-sm font-medium hover:bg-[#1B5E20] active:scale-95 transition-all disabled:opacity-50"
+            className="w-full bg-brand text-white rounded-xl card-shadow dark:shadow-none p-4 flex items-center justify-center gap-2 text-sm font-medium hover:bg-brand-strong active:scale-95 transition-all disabled:opacity-50"
           >
             {updateProfileMutation.isPending ? (
               <Loader2 className="w-5 h-5 animate-spin" />
@@ -291,7 +314,7 @@ export default function DriverProfile() {
       <div className="px-4 mt-6 mb-6">
         <button
           onClick={handleLogout}
-          className="w-full bg-white rounded-xl card-shadow p-4 flex items-center gap-3 text-red-500 hover:bg-red-50 transition-colors"
+          className="w-full bg-white dark:bg-[#1A1A1E] rounded-xl card-shadow dark:shadow-none border border-zinc-100 dark:border-white/10 p-4 flex items-center gap-3 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
         >
           <LogOut className="w-5 h-5" />
           <span className="text-sm font-medium">Salir</span>
