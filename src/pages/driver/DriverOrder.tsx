@@ -20,6 +20,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import ChatBubble from "@/components/ChatBubble";
+import { DEFAULT_MAP_CENTER, geocodeAddress } from "@/lib/geocoding";
 
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -56,7 +57,11 @@ export default function DriverOrder() {
   const driverSession = useDriverSession();
   const driverId = driverSession?.id ?? null;
   const mapRef = useRef<L.Map | null>(null);
-  const [destCoords, setDestCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const geocodedAddressRef = useRef<string | null>(null);
+  const [destGeocode, setDestGeocode] = useState<{
+    address: string;
+    coords: { lat: number; lng: number } | null;
+  } | null>(null);
 
   const { data: order, isLoading } = trpc.order.getById.useQuery(
     { id: Number(id) },
@@ -66,6 +71,10 @@ export default function DriverOrder() {
     { id: driverId! },
     { enabled: !!driverId },
   );
+
+  const deliveryAddress = order?.deliveryAddress?.trim() || "";
+  const destCoords =
+    destGeocode?.address === deliveryAddress ? destGeocode.coords : null;
 
   const utils = trpc.useUtils();
   useOrderEvents(Number(id), utils);
@@ -121,21 +130,19 @@ export default function DriverOrder() {
   // Per-commerce status from order.commerces (includes status field: preparing | ready_for_pickup | picked_up)
   const getCommerceStatus = (commerce: any) => commerce?.status || "preparing";
 
-  // Geocode delivery address
+  // Geocodificación del destino: cacheada, cancelable y sin bloquear el mapa.
+  // Si falla, el mapa sigue con el comercio o con DEFAULT_MAP_CENTER.
   useEffect(() => {
-    if (!order?.deliveryAddress || destCoords) return;
-    const q = encodeURIComponent(order.deliveryAddress);
-    fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1&accept-language=es`, {
-      headers: { "User-Agent": "Rapidy-App/1.0" },
-    })
-      .then((r) => r.json())
-      .then((data) => {
-        if (data?.length > 0) {
-          setDestCoords({ lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) });
-        }
-      })
-      .catch(() => {});
-  }, [order?.deliveryAddress]);
+    if (!deliveryAddress) return;
+    if (geocodedAddressRef.current === deliveryAddress) return;
+
+    geocodedAddressRef.current = deliveryAddress;
+    const controller = new AbortController();
+    geocodeAddress(deliveryAddress, { signal: controller.signal }).then((coords) => {
+      if (!controller.signal.aborted) setDestGeocode({ address: deliveryAddress, coords });
+    });
+    return () => controller.abort();
+  }, [deliveryAddress]);
 
   const getCurrentStep = (status: string) => {
     if (status === "ready_for_pickup" || status === "driver_assigned") return 0;
@@ -209,8 +216,8 @@ export default function DriverOrder() {
     if (!mapContainer) return;
 
     const firstCommerce = order.commerces?.find((c: any) => c.lat && c.lng);
-    const initialLat = firstCommerce ? Number(firstCommerce.lat) : -0.1807;
-    const initialLng = firstCommerce ? Number(firstCommerce.lng) : -78.4678;
+    const initialLat = firstCommerce ? Number(firstCommerce.lat) : DEFAULT_MAP_CENTER.lat;
+    const initialLng = firstCommerce ? Number(firstCommerce.lng) : DEFAULT_MAP_CENTER.lng;
 
     const newMap = L.map(mapContainer, {
       zoomControl: false,
@@ -219,7 +226,7 @@ export default function DriverOrder() {
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
-      attribution: '&copy; OpenStreetMap contributors',
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     }).addTo(newMap);
 
     newMap.whenReady(() => {
@@ -238,8 +245,12 @@ export default function DriverOrder() {
             const isReady = cStatus === "ready_for_pickup";
             commerceCoords.push([lat, lng]);
             const marker = L.marker([lat, lng], {
+              title: `Comercio: ${c.name || "Comercio"}`,
+              alt: `Marcador del comercio ${c.name || ""}`,
               icon: L.divIcon({
                 className: "",
+                iconSize: [40, 44],
+                iconAnchor: [20, 20],
                 html: `<div style="display:flex;flex-direction:column;align-items:center;">
                   <div style="width:36px;height:36px;background:${isPicked ? "linear-gradient(135deg,#34D399,#059669)" : isReady ? "linear-gradient(135deg,#FF8A00,#E85D00)" : "linear-gradient(135deg,#9E9E9E,#757575)"};border:3px solid white;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.2);">
                     ${isPicked ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' : isReady ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>' : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>'}
@@ -259,8 +270,12 @@ export default function DriverOrder() {
         const lat = parseFloat(order.driver.currentLat);
         const lng = parseFloat(order.driver.currentLng);
         const marker = L.marker([lat, lng], {
+          title: "Tu ubicación",
+          alt: "Marcador de tu ubicación",
           icon: L.divIcon({
             className: "",
+            iconSize: [40, 44],
+            iconAnchor: [20, 20],
             html: `<div style="width:36px;height:36px;background:linear-gradient(135deg,#1565C0,#0D47A1);border:3px solid white;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 12px rgba(21,101,192,0.4);animation:driverPulse 2s infinite;">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M5 18a2 2 0 1 0 4 0a2 2 0 0 0-4 0"/><path d="M15 18a2 2 0 1 0 4 0a2 2 0 0 0-4 0"/><path d="M5 18H3V6a1 1 0 0 1 1-1h10l3 5h2a3 3 0 0 1 3 3v5h-2"/><path d="M9 18h6"/></svg>
             </div>`,
@@ -273,8 +288,12 @@ export default function DriverOrder() {
       // Destination marker
       if (destCoords) {
         const marker = L.marker([destCoords.lat, destCoords.lng], {
+          title: "Cliente",
+          alt: "Marcador del cliente",
           icon: L.divIcon({
             className: "",
+            iconSize: [40, 44],
+            iconAnchor: [20, 20],
             html: `<div style="display:flex;flex-direction:column;align-items:center;">
               <div style="width:36px;height:36px;background:linear-gradient(135deg,#E53935,#C62828);border:3px solid white;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.2);">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
@@ -320,8 +339,9 @@ export default function DriverOrder() {
 
   if (isLoading) {
     return (
-      <div className="mobile-container bg-[#F7F7FA] dark:bg-[#0A0A0D] min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-brand" />
+      <div role="status" aria-live="polite" className="mobile-container bg-[#F7F7FA] dark:bg-[#0A0A0D] min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-brand" aria-hidden="true" />
+        <span className="sr-only">Cargando pedido…</span>
       </div>
     );
   }
@@ -339,8 +359,8 @@ export default function DriverOrder() {
       {/* Header */}
       <div className="bg-gradient-to-br from-brand to-brand-strong px-4 pt-safe pb-6 shadow-sm">
         <div className="flex items-center justify-between mb-4">
-          <button onClick={() => navigate("/driver")} className="text-white/80 hover:text-white touch-target">
-            <ArrowLeft className="w-6 h-6" />
+          <button onClick={() => navigate("/driver")} aria-label="Volver a pedidos" className="text-white/80 hover:text-white touch-target flex items-center justify-center rounded-xl">
+            <ArrowLeft className="w-6 h-6" aria-hidden="true" />
           </button>
           <ThemeToggle
             size="lg"
@@ -356,13 +376,13 @@ export default function DriverOrder() {
       {/* Map */}
       <div
         id="driver-map"
-        className="relative z-0 h-52 mx-4 -mt-3 rounded-xl shadow-lg overflow-hidden bg-zinc-200 dark:bg-[#121216] border border-zinc-200 dark:border-white/10 [&_.leaflet-control-attribution]:bg-white/85 [&_.leaflet-control-attribution]:text-zinc-600 dark:[&_.leaflet-control-attribution]:bg-[#1A1A1E]/90 dark:[&_.leaflet-control-attribution]:text-zinc-400 [&_.leaflet-control-attribution_a]:text-brand"
+        className="relative z-0 h-52 mx-4 -mt-3 rounded-xl shadow-lg overflow-hidden bg-zinc-200 dark:bg-[#121216] border border-zinc-200 dark:border-white/10 [&_.leaflet-control-attribution]:bg-white/85 [&_.leaflet-control-attribution]:text-zinc-600 dark:[&_.leaflet-control-attribution]:bg-[#1A1A1E]/90 dark:[&_.leaflet-control-attribution]:text-zinc-400 [&_.leaflet-control-attribution_a]:text-brand-strong"
       />
 
       {/* Order Info */}
       <div className="px-4 mt-4">
         <div className="bg-white dark:bg-[#1A1A1E] rounded-xl card-shadow p-4 border border-zinc-100 dark:border-white/10">
-          <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-3">Detalles</h3>
+          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-3">Detalles</h2>
           <div className="space-y-3">
             <div className="flex items-start gap-3">
               <div className="w-9 h-9 bg-brand-soft dark:bg-brand/15 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -390,8 +410,12 @@ export default function DriverOrder() {
                 <p className="text-xs text-zinc-500 dark:text-zinc-400">{order.deliveryAddress}</p>
                 {!isTerminal && (
                   <div className="flex gap-2 mt-1">
-                    <a href={`tel:${order.customerPhone || ""}`} className="text-xs text-blue-600 dark:text-sky-400 flex items-center gap-0.5">
-                      <Phone className="w-3 h-3" /> {order.customerPhone || "Llamar"}
+                    <a
+                      href={`tel:${order.customerPhone || ""}`}
+                      aria-label={`Llamar al cliente ${order.customerPhone || ""}`}
+                      className="inline-flex items-center gap-1.5 min-h-11 min-w-11 -ml-2 px-2 text-xs text-blue-600 dark:text-sky-400"
+                    >
+                      <Phone className="w-3.5 h-3.5" aria-hidden="true" /> {order.customerPhone || "Llamar"}
                     </a>
                   </div>
                 )}
@@ -405,7 +429,7 @@ export default function DriverOrder() {
       {isAssigned && !allPickedUp && !delivered && (
         <div className="px-4 mt-4">
           <div className="bg-white dark:bg-[#1A1A1E] rounded-xl card-shadow p-4 border border-zinc-100 dark:border-white/10">
-            <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-3">Recoger en comercios</h3>
+            <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-3">Recoger en comercios</h2>
             <div className="space-y-2">
               {order.commerces?.map((c: any) => {
                 const picked = pickedUpCommerceIds.includes(c.id);
@@ -416,7 +440,7 @@ export default function DriverOrder() {
                 const statusColor = isPreparing
                   ? "text-amber-700 bg-amber-50 dark:text-amber-300 dark:bg-amber-500/10"
                   : isReady
-                    ? "text-brand bg-brand-soft dark:bg-brand/15"
+                    ? "text-brand-strong bg-brand-soft dark:text-brand dark:bg-brand/15"
                     : "text-emerald-700 bg-emerald-50 dark:text-emerald-300 dark:bg-emerald-500/10";
                 return (
                   <div key={c.id} className="flex items-center justify-between gap-3 p-2 rounded-lg bg-zinc-50 dark:bg-[#16161B] border border-zinc-100 dark:border-white/5">
@@ -438,7 +462,8 @@ export default function DriverOrder() {
                         <button
                           onClick={() => handleMarkCommercePickup(c.id)}
                           disabled={markCommercePickupMutation.isPending}
-                          className="h-8 px-3 bg-brand text-white text-xs font-medium rounded-lg hover:bg-brand-strong active:scale-[0.97] transition-all flex items-center gap-1 touch-target disabled:opacity-60 disabled:cursor-not-allowed"
+                          aria-label={`Marcar retiro en ${c.name || "el comercio"}`}
+                          className="min-h-11 px-3 bg-brand text-zinc-950 text-xs font-semibold rounded-lg hover:brightness-110 active:scale-[0.97] transition-all flex items-center gap-1 touch-target disabled:opacity-60 disabled:cursor-not-allowed"
                         >
                           {markCommercePickupMutation.isPending ? (
                             <Loader2 className="w-3 h-3 animate-spin" />
@@ -448,7 +473,7 @@ export default function DriverOrder() {
                           Recoger
                         </button>
                       ) : (
-                        <span className="text-xs text-zinc-400 dark:text-zinc-500">Esperando preparación</span>
+                        <span className="text-xs text-zinc-500 dark:text-zinc-400">Esperando preparación</span>
                       )}
                     </div>
                   </div>
@@ -462,7 +487,7 @@ export default function DriverOrder() {
       {/* Progress Steps */}
       <div className="px-4 mt-4">
         <div className="bg-white dark:bg-[#1A1A1E] rounded-xl card-shadow p-4 border border-zinc-100 dark:border-white/10">
-          <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-4">Progreso</h3>
+          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-4">Progreso</h2>
           <div className="relative">
             <div className="absolute left-3.5 top-3 bottom-3 w-0.5 bg-zinc-200 dark:bg-white/10" />
             <div className="space-y-4">
@@ -473,7 +498,7 @@ export default function DriverOrder() {
                       delivered && i === orderSteps.length - 1
                         ? "bg-emerald-500 text-white"
                         : i <= currentStep
-                          ? "bg-brand text-white"
+                          ? "bg-brand text-zinc-950"
                           : "bg-zinc-200 dark:bg-white/10 text-zinc-500 dark:text-zinc-400"
                     }`}
                   >
@@ -484,7 +509,7 @@ export default function DriverOrder() {
                     )}
                   </div>
                   <span
-                    className={`text-sm ${i <= currentStep ? "text-zinc-900 dark:text-zinc-100 font-medium" : "text-zinc-400 dark:text-zinc-500"}`}
+                    className={`text-sm ${i <= currentStep ? "text-zinc-900 dark:text-zinc-100 font-medium" : "text-zinc-500 dark:text-zinc-400"}`}
                   >
                     {step.label}
                   </span>
@@ -501,7 +526,7 @@ export default function DriverOrder() {
           <button
             onClick={handleAcceptOrder}
             disabled={acceptOrderMutation.isPending}
-            className="w-full h-12 bg-brand text-white font-medium rounded-xl hover:bg-brand-strong active:scale-[0.98] transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full h-12 bg-brand text-zinc-950 font-semibold rounded-xl hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {acceptOrderMutation.isPending ? "Aceptando..." : "Aceptar pedido"}
           </button>
@@ -513,7 +538,7 @@ export default function DriverOrder() {
           {order.status === "picked_up" && (
             <button
               onClick={handleNextStep}
-              className="w-full h-12 bg-brand text-white font-medium rounded-xl hover:bg-brand-strong active:scale-[0.98] transition-all"
+              className="w-full h-12 bg-brand text-zinc-950 font-semibold rounded-xl hover:brightness-110 active:scale-[0.98] transition-all"
             >
               Camino al cliente
             </button>
@@ -521,7 +546,7 @@ export default function DriverOrder() {
           {order.status === "on_the_way" && (
             <button
               onClick={handleNextStep}
-              className="w-full h-12 bg-brand text-white font-medium rounded-xl hover:bg-brand-strong active:scale-[0.98] transition-all"
+              className="w-full h-12 bg-brand text-zinc-950 font-semibold rounded-xl hover:brightness-110 active:scale-[0.98] transition-all"
             >
               Completar entrega
             </button>
@@ -550,7 +575,7 @@ export default function DriverOrder() {
             <button
               type="button"
               onClick={() => navigate("/driver/history")}
-              className="mt-3 px-4 py-2 rounded-lg bg-brand hover:bg-brand-strong text-white text-xs font-bold transition-colors"
+              className="mt-3 min-h-11 px-4 py-2 rounded-lg bg-brand hover:brightness-110 text-zinc-950 text-xs font-bold transition-colors"
             >
               Ver historial
             </button>

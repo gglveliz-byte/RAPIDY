@@ -46,16 +46,23 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-[100dvh] h-screen bg-[#F7F7FA] dark:bg-[#0A0A0D] text-zinc-900 dark:text-zinc-100 flex overflow-hidden antialiased">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2.5 focus:rounded-xl focus:bg-white focus:text-zinc-900 focus:font-semibold focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-brand"
+      >
+        Saltar al contenido
+      </a>
+
       {/* Sidebar — desktop */}
       <aside className="hidden lg:flex w-64 bg-white dark:bg-[#111115] border-r border-zinc-100 dark:border-white/10 flex-col fixed h-full z-30">
         <div className="p-6 border-b border-zinc-100 dark:border-white/10">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 bg-brand rounded-xl flex items-center justify-center shadow-sm shadow-brand/30">
-              <Package className="w-5 h-5 text-white" />
+              <Package className="w-5 h-5 text-zinc-950" />
             </div>
             <div>
               <span className="font-extrabold text-base tracking-tight text-zinc-900 dark:text-zinc-100 block leading-none">RAPIDY</span>
-              <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-medium tracking-wide uppercase">Panel Admin</span>
+              <span className="text-[10px] text-zinc-500 dark:text-zinc-400 font-medium tracking-wide uppercase">Panel Admin</span>
             </div>
           </div>
         </div>
@@ -70,7 +77,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 aria-current={isActive ? "page" : undefined}
                 className={`w-full min-h-[44px] flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                   isActive
-                    ? "bg-brand/10 text-brand"
+                    ? "bg-brand/10 text-brand-strong dark:text-brand"
                     : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-white/5 hover:text-zinc-900 dark:hover:text-zinc-100"
                 }`}
               >
@@ -84,7 +91,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           {isDesktop && (
             <div className="flex items-center justify-between px-3.5 py-1.5 bg-zinc-50 dark:bg-white/5 rounded-xl border border-zinc-100 dark:border-white/10">
               <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">Tema</span>
-              <ThemeToggle size="sm" />
+              <ThemeToggle size="lg" />
             </div>
           )}
           <button
@@ -99,7 +106,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       </aside>
 
       {/* Main scroll container — handles mobile bottom nav padding and desktop full height */}
-      <main className="flex-1 lg:ml-64 pb-32 sm:pb-36 lg:pb-0 flex flex-col overflow-y-auto">
+      <main id="main-content" tabIndex={-1} className="flex-1 lg:ml-64 pb-32 sm:pb-36 lg:pb-0 flex flex-col overflow-y-auto focus:outline-none">
         {children}
       </main>
 
@@ -107,7 +114,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       <nav className="lg:hidden fixed bottom-0 inset-x-0 bg-white dark:bg-[#111115] border-t border-zinc-100 dark:border-white/10 z-30 shadow-lg dark:shadow-black/40 px-1 pt-1 pb-[max(0.35rem,env(safe-area-inset-bottom,6px))]">
         {/* Utilidades: tema + logout accesible */}
         <div className="flex items-center justify-between gap-2 px-2 pb-0.5">
-          <span className="text-[9px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Panel Admin</span>
+          <span className="text-[9px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Panel Admin</span>
           <div className="flex items-center gap-1.5">
             {!isDesktop && <ThemeToggle size="sm" className="!w-11 !h-11 !rounded-xl" />}
             <button
@@ -133,8 +140,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 aria-current={isActive ? "page" : undefined}
                 className={`flex-1 min-h-[44px] max-w-[56px] flex flex-col items-center justify-center gap-0.5 px-0.5 py-1 rounded-xl transition-all active:scale-95 ${
                   isActive
-                    ? "text-brand bg-brand/10 font-bold"
-                    : "text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 font-medium"
+                    ? "text-brand-strong bg-brand/10 font-bold dark:text-brand"
+                    : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 font-medium"
                 }`}
               >
                 <item.icon className={`w-4 h-4 sm:w-5 sm:h-5 transition-transform ${isActive ? "scale-110" : ""}`} />

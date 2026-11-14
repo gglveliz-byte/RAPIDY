@@ -128,17 +128,18 @@ export default function AdminDashboard() {
           </h1>
         </div>
         <div className="flex items-center gap-1.5 sm:gap-2 lg:gap-3 shrink-0">
-          <div className="hidden sm:flex items-center gap-2 text-xs text-zinc-400 dark:text-zinc-500">
+          <div className="hidden sm:flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
             <span className={`inline-block w-2 h-2 rounded-full ${connected ? "bg-emerald-500 animate-pulse" : "bg-amber-500"}`} />
             <span className="font-medium text-zinc-600 dark:text-zinc-300">{connected ? "En vivo" : "Reconectando..."}</span>
             <span className="text-zinc-300 dark:text-zinc-600 mx-1">|</span>
-            <span className="text-zinc-400 dark:text-zinc-500">Actualizado hace {secondsAgo}s</span>
+            <span className="text-zinc-500 dark:text-zinc-400">Actualizado hace {secondsAgo}s</span>
           </div>
           <button
             type="button"
             onClick={loadAll}
             disabled={refreshing}
-            className="min-h-[44px] lg:min-h-[36px] flex items-center gap-1.5 text-xs text-brand font-semibold bg-brand/5 hover:bg-brand/10 px-2.5 sm:px-3 py-1.5 rounded-xl border border-brand/20 dark:border-brand/30 transition-colors disabled:opacity-50 active:scale-95 shadow-2xs"
+            aria-label="Recargar datos"
+            className="min-h-[44px] min-w-11 flex items-center gap-1.5 text-xs text-brand-strong dark:text-brand font-semibold bg-brand/5 hover:bg-brand/10 px-2.5 sm:px-3 py-1.5 rounded-xl border border-brand/20 dark:border-brand/30 transition-colors disabled:opacity-50 active:scale-95 shadow-2xs"
             title="Recargar datos"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
@@ -147,13 +148,14 @@ export default function AdminDashboard() {
           <button
             type="button"
             onClick={handleLogout}
-            className="min-h-[44px] lg:min-h-[36px] flex items-center gap-1 text-xs text-red-600 dark:text-red-400 font-semibold hover:bg-red-50 dark:hover:bg-red-500/10 px-2 sm:px-2.5 py-1.5 rounded-xl border border-red-200 dark:border-red-500/30 transition-colors active:scale-95 shadow-2xs"
+            aria-label="Cerrar sesión"
+            className="min-h-[44px] min-w-11 flex items-center gap-1 text-xs text-red-600 dark:text-red-400 font-semibold hover:bg-red-50 dark:hover:bg-red-500/10 px-2 sm:px-2.5 py-1.5 rounded-xl border border-red-200 dark:border-red-500/30 transition-colors active:scale-95 shadow-2xs"
             title="Cerrar sesión"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span className="hidden xs:inline sm:inline">Salir</span>
           </button>
-          <div className="w-7 h-7 sm:w-8 sm:h-8 bg-brand rounded-full flex items-center justify-center text-white text-xs sm:text-sm font-bold shadow-xs">A</div>
+          <div className="w-7 h-7 sm:w-8 sm:h-8 bg-brand rounded-full flex items-center justify-center text-zinc-950 text-xs sm:text-sm font-bold shadow-xs">A</div>
         </div>
       </header>
 
@@ -170,14 +172,14 @@ export default function AdminDashboard() {
                 type="button"
                 onClick={loadAll}
                 disabled={refreshing}
-                className="min-h-[44px] px-4 py-2.5 rounded-xl bg-brand hover:bg-brand-strong text-white text-sm font-semibold transition-colors disabled:opacity-50 active:scale-95"
+                className="min-h-[44px] px-4 py-2.5 rounded-xl bg-brand hover:bg-brand-strong text-zinc-950 text-sm font-semibold transition-colors disabled:opacity-50 active:scale-95"
               >
                 Reintentar
               </button>
             </div>
           ) : (
             <div className="flex w-full flex-1 flex-col items-center justify-center gap-3 py-24 text-center">
-              <RefreshCw className="w-6 h-6 animate-spin text-brand" />
+              <RefreshCw className="w-6 h-6 animate-spin text-brand-strong dark:text-brand" />
               <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Cargando panel...</p>
             </div>
           )
@@ -188,7 +190,7 @@ export default function AdminDashboard() {
               {/* KPI Cards */}
               <div className="grid grid-cols-2 xl:grid-cols-4 gap-2 lg:gap-3">
                 <KpiCard icon={ShoppingBag} label="Pedidos totales" value={String(kpi.totalOrders)} color="bg-blue-100 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400" />
-                <KpiCard icon={Store} label="Comercios" value={`${kpi.activeCommerces}/${kpi.totalCommerces}`} color="bg-brand/10 text-brand dark:bg-brand/15 dark:text-brand" />
+                <KpiCard icon={Store} label="Comercios" value={`${kpi.activeCommerces}/${kpi.totalCommerces}`} color="bg-brand/10 text-brand-strong dark:bg-brand/15 dark:text-brand" />
                 <KpiCard icon={Truck} label="Repartidores (Activos)" value={String(kpi.onlineDrivers)} color="bg-orange-100 text-orange-600 dark:bg-orange-500/15 dark:text-orange-400" />
                 <KpiCard icon={Users} label="Clientes" value={String(kpi.totalCustomers)} color="bg-purple-100 text-purple-600 dark:bg-purple-500/15 dark:text-purple-400" />
               </div>
@@ -199,11 +201,11 @@ export default function AdminDashboard() {
                   <div>
                     <p className="text-[10px] lg:text-xs text-zinc-500 dark:text-zinc-400 font-medium">Facturación total</p>
                     <p className="text-xl lg:text-2xl font-black text-zinc-900 dark:text-zinc-100">${kpi.totalRevenue}</p>
-                    <p className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-0.5">Pedidos entregados</p>
+                    <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-0.5">Pedidos entregados</p>
                   </div>
                   <div className="text-right">
                     <p className="text-[10px] lg:text-xs text-zinc-500 dark:text-zinc-400 font-medium">Comisiones</p>
-                    <p className="text-base lg:text-xl font-extrabold text-brand">${kpi.totalCommission}</p>
+                    <p className="text-base lg:text-xl font-extrabold text-brand-strong dark:text-brand">${kpi.totalCommission}</p>
                   </div>
                 </div>
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
@@ -300,22 +302,22 @@ export default function AdminDashboard() {
 
               {/* Admin Delivery Earnings */}
               {adminDeliveryEarnings && (
-                <div className="bg-gradient-to-r from-brand to-brand-strong rounded-xl card-shadow dark:shadow-none p-3 lg:p-4 text-white">
+                <div className="bg-brand rounded-xl card-shadow dark:shadow-none p-3 lg:p-4 text-zinc-950">
                   <div className="flex items-center gap-2 mb-2">
                     <DollarSign className="w-4 h-4" />
                     <h2 className="text-xs lg:text-sm font-semibold">Ganancias del admin (costos de envio)</h2>
                   </div>
                   <div className="grid grid-cols-3 gap-2 lg:gap-4">
                     <div>
-                      <p className="text-[9px] lg:text-[10px] text-white/70">Total cobrado</p>
+                      <p className="text-[9px] lg:text-[10px] text-zinc-950">Total cobrado</p>
                       <p className="text-sm lg:text-xl font-bold">${adminDeliveryEarnings.totalDeliveryFees}</p>
                     </div>
                     <div>
-                      <p className="text-[9px] lg:text-[10px] text-white/70">Pagado a repartidores</p>
+                      <p className="text-[9px] lg:text-[10px] text-zinc-950">Pagado a repartidores</p>
                       <p className="text-sm lg:text-xl font-bold">-${adminDeliveryEarnings.totalDriverPayouts}</p>
                     </div>
                     <div>
-                      <p className="text-[9px] lg:text-[10px] text-white/70">Ganancia neta</p>
+                      <p className="text-[9px] lg:text-[10px] text-zinc-950">Ganancia neta</p>
                       <p className="text-sm lg:text-xl font-bold">${adminDeliveryEarnings.adminNet}</p>
                     </div>
                   </div>
@@ -329,7 +331,7 @@ export default function AdminDashboard() {
                   <div className="space-y-1.5 lg:space-y-2">
                     {topCategories.slice(0, 5).map((cat, i) => (
                       <div key={cat.id} className="flex items-center gap-2 lg:gap-3">
-                        <span className={`w-5 h-5 lg:w-6 lg:h-6 rounded-full flex items-center justify-center text-[10px] lg:text-xs font-bold ${i < 3 ? "bg-brand text-white" : "bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-300"}`}>
+                        <span className={`w-5 h-5 lg:w-6 lg:h-6 rounded-full flex items-center justify-center text-[10px] lg:text-xs font-bold ${i < 3 ? "bg-brand text-zinc-950" : "bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-300"}`}>
                           {i + 1}
                         </span>
                         <div className="flex-1 flex justify-between items-center">
@@ -338,7 +340,7 @@ export default function AdminDashboard() {
                         </div>
                       </div>
                     ))}
-                    {topCategories.length === 0 && <p className="text-xs text-zinc-400 dark:text-zinc-500">Sin datos</p>}
+                    {topCategories.length === 0 && <p className="text-xs text-zinc-500 dark:text-zinc-400">Sin datos</p>}
                   </div>
                 </div>
 
@@ -347,7 +349,7 @@ export default function AdminDashboard() {
                   <div className="space-y-1.5 lg:space-y-2">
                     {topCommerces.slice(0, 5).map((comm, i) => (
                       <div key={comm.id} className="flex items-center gap-2 lg:gap-3">
-                        <span className={`w-5 h-5 lg:w-6 lg:h-6 rounded-full flex items-center justify-center text-[10px] lg:text-xs font-bold ${i < 3 ? "bg-brand text-white" : "bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-300"}`}>
+                        <span className={`w-5 h-5 lg:w-6 lg:h-6 rounded-full flex items-center justify-center text-[10px] lg:text-xs font-bold ${i < 3 ? "bg-brand text-zinc-950" : "bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-300"}`}>
                           {i + 1}
                         </span>
                         <div className="flex-1 flex justify-between items-center min-w-0">
@@ -359,7 +361,7 @@ export default function AdminDashboard() {
                         </div>
                       </div>
                     ))}
-                    {topCommerces.length === 0 && <p className="text-xs text-zinc-400 dark:text-zinc-500">Sin datos</p>}
+                    {topCommerces.length === 0 && <p className="text-xs text-zinc-500 dark:text-zinc-400">Sin datos</p>}
                   </div>
                 </div>
               </div>
@@ -378,10 +380,10 @@ export default function AdminDashboard() {
                   ].map((link) => (
                     <button key={link.path} type="button" onClick={() => navigate(link.path)} className="min-h-[44px] flex items-center justify-between bg-zinc-50 hover:bg-zinc-100 dark:bg-[#16161B] dark:hover:bg-white/10 rounded-lg p-2 lg:p-3 transition-colors">
                       <div className="flex items-center gap-2">
-                        <link.icon className="w-4 h-4 text-brand" />
+                        <link.icon className="w-4 h-4 text-brand-strong dark:text-brand" />
                         <span className="text-xs lg:text-sm text-zinc-700 dark:text-zinc-200 font-medium">{link.label}</span>
                       </div>
-                      <ChevronRight className="w-3 h-3 text-zinc-400 dark:text-zinc-500 shrink-0" />
+                      <ChevronRight className="w-3 h-3 text-zinc-500 dark:text-zinc-400 shrink-0" />
                     </button>
                   ))}
                 </div>
@@ -394,7 +396,7 @@ export default function AdminDashboard() {
               <div className={`${CARD_CLASS} flex-1 flex flex-col lg:overflow-hidden`}>
                 <div className="p-3.5 border-b border-zinc-100 dark:border-white/10 shrink-0">
                   <h2 className="text-xs sm:text-sm font-bold text-zinc-800 dark:text-zinc-200 flex items-center gap-2">
-                    <Percent className="w-4 h-4 text-brand" />
+                    <Percent className="w-4 h-4 text-brand-strong dark:text-brand" />
                     Comisiones por comercio
                   </h2>
                 </div>
@@ -414,7 +416,7 @@ export default function AdminDashboard() {
                           <tr key={c.commerceId} className="hover:bg-zinc-50 dark:hover:bg-white/5">
                             <td className="px-3 py-2 text-zinc-800 dark:text-zinc-200 font-medium truncate max-w-[120px]">{c.name}</td>
                             <td className="px-3 py-2 text-right text-zinc-600 dark:text-zinc-400">{c.commissionRate}%</td>
-                            <td className="px-3 py-2 text-right text-brand font-semibold">${c.commissionEarned}</td>
+                            <td className="px-3 py-2 text-right text-brand-strong dark:text-brand font-semibold">${c.commissionEarned}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -426,7 +428,7 @@ export default function AdminDashboard() {
                         <div key={c.commerceId} className="flex items-center justify-between p-3 active:bg-zinc-50 dark:active:bg-white/5 transition-colors">
                           <div className="flex items-center gap-3">
                             <div className="w-9 h-9 rounded-xl bg-brand/10 dark:bg-brand/15 flex items-center justify-center shrink-0">
-                              <Store className="w-4 h-4 text-brand" />
+                              <Store className="w-4 h-4 text-brand-strong dark:text-brand" />
                             </div>
                             <div>
                               <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">{c.name}</p>
@@ -434,8 +436,8 @@ export default function AdminDashboard() {
                             </div>
                           </div>
                           <div className="text-right">
-                            <p className="text-sm font-bold text-brand">${c.commissionEarned}</p>
-                            <p className="text-[10px] text-zinc-400 dark:text-zinc-500">Total a cobrar</p>
+                            <p className="text-sm font-bold text-brand-strong dark:text-brand">${c.commissionEarned}</p>
+                            <p className="text-[10px] text-zinc-500 dark:text-zinc-400">Total a cobrar</p>
                           </div>
                         </div>
                       ))}
@@ -450,7 +452,7 @@ export default function AdminDashboard() {
               <div className={`${CARD_CLASS} flex-1 flex flex-col lg:overflow-hidden`}>
                 <div className="p-3.5 border-b border-zinc-100 dark:border-white/10 shrink-0">
                   <h2 className="text-xs sm:text-sm font-bold text-zinc-800 dark:text-zinc-200 flex items-center gap-2">
-                    <Truck className="w-4 h-4 text-brand" />
+                    <Truck className="w-4 h-4 text-brand-strong dark:text-brand" />
                     Comisiones por Repartidor
                   </h2>
                 </div>
@@ -470,7 +472,7 @@ export default function AdminDashboard() {
                           <tr key={d.driverId} className="hover:bg-zinc-50 dark:hover:bg-white/5">
                             <td className="px-3 py-2 text-zinc-800 dark:text-zinc-200 font-medium truncate max-w-[100px]">{d.name}</td>
                             <td className="px-3 py-2 text-right text-zinc-600 dark:text-zinc-400">${d.total}</td>
-                            <td className="px-3 py-2 text-right text-brand font-semibold">${d.adminCommission}</td>
+                            <td className="px-3 py-2 text-right text-brand-strong dark:text-brand font-semibold">${d.adminCommission}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -488,8 +490,8 @@ export default function AdminDashboard() {
                               <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">{d.name}</p>
                             </div>
                             <div className="text-right">
-                              <p className="text-sm font-bold text-brand">${d.adminCommission}</p>
-                              <p className="text-[10px] text-zinc-400 dark:text-zinc-500">Tu Comisión</p>
+                              <p className="text-sm font-bold text-brand-strong dark:text-brand">${d.adminCommission}</p>
+                              <p className="text-[10px] text-zinc-500 dark:text-zinc-400">Tu Comisión</p>
                             </div>
                           </div>
                           <div className="bg-zinc-50 dark:bg-[#16161B] rounded-lg p-2 text-center">
@@ -533,9 +535,9 @@ function PeriodTabs({
             type="button"
             onClick={() => onChange(p)}
             aria-pressed={isActive}
-            className={`min-h-[44px] lg:min-h-[32px] px-2.5 sm:px-3 py-1 text-[11px] sm:text-xs font-semibold rounded-md transition-all active:scale-95 ${
+            className={`min-h-11 min-w-11 px-2.5 sm:px-3 py-1 text-[11px] sm:text-xs font-semibold rounded-md transition-all active:scale-95 ${
               isActive
-                ? "bg-white dark:bg-[#26262C] text-brand shadow-xs"
+                ? "bg-white dark:bg-[#26262C] text-brand-strong dark:text-brand shadow-xs"
                 : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-100"
             }`}
           >
@@ -549,7 +551,7 @@ function PeriodTabs({
 
 function ChartEmpty() {
   return (
-    <div className="h-full flex flex-col items-center justify-center gap-1.5 text-zinc-400 dark:text-zinc-500">
+    <div className="h-full flex flex-col items-center justify-center gap-1.5 text-zinc-500 dark:text-zinc-400">
       <BarChart3 className="w-5 h-5" />
       <span className="text-xs">Sin datos</span>
     </div>
@@ -558,7 +560,7 @@ function ChartEmpty() {
 
 function TableEmpty() {
   return (
-    <div className="flex flex-col items-center justify-center gap-1.5 p-6 text-center text-xs text-zinc-400 dark:text-zinc-500">
+    <div className="flex flex-col items-center justify-center gap-1.5 p-6 text-center text-xs text-zinc-500 dark:text-zinc-400">
       <BarChart3 className="w-5 h-5" />
       <span>Sin datos</span>
     </div>

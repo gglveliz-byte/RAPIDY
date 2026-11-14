@@ -60,8 +60,94 @@ export interface OtpVerifyResult {
   attemptsLeft?: number;
 }
 
-function providerError(status: number, code: string | undefined, message: string): never {
-  const normalized = (code || "").toUpperCase();
+/**
+ * El proveedor se consulta con timeout y un reintento acotado. Los valores se
+ * leen de process.env porque env.ts es un archivo compartido fuera de este
+ * frente; se documentan en docs/production/OTP.md.
+ */
+function boundedInt(raw: string | undefined, fallback: number, min: number, max: number): number {
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(max, Math.max(min, Math.trunc(parsed)));
+}
+
+const PROVIDER_TIMEOUT_MS = boundedInt(process.env.NEUROCHAT_TIMEOUT_MS, 8_000, 2_000, 20_000);
+const SEND_ATTEMPTS = 2;
+const RETRY_BASE_DELAY_MS = 400;
+const MAX_RETRY_DELAY_MS = 2_000;
+const RETRYABLE_STATUSES = new Set([502, 503, 504]);
+
+/** OTP_DEV_FALLBACK nunca se aplica en producción, aunque la variable esté en "true". */
+if (env.isProduction && env.otpDevFallback) {
+  // Fail-fast: mejor no arrancar que emitir OTP locales en producción.
+  throw new Error(
+    "OTP_DEV_FALLBACK está prohibido en producción. Elimínalo o ponlo en false y configura NEUROCHAT_API_KEY.",
+  );
+}
+const DEV_FALLBACK_ENABLED =
+  env.otpDevFallback &&
+  !env.isProduction &&
+  // Fail-closed: staging o NODE_ENV ausente nunca exponen devCode.
+  (process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test");
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isTimeoutError(error: unknown): boolean {
+  return error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError");
+}
+
+/** Logs sin teléfono, OTP ni payload: solo el resultado técnico del proveedor. */
+function logProviderFailure(
+  operation: string,
+  status: number | null,
+  providerCode: string | null,
+  attempt: number,
+): void {
+  const statusLabel = status ? `HTTP ${status}` : "sin respuesta";
+  const codeLabel = providerCode ? ` código ${providerCode}` : "";
+  console.warn(`[OTP] fallo de NeuroChat en ${operation} (${statusLabel}${codeLabel}, intento ${attempt})`);
+}
+
+function retryDelayMs(res: Response, attempt: number): number {
+  const retryAfter = res.headers.get("retry-after");
+  if (retryAfter) {
+    const seconds = Number(retryAfter);
+    if (Number.isFinite(seconds) && seconds > 0) {
+      return Math.min(seconds * 1_000, MAX_RETRY_DELAY_MS);
+    }
+    const date = Date.parse(retryAfter);
+    if (!Number.isNaN(date)) {
+      return Math.min(Math.max(0, date - Date.now()), MAX_RETRY_DELAY_MS);
+    }
+  }
+  return Math.min(RETRY_BASE_DELAY_MS * attempt, MAX_RETRY_DELAY_MS);
+}
+
+function isRetryableStatus(status: number): boolean {
+  return RETRYABLE_STATUSES.has(status);
+}
+
+/** Acepta ISO 8601 o epoch en segundos/milisegundos; devuelve null si es inválido. */
+function parseProviderExpiry(value: unknown): Date | null {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return new Date(value < 1e12 ? value * 1_000 : value);
+  }
+  if (typeof value === "string" && value.trim()) {
+    const trimmed = value.trim();
+    if (/^\d{10,13}$/.test(trimmed)) {
+      const numeric = Number(trimmed);
+      return new Date(numeric < 1e12 ? numeric * 1_000 : numeric);
+    }
+    return new Date(trimmed);
+  }
+  return null;
+}
+
+/** Errores claros y estables para el cliente; nunca se reenvía el mensaje crudo del proveedor. */
+function providerError(status: number, providerCode: string | undefined): never {
+  const normalized = (providerCode || "").toUpperCase();
   if (status === 429 || normalized === "RATE_LIMIT_OTP_SEND") {
     throw new TRPCError({
       code: "TOO_MANY_REQUESTS",
@@ -84,42 +170,106 @@ function providerError(status: number, code: string | undefined, message: string
       message: "No pudimos enviar el código por WhatsApp. Intenta más tarde.",
     });
   }
+  if (status === 401 || status === 403) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "El servicio de códigos no está disponible en este momento. Contacta a soporte.",
+    });
+  }
+  if (status >= 500) {
+    throw new TRPCError({
+      code: "SERVICE_UNAVAILABLE",
+      message: "El servicio de WhatsApp no está disponible. Intenta de nuevo en unos segundos.",
+    });
+  }
   throw new TRPCError({
     code: "BAD_GATEWAY",
-    message: message || "El proveedor de WhatsApp no respondió correctamente.",
+    message: "El proveedor de WhatsApp no respondió correctamente. Intenta de nuevo.",
   });
 }
 
-async function neurochatRequest(path: string, body?: Record<string, unknown>) {
-  const res = await fetch(`${env.neurochatBaseUrl.replace(/\/$/, "")}${path}`, {
-    method: body ? "POST" : "GET",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": env.neurochatApiKey,
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
+interface NeurochatRequestOptions {
+  /** Total de intentos, incluido el primero. Por defecto 1 (sin reintento). */
+  attempts?: number;
+}
 
-  const json = await res.json().catch(() => null) as any;
-  if (!res.ok || !json?.success) {
-    const code = json?.error?.code || json?.code;
-    const message = json?.error?.message || json?.message || `HTTP ${res.status}`;
-    providerError(res.status, code, message);
+async function neurochatRequest(
+  path: string,
+  body?: Record<string, unknown>,
+  options: NeurochatRequestOptions = {},
+) {
+  const attempts = Math.max(1, options.attempts ?? 1);
+  const url = `${env.neurochatBaseUrl.replace(/\/$/, "")}${path}`;
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      const res = await fetch(url, {
+        method: body ? "POST" : "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": env.neurochatApiKey,
+        },
+        body: body ? JSON.stringify(body) : undefined,
+        signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
+      });
+
+      const json = (await res.json().catch(() => null)) as any;
+      const providerCode = json?.error?.code || json?.code || undefined;
+
+      if (!res.ok || !json?.success) {
+        if (attempt < attempts && isRetryableStatus(res.status)) {
+          logProviderFailure(path, res.status, providerCode ?? null, attempt);
+          await sleep(retryDelayMs(res, attempt));
+          continue;
+        }
+        logProviderFailure(path, res.status, providerCode ?? null, attempt);
+        providerError(res.status, providerCode);
+      }
+      return json.data;
+    } catch (error) {
+      if (error instanceof TRPCError) throw error;
+
+      if (isTimeoutError(error)) {
+        logProviderFailure(path, null, "TIMEOUT", attempt);
+        throw new TRPCError({
+          code: "GATEWAY_TIMEOUT",
+          message:
+            "El servicio de WhatsApp tardó demasiado en responder. Intenta de nuevo en unos segundos.",
+        });
+      }
+
+      logProviderFailure(path, null, "NETWORK_ERROR", attempt);
+      if (attempt < attempts) {
+        await sleep(RETRY_BASE_DELAY_MS * attempt);
+        continue;
+      }
+      throw new TRPCError({
+        code: "SERVICE_UNAVAILABLE",
+        message: "No pudimos contactar al servicio de WhatsApp. Intenta de nuevo en unos segundos.",
+      });
+    }
   }
-  return json.data;
+
+  throw new TRPCError({
+    code: "SERVICE_UNAVAILABLE",
+    message: "No pudimos contactar al servicio de WhatsApp. Intenta de nuevo en unos segundos.",
+  });
 }
 
 export async function sendOtp(phone: string): Promise<OtpSendResult> {
   if (!env.neurochatApiKey) {
-    if (!env.otpDevFallback) {
+    if (env.isProduction || !DEV_FALLBACK_ENABLED) {
       throw new TRPCError({
         code: "PRECONDITION_FAILED",
-        message: "La verificación por WhatsApp no está configurada.",
+        message: env.isProduction
+          ? "La verificación por WhatsApp no está configurada. Contacta a soporte."
+          : "La verificación por WhatsApp no está configurada.",
       });
     }
     const code = String(crypto.randomInt(10 ** (env.otpLength - 1), 10 ** env.otpLength));
     const expiresAt = new Date(Date.now() + env.otpExpiryMinutes * 60_000);
-    console.info(`[OTP][DEV] ${maskPhone(phone)} -> ${code} (expira ${expiresAt.toISOString()})`);
+    // Sin teléfono ni código: el devCode viaja solo en la respuesta de desarrollo.
+    console.info(`[OTP][DEV] código de desarrollo generado (expira ${expiresAt.toISOString()})`);
     return {
       provider: "dev",
       otpId: `local:${crypto.randomUUID()}`,
@@ -128,21 +278,42 @@ export async function sendOtp(phone: string): Promise<OtpSendResult> {
     };
   }
 
-  const data = await neurochatRequest("/otp/send", {
-    to: phone,
-    length: env.otpLength,
-    expiry: env.otpExpiryMinutes,
-    ...(env.neurochatOtpFrom ? { from: env.neurochatOtpFrom } : {}),
-  });
+  const data = await neurochatRequest(
+    "/otp/send",
+    {
+      to: phone,
+      length: env.otpLength,
+      expiry: env.otpExpiryMinutes,
+      ...(env.neurochatOtpFrom ? { from: env.neurochatOtpFrom } : {}),
+    },
+    { attempts: SEND_ATTEMPTS },
+  );
+
+  if (!data?.otp_id) {
+    console.warn("[OTP] NeuroChat devolvió una respuesta sin otp_id");
+    throw new TRPCError({
+      code: "BAD_GATEWAY",
+      message: "El proveedor de WhatsApp devolvió una respuesta inválida. Intenta de nuevo.",
+    });
+  }
+
+  const parsedExpiry = parseProviderExpiry(data?.expires_at);
+  const localMaxExpiry = new Date(Date.now() + env.otpExpiryMinutes * 60_000);
+  const expiresAt =
+    parsedExpiry && !Number.isNaN(parsedExpiry.getTime())
+      ? // Nunca extender la vigencia local, aunque el proveedor devuelva más tiempo.
+        new Date(Math.min(parsedExpiry.getTime(), localMaxExpiry.getTime()))
+      : localMaxExpiry;
 
   return {
     provider: "neurochat",
     otpId: String(data.otp_id),
-    expiresAt: new Date(data.expires_at ?? Date.now() + env.otpExpiryMinutes * 60_000),
+    expiresAt,
   };
 }
 
 export async function verifyOtpWithProvider(otpId: string, code: string): Promise<OtpVerifyResult> {
+  // Sin reintento: cada verificación puede consumir un intento en el proveedor.
   const data = await neurochatRequest("/otp/verify", { otp_id: otpId, code });
   return {
     valid: data?.valid === true,

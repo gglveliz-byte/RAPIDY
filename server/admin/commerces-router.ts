@@ -8,6 +8,7 @@
  * @resumen_contenido
  *   - `listCommerces`: Retorna el catálogo completo de comercios con sus datos maestros.
  *   - `createMerchant`: Alta transaccional de usuario merchant (sin fuga de passwordHash).
+ *   - `resetMerchantPassword`: Restablecimiento administrativo de contraseña con revocación de sesiones.
  *   - `createCommerce`: Alta de comercio asociado a un merchant existente.
  *   - `updateCommerce`: Modificación granular con validación estricta de rangos y coordenadas.
  *   - `deleteCommerce`: Desactivación segura protegiendo órdenes y balances contables históricos.
@@ -133,6 +134,66 @@ export const adminCommercesProcedures = {
       emit("admin:dashboard", { type: "dashboard_update" });
       emit("commerces:global", { type: "commerce_update" });
       return safeResult;
+    }),
+
+  resetMerchantPassword: adminQuery
+    .input(z.object({
+      userId: z.number().int().positive(),
+      password: z
+        .string()
+        .min(8, "La contraseña debe tener al menos 8 caracteres")
+        .max(72, "La contraseña no puede superar los 72 caracteres"),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = getDb();
+      const rows = await db
+        .select({
+          id: users.id,
+          email: users.email,
+          role: users.role,
+        })
+        .from(users)
+        .where(eq(users.id, input.userId))
+        .limit(1);
+      const merchant = rows[0];
+
+      if (!merchant || merchant.role !== "merchant") {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Usuario merchant no encontrado.",
+        });
+      }
+      if (!merchant.email) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "El merchant no tiene un email de acceso configurado.",
+        });
+      }
+
+      const passwordHash = await bcrypt.hash(input.password, 10);
+
+      await db
+        .update(users)
+        .set({
+          passwordHash,
+          sessionVersion: sql`coalesce(${users.sessionVersion}, 0) + 1`,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(users.id, merchant.id), eq(users.role, "merchant")));
+
+      // Auditoría mínima en logs: nunca se registra la contraseña ni el hash.
+      console.info(
+        "[admin][audit] merchant_password_reset",
+        JSON.stringify({
+          adminId: ctx.admin?.id ?? null,
+          targetUserId: merchant.id,
+          at: new Date().toISOString(),
+        }),
+      );
+
+      emit("admin:dashboard", { type: "dashboard_update" });
+
+      return { success: true as const, email: merchant.email };
     }),
 
   createCommerce: adminQuery

@@ -2,6 +2,7 @@ import { Routes, Route, Navigate, useParams } from 'react-router'
 import { lazy, Suspense, useEffect } from 'react'
 import { Loader2 } from 'lucide-react'
 import SessionGuard from '@/components/SessionGuard'
+import { PWAInstallBanner } from '@/components/PWAInstallBanner'
 import { trpcMutate } from '@/hooks/useDeliveryData'
 import { getRoleUser } from '@/hooks/useSessionSync'
 
@@ -161,6 +162,7 @@ export default function App() {
     <Suspense fallback={<LoadingFallback />}>
       <SessionRefresh />
       <AnimatedRoutes />
+      <PWAInstallBanner />
     </Suspense>
   )
 }

@@ -12,15 +12,19 @@
  *
  * @dependencias_externas
  *   - `leaflet` (`L`)
- *   - `react` (`useRef`, `useEffect`, `useCallback`)
+ *   - `react` (`useRef`, `useEffect`, `useCallback`, `useState`)
  *   - `lucide-react` (`Navigation`, `Clock`, `Crosshair`)
+ *
+ * @dependencias_internas
+ *   - `DEFAULT_MAP_CENTER`, `geocodeAddress` (@/lib/geocoding)
  */
 
-import { useRef, useEffect, useCallback } from "react";
+import { useRef, useEffect, useCallback, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Navigation, Clock, Crosshair } from "lucide-react";
 import { safeImage } from "@/lib/imageUtils";
+import { DEFAULT_MAP_CENTER, geocodeAddress } from "@/lib/geocoding";
 
 function escapeHtml(value: unknown): string {
   return String(value ?? "").replace(/[&<>"']/g, (char) => {
@@ -127,6 +131,10 @@ export function OrderTrackingMap({
   const prevDriverPosRef = useRef<{ lat: number; lng: number } | null>(null);
   const animFrameRef = useRef<number | null>(null);
   const hasFittedRef = useRef(false);
+  const [fallbackGeocode, setFallbackGeocode] = useState<{
+    address: string;
+    coords: { lat: number; lng: number };
+  } | null>(null);
 
   useEffect(() => {
     ensureMapStyles();
@@ -135,16 +143,36 @@ export function OrderTrackingMap({
     };
   }, []);
 
+  // El hook del padre ya geocodifica; esto solo cubre su fallo o ausencia.
+  // La caché y el rate limit del helper evitan duplicar tráfico en éxito.
   useEffect(() => {
-    if (deliveryCoords) hasFittedRef.current = false;
-  }, [deliveryCoords?.lat, deliveryCoords?.lng]);
+    if (deliveryCoords || geoLoading) return;
+    const address = order?.deliveryAddress?.trim();
+    if (!address) return;
+    const controller = new AbortController();
+    geocodeAddress(address, { signal: controller.signal }).then((coords) => {
+      if (coords && !controller.signal.aborted) setFallbackGeocode({ address, coords });
+    });
+    return () => controller.abort();
+  }, [order?.deliveryAddress, deliveryCoords, geoLoading]);
+
+  const deliveryAddress = order?.deliveryAddress?.trim();
+  const effectiveDeliveryCoords =
+    deliveryCoords ??
+    (fallbackGeocode && fallbackGeocode.address === deliveryAddress
+      ? fallbackGeocode.coords
+      : null);
+
+  useEffect(() => {
+    if (effectiveDeliveryCoords) hasFittedRef.current = false;
+  }, [effectiveDeliveryCoords]);
 
   const mapContainerRef = useCallback((element: HTMLDivElement | null) => {
     if (element && !mapRef.current) {
       const map = L.map(element, {
         zoomControl: false,
         attributionControl: true,
-      }).setView([-0.1807, -78.4678], 13);
+      }).setView([DEFAULT_MAP_CENTER.lat, DEFAULT_MAP_CENTER.lng], 13);
 
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         maxZoom: 19,
@@ -237,17 +265,20 @@ export function OrderTrackingMap({
     }
 
     // Marcador de destino
-    if (deliveryCoords) {
+    if (effectiveDeliveryCoords) {
       const popup = `<b>Destino</b><br/>${escapeHtml(order.deliveryAddress)}`;
       if (deliveryMarkerRef.current) {
-        deliveryMarkerRef.current.setLatLng([deliveryCoords.lat, deliveryCoords.lng]);
+        deliveryMarkerRef.current.setLatLng([effectiveDeliveryCoords.lat, effectiveDeliveryCoords.lng]);
         deliveryMarkerRef.current.setPopupContent(popup);
       } else {
-        deliveryMarkerRef.current = L.marker([deliveryCoords.lat, deliveryCoords.lng], { icon: destinationIcon })
+        deliveryMarkerRef.current = L.marker(
+          [effectiveDeliveryCoords.lat, effectiveDeliveryCoords.lng],
+          { icon: destinationIcon },
+        )
           .addTo(map)
           .bindPopup(popup);
       }
-      bounds.extend([deliveryCoords.lat, deliveryCoords.lng]);
+      bounds.extend([effectiveDeliveryCoords.lat, effectiveDeliveryCoords.lng]);
     }
 
     // Marcador de repartidor
@@ -267,8 +298,8 @@ export function OrderTrackingMap({
       }
       bounds.extend([dlat, dlng]);
 
-      let targetLat = deliveryCoords?.lat ?? null;
-      let targetLng = deliveryCoords?.lng ?? null;
+      let targetLat = effectiveDeliveryCoords?.lat ?? null;
+      let targetLng = effectiveDeliveryCoords?.lng ?? null;
       if (targetLat === null && order.commerces?.length > 0) {
         const first = order.commerces.find((c: any) => c.lat && c.lng);
         if (first) {
@@ -297,7 +328,7 @@ export function OrderTrackingMap({
       map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
       hasFittedRef.current = true;
     }
-  }, [order, driverPos, deliveryCoords, animateDriverMarker]);
+  }, [order, driverPos, effectiveDeliveryCoords, animateDriverMarker]);
 
   // Centrar en chofer si está activo
   useEffect(() => {

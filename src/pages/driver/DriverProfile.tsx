@@ -124,7 +124,7 @@ export default function DriverProfile() {
         <button
           type="button"
           onClick={() => refetch()}
-          className="mt-4 px-4 py-2 rounded-lg bg-brand hover:bg-brand-strong text-white text-xs font-bold transition-colors"
+          className="mt-4 min-h-11 px-4 py-2 rounded-lg bg-brand hover:brightness-110 text-zinc-950 text-xs font-bold transition-colors"
         >
           Reintentar
         </button>
@@ -145,8 +145,8 @@ export default function DriverProfile() {
       {/* Header */}
       <div className="bg-gradient-to-br from-brand to-brand-strong px-4 pt-4 pb-8">
         <div className="flex items-center justify-between mb-4">
-          <button onClick={() => navigate("/driver")} className="text-white/80 hover:text-white touch-target">
-            <ArrowLeft className="w-6 h-6" />
+          <button onClick={() => navigate("/driver")} aria-label="Volver a pedidos" className="text-white/80 hover:text-white touch-target flex items-center justify-center rounded-xl">
+            <ArrowLeft className="w-6 h-6" aria-hidden="true" />
           </button>
           <div className="flex items-center gap-2">
             <ThemeToggle
@@ -183,6 +183,7 @@ export default function DriverProfile() {
                 onChange={(e) => setEditName(e.target.value)}
                 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 bg-white dark:bg-[#16161B] border border-transparent dark:border-white/15 rounded-lg px-2 py-1 w-full placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-white/60"
                 placeholder="Nombre"
+                aria-label="Nombre"
               />
             )}
             <div className="flex items-center gap-2 mt-1">
@@ -236,7 +237,7 @@ export default function DriverProfile() {
               aria-pressed={driver.status === "online"}
             >
               {driver?.status === "online" ? (
-                <ToggleRight className="w-10 h-10 text-brand" />
+                <ToggleRight className="w-10 h-10 text-brand-strong" />
               ) : (
                 <ToggleLeft className="w-10 h-10 text-zinc-300 dark:text-zinc-600" />
               )}
@@ -268,6 +269,7 @@ export default function DriverProfile() {
                   onChange={(e) => setEditVehicle(e.target.value)}
                   className="text-sm text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-[#16161B] border border-zinc-200 dark:border-white/15 rounded-lg px-2 py-1 w-full mt-0.5 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:border-brand focus:ring-1 focus:ring-brand focus:outline-none"
                   placeholder="Vehiculo"
+                  aria-label="Vehículo"
                 />
               )}
             </div>
@@ -285,6 +287,7 @@ export default function DriverProfile() {
                   onChange={(e) => setEditLicensePlate(e.target.value)}
                   className="text-sm text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-[#16161B] border border-zinc-200 dark:border-white/15 rounded-lg px-2 py-1 w-full mt-0.5 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:border-brand focus:ring-1 focus:ring-brand focus:outline-none"
                   placeholder="Placa"
+                  aria-label="Placa"
                 />
               )}
             </div>
@@ -298,7 +301,7 @@ export default function DriverProfile() {
           <button
             onClick={handleSaveProfile}
             disabled={updateProfileMutation.isPending}
-            className="w-full bg-brand text-white rounded-xl card-shadow dark:shadow-none p-4 flex items-center justify-center gap-2 text-sm font-medium hover:bg-brand-strong active:scale-95 transition-all disabled:opacity-50"
+            className="w-full bg-brand text-zinc-950 rounded-xl card-shadow dark:shadow-none p-4 flex items-center justify-center gap-2 text-sm font-semibold hover:brightness-110 active:scale-95 transition-all disabled:opacity-50"
           >
             {updateProfileMutation.isPending ? (
               <Loader2 className="w-5 h-5 animate-spin" />

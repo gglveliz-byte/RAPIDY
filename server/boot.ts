@@ -13,7 +13,7 @@ import {
   verifyAdminTokenPayload,
   verifyAdminRefreshTokenPayload,
 } from "./admin-auth";
-import { getDb } from "./queries/connection";
+import { getDb, closeDb } from "./queries/connection";
 import { commerces, orderItems, orders, users, drivers, customers } from "@db/schema";
 import { verifyAccessTokenPayload, verifyRefreshTokenPayload } from "./customer-auth";
 import {
@@ -38,16 +38,147 @@ const app = new Hono<{ Bindings: HttpBindings }>();
 
 seedAdmin();
 
+// ── Cabeceras de seguridad ─────────────────────────────────────
+// CSP cerrada: solo los orígenes externos que la app usa de verdad.
+// OSM (teselas + Nominatim), Unsplash, Picsum, Supabase y Google Fonts.
+const CONTENT_SECURITY_POLICY = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "img-src 'self' data: blob: https://tile.openstreetmap.org https://*.tile.openstreetmap.org https://images.unsplash.com https://plus.unsplash.com https://picsum.photos https://fastly.picsum.photos https://upload.wikimedia.org https://unpkg.com https://*.supabase.co",
+  "font-src 'self' data: https://fonts.gstatic.com",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://nominatim.openstreetmap.org",
+  "worker-src 'self' blob:",
+  "manifest-src 'self'",
+  "object-src 'none'",
+  "frame-src 'none'",
+  "frame-ancestors 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+].join("; ");
+
+/** Normaliza puertos por defecto para comparar Host y Origin. */
+function normalizeHost(host: string): string {
+  return host.toLowerCase().replace(/:(?:80|443)$/, "");
+}
+
+/** Host del request, respetando proxies (Vercel/Render) sin confiar en el Origin. */
+function requestHost(req: Request): string {
+  const forwarded = req.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
+  const host = forwarded || req.headers.get("host") || "";
+  if (host) return normalizeHost(host);
+  try {
+    return normalizeHost(new URL(req.url).host);
+  } catch {
+    return "";
+  }
+}
+
+/** Extrae el host de un Origin/Referer; null si no es una URL válida. */
+function sourceHost(value: string): string | null {
+  try {
+    return normalizeHost(new URL(value).host);
+  } catch {
+    return null;
+  }
+}
+
+/** Interpreta un host como hostname (soporta localhost, IPv4 e IPv6 entre corchetes). */
+function hostnameOf(host: string): string {
+  try {
+    return new URL(`http://${host}`).hostname.replace(/^\[|\]$/g, "").toLowerCase();
+  } catch {
+    return host.toLowerCase();
+  }
+}
+
+function isLoopbackHost(host: string): boolean {
+  const hostname = hostnameOf(host);
+  return (
+    hostname === "localhost" ||
+    hostname.endsWith(".localhost") ||
+    hostname === "127.0.0.1" ||
+    hostname === "::1"
+  );
+}
+
+function configuredOriginHosts(): Set<string> {
+  const raw = [process.env.TRUSTED_ORIGINS, process.env.APP_ORIGIN]
+    .filter(Boolean)
+    .join(",");
+  const hosts = new Set<string>();
+  for (const entry of raw.split(",")) {
+    const value = entry.trim();
+    if (!value) continue;
+    const host = value.includes("://") ? sourceHost(value) : normalizeHost(value);
+    if (host) hosts.add(host);
+  }
+  return hosts;
+}
+
+const trustedOriginHosts = configuredOriginHosts();
+
+function isAllowedMutationSource(source: string, host: string): boolean {
+  if (source === "null") return false;
+  const originHost = sourceHost(source);
+  if (!originHost) return false;
+  if (originHost === host) return true;
+  if (trustedOriginHosts.has(originHost)) return true;
+  // En desarrollo se permite cualquier localhost/loopback, con cualquier puerto.
+  if (!env.isProduction && isLoopbackHost(originHost)) return true;
+  return false;
+}
+
 app.use("*", async (c, next) => {
-  await next();
-  c.header("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
-  c.header("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https: https://*.tile.openstreetmap.org; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://nominatim.openstreetmap.org https://*.tile.openstreetmap.org https://images.unsplash.com https://picsum.photos; font-src 'self' data: https://fonts.gstatic.com; worker-src 'self' blob:;");
-  c.header("X-Frame-Options", "DENY");
   c.header("X-Content-Type-Options", "nosniff");
+  c.header("X-Frame-Options", "DENY");
   c.header("Referrer-Policy", "strict-origin-when-cross-origin");
+  c.header("Content-Security-Policy", CONTENT_SECURITY_POLICY);
+  // No fijar HSTS en loopback (evita romper el smoke test http local).
+  if (env.isProduction && !isLoopbackHost(requestHost(c.req.raw))) {
+    c.header("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  }
+  await next();
 });
 
-app.use(bodyLimit({ maxSize: 50 * 1024 * 1024 }));
+// CSRF: toda mutación de tRPC debe venir del mismo origen (Origin o Referer).
+// Los GET/HEAD/OPTIONS (queries y SSE) quedan intactos.
+app.use("/api/trpc/*", async (c, next) => {
+  const method = c.req.method.toUpperCase();
+  if (method === "GET" || method === "HEAD" || method === "OPTIONS") {
+    return next();
+  }
+
+  const host = requestHost(c.req.raw);
+  const source = c.req.header("origin") || c.req.header("referer");
+
+  if (!source) {
+    // Clientes sin navegador (curl/scripts) solo en dev local.
+    if (!env.isProduction && isLoopbackHost(host)) return next();
+    return c.json({ error: "Origen no permitido" }, 403);
+  }
+
+  if (!isAllowedMutationSource(source, host)) {
+    return c.json({ error: "Origen no permitido" }, 403);
+  }
+
+  return next();
+});
+
+// Límite de payload: las imágenes viajan como data URL (máx. ~7.5 MB de
+// comprobante y 2 MB por imagen), así que 20 MB deja margen sin aceptar 50 MB.
+const configuredBodyLimit = Number(process.env.MAX_BODY_BYTES);
+const MAX_BODY_BYTES =
+  Number.isFinite(configuredBodyLimit) && configuredBodyLimit > 0
+    ? configuredBodyLimit
+    : 20 * 1024 * 1024;
+app.use(bodyLimit({ maxSize: MAX_BODY_BYTES }));
+
+// Liveness sin datos sensibles (no consulta DB ni expone versión/entorno).
+app.get("/api/health", (c) => {
+  c.header("Cache-Control", "no-store");
+  return c.json({ status: "ok" });
+});
 
 function setupSSE(c: any, channel: string, stream: any) {
   c.header("Cache-Control", "no-cache, no-transform");
@@ -451,7 +582,24 @@ if (env.isProduction && !process.env.VERCEL) {
   serveStaticFiles(app);
 
   const port = parseInt(process.env.PORT || "3000");
-  serve({ fetch: app.fetch, port }, () => {
+  const server = serve({ fetch: app.fetch, port }, () => {
     console.log(`Server running on http://localhost:${port}/`);
   });
+
+  let shuttingDown = false;
+  const shutdown = async (signal: string) => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    console.log(`[boot] ${signal} recibido; cerrando servidor y pool`);
+    const force = setTimeout(() => process.exit(1), 10_000);
+    force.unref();
+    server.close();
+    await closeDb().catch((error) => {
+      console.error("[boot] error cerrando pool:", error?.message);
+    });
+    clearTimeout(force);
+    process.exit(0);
+  };
+  process.once("SIGTERM", () => void shutdown("SIGTERM"));
+  process.once("SIGINT", () => void shutdown("SIGINT"));
 }

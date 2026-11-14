@@ -2,6 +2,8 @@
   "name": "Rapidy Socios",
   "short_name": "Socios",
   "description": "Panel de control para Comercios, Repartidores y Administración",
+  "lang": "es-EC",
+  "categories": ["business", "productivity"],
   "id": "/?app=socios",
   "start_url": "/login?source=pwa-partners",
   "scope": "/",

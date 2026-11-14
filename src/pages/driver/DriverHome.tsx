@@ -192,16 +192,16 @@ export default function DriverHome() {
 
         <div className="flex gap-3">
           <div className="flex-1 bg-white/20 backdrop-blur-sm rounded-xl p-3">
-            <p className="text-white/70 text-xs">Hoy</p>
-            <p className="text-white font-bold text-lg">${todayEarnings.toFixed(2)}</p>
+            <p className="text-zinc-950/80 text-xs">Hoy</p>
+            <p className="text-zinc-950 font-bold text-lg">${todayEarnings.toFixed(2)}</p>
           </div>
           <div className="flex-1 bg-white/20 backdrop-blur-sm rounded-xl p-3">
-            <p className="text-white/70 text-xs">Entregas</p>
-            <p className="text-white font-bold text-lg">{totalDeliveries}</p>
+            <p className="text-zinc-950/80 text-xs">Entregas</p>
+            <p className="text-zinc-950 font-bold text-lg">{totalDeliveries}</p>
           </div>
           <div className="flex-1 bg-white/20 backdrop-blur-sm rounded-xl p-3">
-            <p className="text-white/70 text-xs">Rating</p>
-            <p className="text-white font-bold text-lg">
+            <p className="text-zinc-950/80 text-xs">Rating</p>
+            <p className="text-zinc-950 font-bold text-lg">
               {driverProfile?.rating?.toString() || "—"}
             </p>
           </div>
@@ -241,15 +241,16 @@ export default function DriverHome() {
           <button
             type="button"
             onClick={() => availableQuery.refetch()}
-            className="inline-flex items-center min-h-11 px-2 -mr-2 text-xs font-bold text-brand"
+            className="inline-flex items-center min-h-11 px-2 -mr-2 text-xs font-bold text-brand-strong"
           >
             Actualizar
           </button>
         </div>
 
         {availableQuery.isLoading ? (
-          <div className="flex justify-center py-8">
-            <Loader2 className="w-6 h-6 animate-spin text-brand" />
+          <div role="status" aria-live="polite" className="flex justify-center py-8">
+            <Loader2 className="w-6 h-6 animate-spin text-brand" aria-hidden="true" />
+            <span className="sr-only">Cargando pedidos…</span>
           </div>
         ) : availableQuery.isError ? (
           <div className="bg-white dark:bg-[#1A1A1E] rounded-xl p-5 text-center border border-red-200 dark:border-red-900/50">
@@ -262,7 +263,7 @@ export default function DriverHome() {
             <button
               type="button"
               onClick={() => availableQuery.refetch()}
-              className="mt-3 px-4 py-2 rounded-lg bg-red-600 text-white text-xs font-bold"
+              className="mt-3 min-h-11 px-4 py-2 rounded-lg bg-red-600 text-white text-xs font-bold"
             >
               Reintentar
             </button>
@@ -311,10 +312,10 @@ export default function DriverHome() {
                       </div>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="text-sm font-bold text-brand">
+                      <p className="text-sm font-bold text-brand-strong">
                         ${earning.toFixed(2)}
                       </p>
-                      <p className="text-xs text-zinc-400 dark:text-zinc-500">ganancia estimada</p>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400">ganancia estimada</p>
                     </div>
                   </div>
 
@@ -343,7 +344,7 @@ export default function DriverHome() {
                     <button
                       onClick={() => handleAcceptOrder(order.id)}
                       disabled={acceptOrderMutation.isPending || !!activeOrder || !isOnline}
-                      className="h-11 px-5 bg-brand text-white text-sm font-medium rounded-lg hover:bg-brand-strong active:scale-95 transition-all disabled:opacity-50 shrink-0"
+                      className="h-11 px-5 bg-brand text-zinc-950 text-sm font-semibold rounded-lg hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 shrink-0"
                     >
                       {acceptOrderMutation.isPending ? "..." : "Aceptar"}
                     </button>
@@ -359,7 +360,7 @@ export default function DriverHome() {
               No hay pedidos disponibles
             </p>
             {!isOnline && (
-              <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
                 Actívate para recibir pedidos.
               </p>
             )}
@@ -368,19 +369,19 @@ export default function DriverHome() {
       </div>
 
       <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-[#111115] border-t border-zinc-100 dark:border-white/10 px-4 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] flex justify-around items-center z-50" style={{ maxWidth: "480px", margin: "0 auto" }}>
-        <button onClick={() => navigate("/driver")} className="bottom-nav-item active min-h-11">
+        <button onClick={() => navigate("/driver")} className="bottom-nav-item active min-h-11 min-w-11" aria-current="page">
           <List className="w-5 h-5" />
           <span className="text-[10px]">Pedidos</span>
         </button>
-        <button onClick={() => navigate("/driver/earnings")} className="bottom-nav-item min-h-11">
+        <button onClick={() => navigate("/driver/earnings")} className="bottom-nav-item min-h-11 min-w-11">
           <BarChart3 className="w-5 h-5" />
           <span className="text-[10px]">Ganancias</span>
         </button>
-        <button onClick={() => navigate("/driver/history")} className="bottom-nav-item min-h-11">
+        <button onClick={() => navigate("/driver/history")} className="bottom-nav-item min-h-11 min-w-11">
           <Package className="w-5 h-5" />
           <span className="text-[10px]">Historial</span>
         </button>
-        <button onClick={() => navigate("/driver/profile")} className="bottom-nav-item min-h-11">
+        <button onClick={() => navigate("/driver/profile")} className="bottom-nav-item min-h-11 min-w-11">
           <User className="w-5 h-5" />
           <span className="text-[10px]">Perfil</span>
         </button>

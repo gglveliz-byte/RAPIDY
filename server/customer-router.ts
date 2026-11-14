@@ -126,10 +126,32 @@ export const customerRouter = createRouter({
       const ip = clientIp(ctx.req);
       await enforceOtpRateLimit(phone, ip);
 
-      const result = await sendOtp(phone);
+      const db = getDb();
+      let result: Awaited<ReturnType<typeof sendOtp>>;
+      try {
+        result = await sendOtp(phone);
+      } catch (error) {
+        // El intento fallido también cuenta para el rate limit: evita martillar al
+        // proveedor cuando está caído. La fila es auditoría; no se loggea PII.
+        try {
+          await db.insert(otpVerifications).values({
+            phone,
+            otpId: null,
+            codeHash: null,
+            provider: "neurochat",
+            purpose: input.purpose,
+            status: "send_failed",
+            ip,
+            expiresAt: new Date(Date.now() + env.otpExpiryMinutes * 60_000),
+          });
+        } catch {
+          console.warn("[OTP] no se pudo registrar el intento fallido de envío");
+        }
+        throw error;
+      }
+
       const codeHash = result.devCode ? await hashOtpCode(result.devCode) : null;
 
-      const db = getDb();
       await db.insert(otpVerifications).values({
         phone,
         otpId: result.otpId,
@@ -161,6 +183,13 @@ export const customerRouter = createRouter({
     )
     .mutation(async ({ input, ctx }) => {
       const phone = normalizePhone(input.phone);
+      if (env.isProduction && isDevOtpId(input.otpId)) {
+        // Un OTP de desarrollo jamás puede verificar sesiones en producción.
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "El código no existe o ya fue utilizado. Pide uno nuevo.",
+        });
+      }
       const db = getDb();
 
       const rows = await db
@@ -201,10 +230,41 @@ export const customerRouter = createRouter({
         });
       }
 
-      await db
+      // Incremento atómico: dos verificaciones concurrentes no pueden superar 3 intentos.
+      const claimedRows = await db
         .update(otpVerifications)
-        .set({ attempts: record.attempts + 1 })
-        .where(eq(otpVerifications.id, record.id));
+        .set({ attempts: sql`${otpVerifications.attempts} + 1` })
+        .where(
+          and(
+            eq(otpVerifications.id, record.id),
+            eq(otpVerifications.status, "pending"),
+            sql`${otpVerifications.attempts} < 3`,
+          ),
+        )
+        .returning({ attempts: otpVerifications.attempts });
+
+      const currentAttempt = claimedRows[0]?.attempts;
+      if (currentAttempt === undefined) {
+        const [latest] = await db
+          .select({ status: otpVerifications.status })
+          .from(otpVerifications)
+          .where(eq(otpVerifications.id, record.id))
+          .limit(1);
+        if (!latest || latest.status !== "pending") {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "El código no existe o ya fue utilizado. Pide uno nuevo.",
+          });
+        }
+        await db
+          .update(otpVerifications)
+          .set({ status: "failed" })
+          .where(eq(otpVerifications.id, record.id));
+        throw new TRPCError({
+          code: "TOO_MANY_REQUESTS",
+          message: "Superaste los 3 intentos. Pide un código nuevo.",
+        });
+      }
 
       let valid = false;
       let providerStatus = "pending";
@@ -223,9 +283,14 @@ export const customerRouter = createRouter({
           await db
             .update(otpVerifications)
             .set({ status: providerStatus === "max_attempts" ? "failed" : providerStatus })
-            .where(eq(otpVerifications.id, record.id));
+            .where(
+              and(
+                eq(otpVerifications.id, record.id),
+                eq(otpVerifications.status, "pending"),
+              ),
+            );
         }
-        const remaining = Math.max(0, 3 - (record.attempts + 1));
+        const remaining = Math.max(0, 3 - currentAttempt);
         throw new TRPCError({
           code: "BAD_REQUEST",
           message:

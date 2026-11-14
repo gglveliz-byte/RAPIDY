@@ -8,13 +8,15 @@
  *
  * @resumen_contenido
  *   - `CommerceProfile`: Vista y formulario de ajustes del comercio.
- *   - Leaflet Map: Pin personalizado Flame Orange (#FF6A00) y geocodificación reversa OSM Nominatim.
+ *   - Leaflet Map: Pin personalizado Flame Orange (#FF6A00) y geocodificación reversa
+ *     centralizada en `@/lib/geocoding`.
  *   - Mutaciones: `useUpdateCommerceProfile` y `useToggleCommerceStatus`.
  *
  * @dependencias_internas
  *   - `useCommerce`, `useMerchantCommerceId`, `useToggleCommerceStatus`, `useUpdateCommerceProfile`, `trpcMutate` (@/hooks/useDeliveryData)
  *   - `CommerceLayout` (@/components/CommerceLayout)
  *   - `safeImage` (@/lib/imageUtils)
+ *   - `DEFAULT_MAP_CENTER`, `reverseGeocode` (@/lib/geocoding)
  */
 
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -39,6 +41,7 @@ import {
 } from "@/hooks/useSessionSync";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { DEFAULT_MAP_CENTER, reverseGeocode } from "@/lib/geocoding";
 
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -59,19 +62,6 @@ function createFlamePinIcon(): L.DivIcon {
 
 
 
-async function getAddressFromCoords(lat: number, lng: number): Promise<string> {
-  try {
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1&accept-language=es`,
-      { headers: { "User-Agent": "Rapidy-App/1.0" } }
-    );
-    const data = await res.json();
-    return data?.display_name || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-  } catch {
-    return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-  }
-}
-
 export default function CommerceProfile() {
   const navigate = useNavigate();
   const [saving, setSaving] = useState(false);
@@ -80,6 +70,7 @@ export default function CommerceProfile() {
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
   const hydratedCommerceRef = useRef<number | null>(null);
+  const geocodeAbortRef = useRef<AbortController | null>(null);
 
   const merchantUser = getRoleUser<{ email?: string }>("merchant");
   const registeredEmail = merchantUser?.email || "";
@@ -109,14 +100,25 @@ export default function CommerceProfile() {
     if ((mapRef.current as any)._leaflet_id) delete (mapRef.current as any)._leaflet_id;
     try {
       const map = L.map(mapRef.current, { zoomControl: true, scrollWheelZoom: false }).setView([lat, lng], 15);
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "© OpenStreetMap" }).addTo(map);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      }).addTo(map);
 
       const marker = L.marker([lat, lng], { draggable: true, icon: createFlamePinIcon() }).addTo(map);
       marker.on("dragend", async () => {
         const pos = marker.getLatLng();
         setForm((prev) => ({ ...prev, lat: pos.lat.toFixed(6), lng: pos.lng.toFixed(6) }));
-        const addr = await getAddressFromCoords(pos.lat, pos.lng);
+
+        // Cancela la geocodificación anterior para que una respuesta vieja
+        // no sobrescriba la dirección del último pin.
+        geocodeAbortRef.current?.abort();
+        const controller = new AbortController();
+        geocodeAbortRef.current = controller;
+        const addr = await reverseGeocode(pos.lat, pos.lng, { signal: controller.signal });
+        if (controller.signal.aborted) return;
         setForm((prev) => ({ ...prev, address: addr }));
+        if (geocodeAbortRef.current === controller) geocodeAbortRef.current = null;
       });
 
       mapInstanceRef.current = map;
@@ -141,8 +143,8 @@ export default function CommerceProfile() {
     // Quito solo se usa para centrar el mapa; no se persiste si el comercio
     // todavía no tiene coordenadas.
     const hasCoords = Boolean(commerce.lat && commerce.lng);
-    const clat = hasCoords ? parseFloat(commerce.lat) : -0.1807;
-    const clng = hasCoords ? parseFloat(commerce.lng) : -78.4678;
+    const clat = hasCoords ? parseFloat(commerce.lat) : DEFAULT_MAP_CENTER.lat;
+    const clng = hasCoords ? parseFloat(commerce.lng) : DEFAULT_MAP_CENTER.lng;
     setForm({
       name: commerce.name || "", description: commerce.description || "",
       address: commerce.address || "", phone: commerce.phone || "", email: commerce.email || "",
@@ -155,6 +157,7 @@ export default function CommerceProfile() {
     const t = setTimeout(() => initMap(clat, clng), 150);
     return () => {
       clearTimeout(t);
+      geocodeAbortRef.current?.abort();
       if (mapInstanceRef.current) {
         try { mapInstanceRef.current.remove(); } catch {}
         mapInstanceRef.current = null;
@@ -228,9 +231,14 @@ export default function CommerceProfile() {
       );
       const lat = pos.coords.latitude;
       const lng = pos.coords.longitude;
-      const addr = await getAddressFromCoords(lat, lng);
+      geocodeAbortRef.current?.abort();
+      const controller = new AbortController();
+      geocodeAbortRef.current = controller;
+      const addr = await reverseGeocode(lat, lng, { signal: controller.signal });
+      if (controller.signal.aborted) return;
       setForm((prev) => ({ ...prev, address: addr, lat: lat.toFixed(6), lng: lng.toFixed(6) }));
       updateMarker(lat, lng);
+      if (geocodeAbortRef.current === controller) geocodeAbortRef.current = null;
     } catch {} finally {
       setGeoLoading(false);
     }

@@ -1,5 +1,45 @@
+# Dependencias y artefactos de build (se generan dentro de la imagen)
 node_modules
 dist
+dist-ssr
+coverage
+.nyc_output
+*.tsbuildinfo
+
+# Entorno y secretos: nunca se hornean en la imagen
+.env
+.env.*
+.firebase
+firebase-adminsdk.json
+*service-account*.json
+*serviceAccount*.json
+
+# Git, editores y metadatos del sistema
 .git
-*.swp
+.gitignore
+.vscode
+.idea
+.opencode
+.DS_Store
+Thumbs.db
+
+# Capturas, pruebas y basura
+screenshots
+test-flow-screenshots
+.playwright-mcp
+playwright-report
+test-results
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.tmp
+*.temp
+*.swp
+*.swo
+*.bak
+
+# No hacen falta para compilar ni ejecutar el contenedor
+docs
+android

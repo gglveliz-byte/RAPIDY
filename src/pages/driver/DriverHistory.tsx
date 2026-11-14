@@ -55,7 +55,7 @@ export default function DriverHistory() {
             <button
               type="button"
               onClick={() => refetch()}
-              className="mt-3 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 dark:hover:bg-red-500 text-white text-xs font-bold transition-colors"
+              className="mt-3 min-h-11 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 dark:hover:bg-red-500 text-white text-xs font-bold transition-colors"
             >
               Reintentar
             </button>
@@ -96,7 +96,7 @@ export default function DriverHistory() {
                       {new Date(order.deliveredAt ?? order.updatedAt).toLocaleDateString("es-ES")}
                     </span>
                   </div>
-                  <span className="text-sm font-semibold text-brand">
+                  <span className="text-sm font-semibold text-brand-strong">
                     ${Number(order.earningAmount || 0).toFixed(2)}
                   </span>
                 </div>
@@ -125,21 +125,21 @@ export default function DriverHistory() {
       >
         <button
           onClick={() => navigate("/driver")}
-          className="bottom-nav-item min-h-11 !text-zinc-400 dark:!text-zinc-500"
+          className="bottom-nav-item min-h-11 min-w-11 !text-zinc-400 dark:!text-zinc-500"
         >
           <List className="w-5 h-5" />
           <span className="text-[10px]">Pedidos</span>
         </button>
         <button
           onClick={() => navigate("/driver/earnings")}
-          className="bottom-nav-item min-h-11 !text-zinc-400 dark:!text-zinc-500"
+          className="bottom-nav-item min-h-11 min-w-11 !text-zinc-400 dark:!text-zinc-500"
         >
           <BarChart3 className="w-5 h-5" />
           <span className="text-[10px]">Ganancias</span>
         </button>
         <button
           onClick={() => navigate("/driver/history")}
-          className="bottom-nav-item active min-h-11"
+          className="bottom-nav-item active min-h-11 min-w-11"
           aria-current="page"
         >
           <Package className="w-5 h-5" />
@@ -147,7 +147,7 @@ export default function DriverHistory() {
         </button>
         <button
           onClick={() => navigate("/driver/profile")}
-          className="bottom-nav-item min-h-11 !text-zinc-400 dark:!text-zinc-500"
+          className="bottom-nav-item min-h-11 min-w-11 !text-zinc-400 dark:!text-zinc-500"
         >
           <User className="w-5 h-5" />
           <span className="text-[10px]">Perfil</span>

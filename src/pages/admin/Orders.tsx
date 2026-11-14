@@ -7,6 +7,7 @@ import {
   X,
   Package,
 } from "lucide-react";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useAdminSSE } from "@/hooks/useAdminSSE";
 import { trpc } from "@/providers/trpc";
 import AdminLayout from "@/components/AdminLayout";
@@ -52,7 +53,7 @@ function SettlementPanel({
   onToggleDriver: (orderId: number) => void;
 }) {
   if (order.status !== "delivered") {
-    return <span className="text-[10px] text-zinc-400 dark:text-zinc-500">Pendiente de entrega</span>;
+    return <span className="text-[10px] text-zinc-500 dark:text-zinc-400">Pendiente de entrega</span>;
   }
 
   const settlements: any[] =
@@ -78,7 +79,7 @@ function SettlementPanel({
             className="flex items-center justify-between gap-1.5 bg-zinc-50 dark:bg-[#16161B] px-2 py-1.5 rounded-lg border border-zinc-100 dark:border-white/10"
           >
             <div className="flex flex-col min-w-0">
-              <span className="text-[9px] text-zinc-400 dark:text-zinc-500 leading-none truncate">
+              <span className="text-[9px] text-zinc-500 dark:text-zinc-400 leading-none truncate">
                 {settlements.length > 1 ? settlement.commerceName : "Comercio"}
               </span>
               <span
@@ -93,7 +94,7 @@ function SettlementPanel({
             <button
               disabled={loadingKey === key}
               onClick={() => onToggleCommerce(order.id, settlement.commerceId)}
-              className={`min-h-[34px] px-2.5 text-[11px] font-semibold rounded-lg transition-colors disabled:opacity-50 shrink-0 ${
+              className={`min-h-11 px-2.5 text-[11px] font-semibold rounded-lg transition-colors disabled:opacity-50 shrink-0 ${
                 settlement.settled
                   ? "bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-400"
                   : "bg-zinc-200 text-zinc-700 hover:bg-zinc-300 dark:bg-white/10 dark:text-zinc-200 dark:hover:bg-white/15"
@@ -107,7 +108,7 @@ function SettlementPanel({
 
       <div className="flex items-center justify-between gap-1.5 bg-zinc-50 dark:bg-[#16161B] px-2 py-1.5 rounded-lg border border-zinc-100 dark:border-white/10">
         <div className="flex flex-col min-w-0">
-          <span className="text-[9px] text-zinc-400 dark:text-zinc-500 leading-none">Repartidor</span>
+          <span className="text-[9px] text-zinc-500 dark:text-zinc-400 leading-none">Repartidor</span>
           <span
             className={`text-[11px] font-bold truncate ${
               order.driverAction === "cobrar" ? "text-blue-600 dark:text-blue-400" : "text-orange-600 dark:text-orange-400"
@@ -120,7 +121,7 @@ function SettlementPanel({
         <button
           disabled={loadingKey === `${order.id}:driver`}
           onClick={() => onToggleDriver(order.id)}
-          className={`min-h-[34px] px-2.5 text-[11px] font-semibold rounded-lg transition-colors disabled:opacity-50 shrink-0 ${
+          className={`min-h-11 px-2.5 text-[11px] font-semibold rounded-lg transition-colors disabled:opacity-50 shrink-0 ${
             order.driverSettled
               ? "bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-400"
               : "bg-zinc-200 text-zinc-700 hover:bg-zinc-300 dark:bg-white/10 dark:text-zinc-200 dark:hover:bg-white/15"
@@ -212,7 +213,7 @@ export default function AdminOrders() {
       <div className="flex flex-1 flex-col min-h-full bg-[#F7F7FA] dark:bg-[#0A0A0D] text-zinc-900 dark:text-zinc-100">
         <header className="bg-white dark:bg-[#1A1A1E] border-b border-zinc-100 dark:border-white/10 px-3 lg:px-4 pt-safe-top pb-2 lg:py-4">
           <div className="flex items-center gap-2 lg:gap-3 min-w-0">
-            <button onClick={() => navigate("/admin")} className="touch-target shrink-0 rounded-lg hover:bg-zinc-100 dark:hover:bg-white/10 transition-colors">
+            <button type="button" onClick={() => navigate("/admin")} aria-label="Volver al panel" className="touch-target shrink-0 rounded-lg hover:bg-zinc-100 dark:hover:bg-white/10 transition-colors">
               <ArrowLeft className="w-4 h-4 lg:w-5 lg:h-5 text-zinc-600 dark:text-zinc-300" />
             </button>
             <h1 className="text-base lg:text-lg font-bold text-zinc-800 dark:text-zinc-100 truncate">Pedidos</h1>
@@ -223,8 +224,10 @@ export default function AdminOrders() {
         <div className="lg:h-full lg:flex lg:flex-col max-w-6xl mx-auto">
           <div className="flex gap-2 lg:gap-3 mb-3 lg:mb-4 lg:shrink-0">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500" />
+              <label htmlFor="orders-search" className="sr-only">Buscar por ID o cliente</label>
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 dark:text-zinc-400" />
               <input
+                id="orders-search"
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -238,10 +241,12 @@ export default function AdminOrders() {
             {["all", "pending_payment", "payment_rejected", "received", "accepted", "preparing", "ready_for_pickup", "driver_assigned", "picked_up", "on_the_way", "delivered", "cancelled"].map((f) => (
               <button
                 key={f}
+                type="button"
                 onClick={() => setFilter(f)}
-                className={`min-h-[36px] px-3 sm:px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold whitespace-nowrap transition-all active:scale-95 shadow-xs ${
+                aria-pressed={filter === f}
+                className={`min-h-11 px-3 sm:px-3.5 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold whitespace-nowrap transition-all active:scale-95 shadow-xs ${
                   filter === f
-                    ? "bg-brand text-white shadow-sm shadow-brand/20"
+                    ? "bg-brand text-zinc-950 shadow-sm shadow-brand/20"
                     : "bg-white dark:bg-[#1A1A1E] text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-white/10 hover:bg-zinc-50 dark:hover:bg-white/10"
                 }`}
               >
@@ -312,7 +317,7 @@ export default function AdminOrders() {
                           />
                         </td>
                         <td className="px-4 py-3 text-center">
-                          <button onClick={() => setSelectedOrderId(o.id)} className="w-9 h-9 inline-flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-white/10 rounded-xl text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors" title="Ver detalles">
+                          <button type="button" onClick={() => setSelectedOrderId(o.id)} aria-label={`Ver detalles del pedido #${o.id}`} className="min-h-11 min-w-11 inline-flex items-center justify-center hover:bg-zinc-100 dark:hover:bg-white/10 rounded-xl text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors" title="Ver detalles">
                             <Eye className="w-5 h-5" />
                           </button>
                         </td>
@@ -377,8 +382,10 @@ export default function AdminOrders() {
                         />
                       </div>
                       <button
+                        type="button"
                         onClick={() => setSelectedOrderId(o.id)}
-                        className="min-h-[40px] min-w-[40px] flex items-center justify-center bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 dark:hover:bg-white/15 rounded-xl text-zinc-700 dark:text-zinc-200 transition-all active:scale-95 shrink-0"
+                        aria-label={`Ver detalles del pedido #${o.id}`}
+                        className="min-h-11 min-w-11 flex items-center justify-center bg-zinc-100 hover:bg-zinc-200 dark:bg-white/10 dark:hover:bg-white/15 rounded-xl text-zinc-700 dark:text-zinc-200 transition-all active:scale-95 shrink-0"
                         title="Ver detalles"
                       >
                         <Eye className="w-5 h-5" />
@@ -413,20 +420,25 @@ export default function AdminOrders() {
       </div>
 
       {/* Details Modal */}
-      {selectedOrderId && (
-        <div className="fixed inset-0 bg-black/70 dark:bg-black/80 backdrop-blur-xs flex items-center justify-center z-[70] p-2.5 sm:p-4 animate-fade-in">
-          <div className="bg-white dark:bg-[#1A1A1E] rounded-2xl w-full max-w-lg max-h-[80dvh] sm:max-h-[85dvh] flex flex-col overflow-hidden shadow-2xl border border-zinc-100 dark:border-white/10 my-auto">
+      <DialogPrimitive.Root open={Boolean(selectedOrderId)} onOpenChange={(open) => { if (!open) setSelectedOrderId(null); }}>
+        {selectedOrderId && (
+          <DialogPrimitive.Portal>
+            <DialogPrimitive.Overlay className="fixed inset-0 z-[70] bg-black/70 dark:bg-black/80 backdrop-blur-xs animate-fade-in" />
+            <DialogPrimitive.Content
+              aria-describedby={undefined}
+              className="fixed left-1/2 top-1/2 z-[70] -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-[#1A1A1E] rounded-2xl w-[calc(100%_-_1.25rem)] sm:w-full max-w-lg max-h-[80dvh] sm:max-h-[85dvh] flex flex-col overflow-hidden shadow-2xl border border-zinc-100 dark:border-white/10 focus:outline-none"
+            >
             <div className="p-3.5 sm:p-4 border-b border-zinc-100 dark:border-white/10 flex items-center justify-between bg-zinc-50/80 dark:bg-white/5 shrink-0">
-              <h2 className="text-base sm:text-lg font-bold text-zinc-800 dark:text-zinc-100 flex items-center gap-2 truncate pr-2">
-                <Package className="w-5 h-5 text-brand shrink-0" />
+              <DialogPrimitive.Title className="text-base sm:text-lg font-bold text-zinc-800 dark:text-zinc-100 flex items-center gap-2 truncate pr-2">
+                <Package className="w-5 h-5 text-brand-strong dark:text-brand shrink-0" />
                 <span className="truncate">Detalles del Pedido #{selectedOrderId}</span>
-              </h2>
-              <button
-                onClick={() => setSelectedOrderId(null)}
-                className="w-8 h-8 flex items-center justify-center text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 rounded-full hover:bg-zinc-200 dark:hover:bg-white/10 transition-colors shrink-0"
+              </DialogPrimitive.Title>
+              <DialogPrimitive.Close
+                aria-label="Cerrar"
+                className="min-h-11 min-w-11 flex items-center justify-center text-zinc-500 dark:text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 rounded-full hover:bg-zinc-200 dark:hover:bg-white/10 transition-colors shrink-0"
               >
                 <X className="w-5 h-5" />
-              </button>
+              </DialogPrimitive.Close>
             </div>
             
             <div className="p-4 sm:p-5 overflow-y-auto flex-1">
@@ -474,7 +486,7 @@ export default function AdminOrders() {
                         <div key={item.id} className="flex justify-between items-start gap-2 text-xs sm:text-sm">
                           <div>
                             <p className="font-semibold text-zinc-800 dark:text-zinc-100">
-                              <span className="text-brand mr-1.5">{item.quantity}x</span>
+                              <span className="text-brand-strong dark:text-brand mr-1.5">{item.quantity}x</span>
                               {item.productName}
                             </p>
                             {item.notes && <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">Nota: {item.notes}</p>}
@@ -507,7 +519,7 @@ export default function AdminOrders() {
                           <button
                             onClick={handleApprovePayment}
                             disabled={updateStatus.isPending}
-                            className="flex-1 min-h-[44px] bg-brand text-white font-semibold py-2 rounded-xl hover:bg-brand-strong active:scale-98 transition-all shadow-sm shadow-brand/20"
+                            className="flex-1 min-h-[44px] bg-brand text-zinc-950 font-semibold py-2 rounded-xl hover:bg-brand-strong active:scale-98 transition-all shadow-sm shadow-brand/20"
                           >
                             {updateStatus.isPending ? "Aprobando..." : "Aprobar Pago"}
                           </button>
@@ -535,7 +547,7 @@ export default function AdminOrders() {
                     </div>
                     <div className="flex justify-between text-sm sm:text-base font-extrabold text-zinc-900 dark:text-zinc-100 pt-2 border-t border-zinc-100 dark:border-white/10">
                       <span>Total</span>
-                      <span className="text-brand">${parseFloat(orderDetails.total || "0").toFixed(2)}</span>
+                      <span className="text-brand-strong dark:text-brand">${parseFloat(orderDetails.total || "0").toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
@@ -545,14 +557,15 @@ export default function AdminOrders() {
             <div className="p-3 sm:p-4 border-t border-zinc-100 dark:border-white/10 bg-zinc-50 dark:bg-white/5 flex justify-end shrink-0">
               <button
                 onClick={() => setSelectedOrderId(null)}
-                className="min-h-[42px] px-5 bg-white dark:bg-[#1A1A1E] border border-zinc-300 dark:border-white/10 rounded-xl text-xs sm:text-sm font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/10 active:scale-98 transition-all shadow-xs dark:shadow-none"
+                className="min-h-11 px-5 bg-white dark:bg-[#1A1A1E] border border-zinc-300 dark:border-white/10 rounded-xl text-xs sm:text-sm font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/10 active:scale-98 transition-all shadow-xs dark:shadow-none"
               >
                 Cerrar
               </button>
             </div>
-          </div>
-        </div>
-      )}
+            </DialogPrimitive.Content>
+          </DialogPrimitive.Portal>
+        )}
+      </DialogPrimitive.Root>
       </div>
     </AdminLayout>
   );

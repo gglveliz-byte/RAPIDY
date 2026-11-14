@@ -147,7 +147,7 @@ export default function DriverChat() {
               >
                 <div className={`max-w-[78%] ${isMine(msg) ? "order-1" : "order-1"}`}>
                   {!isMine(msg) && (
-                    <p className="text-[11px] font-semibold text-brand dark:text-brand ml-1 mb-0.5">
+                    <p className="text-[11px] font-semibold text-brand-strong dark:text-brand ml-1 mb-0.5">
                       {msg.senderName || "Cliente"}
                     </p>
                   )}
@@ -193,7 +193,7 @@ export default function DriverChat() {
             type="button"
             onClick={() => handleSend(qm)}
             disabled={sendChat.isPending}
-            className="min-h-11 px-3 py-1.5 bg-zinc-100 dark:bg-[#1E1E24] border border-zinc-200/70 dark:border-white/10 rounded-full text-xs font-medium text-zinc-700 dark:text-zinc-300 whitespace-nowrap hover:bg-brand-soft hover:text-brand dark:hover:bg-brand/15 dark:hover:text-brand dark:hover:border-brand/30 transition-colors shadow-sm dark:shadow-none disabled:opacity-40"
+            className="min-h-11 px-3 py-1.5 bg-zinc-100 dark:bg-[#1E1E24] border border-zinc-200/70 dark:border-white/10 rounded-full text-xs font-medium text-zinc-700 dark:text-zinc-300 whitespace-nowrap hover:bg-brand-soft hover:text-brand-strong dark:hover:bg-brand/15 dark:hover:text-brand dark:hover:border-brand/30 transition-colors shadow-sm dark:shadow-none disabled:opacity-40"
           >
             {qm}
           </button>
@@ -222,7 +222,7 @@ export default function DriverChat() {
           onClick={() => handleSend(text)}
           disabled={sendChat.isPending || !text.trim()}
           aria-label="Enviar mensaje"
-          className="w-11 h-11 bg-brand rounded-full flex items-center justify-center text-white hover:bg-brand-strong disabled:opacity-40 transition-all flex-shrink-0 shadow-sm dark:shadow-none"
+          className="w-11 h-11 bg-brand rounded-full flex items-center justify-center text-zinc-950 hover:brightness-110 disabled:opacity-40 transition-all flex-shrink-0 shadow-sm dark:shadow-none"
         >
           <Send className="w-4 h-4" />
         </button>

@@ -397,11 +397,17 @@ export const adminOrdersProcedures = {
           })()
         : null;
       const { idempotencyKey: _idempotencyKey, ...safeOrder } = order;
+      const customer = customerRows[0]
+        ? (() => {
+            const { fcmToken: _fcmToken, ...safe } = customerRows[0];
+            return safe;
+          })()
+        : null;
 
       return {
         ...safeOrder,
         items,
-        customer: customerRows[0] ?? null,
+        customer,
         driver,
         commerces: coms,
         commerceStatuses: statuses,
@@ -570,12 +576,37 @@ export const adminOrdersProcedures = {
           await tx.update(drivers).set({ status: "busy" }).where(eq(drivers.id, driver.id));
         }
 
+        if (
+          input.status === "payment_rejected" &&
+          !["pending_payment", "payment_rejected"].includes(current.status)
+        ) {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message:
+              "Solo se puede rechazar un pago que está pendiente o ya rechazado.",
+          });
+        }
+        if (
+          input.status === "received" &&
+          !["pending_payment", "payment_rejected", "received"].includes(current.status)
+        ) {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: "Solo se puede aprobar un pago pendiente o rechazado.",
+          });
+        }
+
         const updateData: Partial<typeof orders.$inferInsert> = {
           status: input.status,
           updatedAt: new Date(),
         };
         if (input.status === "delivered" && !current.deliveredAt) {
           updateData.deliveredAt = new Date();
+        }
+        if (input.status === "cancelled") {
+          updateData.cancelledBy = "admin";
+          updateData.cancellationReason =
+            input.notes?.trim() || "Cancelado por el administrador";
         }
         if (input.driverId !== undefined) updateData.driverId = input.driverId;
         if (assignedCommissionRate !== null) {

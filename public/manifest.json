@@ -2,24 +2,26 @@
   "name": "Rapidy",
   "short_name": "Rapidy",
   "description": "Plataforma de delivery multi-comercio",
+  "lang": "es-EC",
   "id": "/?app=cliente",
-  "start_url": "/?source=pwa",
+  "start_url": "/?source=pwa&app=cliente",
   "scope": "/",
   "display": "standalone",
   "background_color": "#121212",
-  "theme_color": "#FF6A00",
+  "theme_color": "#121212",
+  "categories": ["food", "shopping"],
   "icons": [
     {
       "src": "/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     }
   ]
 }

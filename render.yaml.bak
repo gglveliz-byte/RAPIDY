@@ -11,7 +11,7 @@ services:
       - key: APP_ID
         value: quickgo-app
       - key: APP_SECRET
-        value: quickgo_dev_secret_2024_para_desarrollo
+        value: CHANGE_ME_generate_a_unique_secret_at_least_32_chars
         sync: false
       - key: DATABASE_URL
         sync: false

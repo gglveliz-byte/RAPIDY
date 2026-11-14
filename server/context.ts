@@ -49,6 +49,7 @@ async function getCustomerFromCookie(headers: Headers, resHeaders: Headers): Pro
   
   let customerId: number | null = null;
   let expectedSessionVersion: number | null = null;
+  let refreshedFromCookie = false;
 
   if (token) {
     const payload = await verifyAccessTokenPayload(token);
@@ -60,9 +61,7 @@ async function getCustomerFromCookie(headers: Headers, resHeaders: Headers): Pro
     const payload = await verifyRefreshTokenPayload(refreshToken);
     customerId = payload?.customerId ?? null;
     expectedSessionVersion = payload?.sessionVersion ?? null;
-    if (customerId) {
-      await setCustomerCookies(resHeaders, headers, customerId);
-    }
+    refreshedFromCookie = Boolean(customerId);
   }
 
   if (!customerId) return null;
@@ -71,8 +70,15 @@ async function getCustomerFromCookie(headers: Headers, resHeaders: Headers): Pro
   const result = await db.select().from(customers).where(eq(customers.id, customerId));
   const customer = result[0];
   if (!customer || customer.deletedAt) return null;
-  if (expectedSessionVersion !== null && (customer.sessionVersion ?? 0) !== expectedSessionVersion) {
+  if (
+    expectedSessionVersion !== null &&
+    (customer.sessionVersion ?? 0) !== expectedSessionVersion
+  ) {
     return null;
+  }
+  // Solo se reemiten cookies después de validar rol y sessionVersion.
+  if (refreshedFromCookie) {
+    await setCustomerCookies(resHeaders, headers, customer.id);
   }
   return customer;
 }
@@ -84,6 +90,7 @@ async function getAdminFromCookie(headers: Headers, resHeaders?: Headers): Promi
 
   let adminId: number | null = null;
   let expectedSessionVersion: number | null = null;
+  let refreshedFromCookie = false;
 
   if (token) {
     const payload = await verifyAdminTokenPayload(token);
@@ -95,9 +102,7 @@ async function getAdminFromCookie(headers: Headers, resHeaders?: Headers): Promi
     const payload = await verifyAdminRefreshTokenPayload(refreshToken);
     adminId = payload?.userId ?? null;
     expectedSessionVersion = payload?.sessionVersion ?? null;
-    if (adminId && resHeaders) {
-      await setAdminCookie(resHeaders, headers, adminId);
-    }
+    refreshedFromCookie = Boolean(adminId);
   }
 
   if (!adminId) return null;
@@ -111,6 +116,9 @@ async function getAdminFromCookie(headers: Headers, resHeaders?: Headers): Promi
     (user.sessionVersion ?? 0) !== expectedSessionVersion
   ) {
     return null;
+  }
+  if (refreshedFromCookie && resHeaders) {
+    await setAdminCookie(resHeaders, headers, user.id);
   }
   return user;
 }
@@ -165,6 +173,7 @@ async function getMerchantFromCookie(headers: Headers, resHeaders: Headers): Pro
 
   let userId: number | null = null;
   let expectedSessionVersion: number | null = null;
+  let refreshedFromCookie = false;
 
   if (token) {
     const payload = await verifyMerchantTokenPayload(token);
@@ -176,13 +185,7 @@ async function getMerchantFromCookie(headers: Headers, resHeaders: Headers): Pro
     const payload = await verifyMerchantRefreshTokenPayload(refreshToken);
     userId = payload?.userId ?? null;
     expectedSessionVersion = payload?.sessionVersion ?? null;
-    if (userId) {
-      const db = getDb();
-      const result = await db.select().from(users).where(and(eq(users.id, userId), eq(users.role, "merchant")));
-      if (result.length > 0) {
-        await setMerchantCookie(resHeaders, headers, userId);
-      }
-    }
+    refreshedFromCookie = Boolean(userId);
   }
 
   if (!userId) return null;
@@ -196,6 +199,9 @@ async function getMerchantFromCookie(headers: Headers, resHeaders: Headers): Pro
     (user.sessionVersion ?? 0) !== expectedSessionVersion
   ) {
     return null;
+  }
+  if (refreshedFromCookie) {
+    await setMerchantCookie(resHeaders, headers, user.id);
   }
   return user;
 }

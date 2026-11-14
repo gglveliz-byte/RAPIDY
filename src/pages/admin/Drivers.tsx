@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import {
   ArrowLeft, Star, Search, Bike, X, Plus, Trash2,
 } from "lucide-react";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { toast } from "sonner";
 import { trpcMutate } from "@/hooks/useDeliveryData";
 import { trpc } from "@/providers/trpc";
@@ -20,6 +21,14 @@ export default function AdminDrivers() {
   const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState({ name: "", phone: "", password: "", vehicle: "", licensePlate: "", commissionRate: "75" });
   const [saving, setSaving] = useState(false);
+  const phoneFieldRef = useRef<HTMLDivElement>(null);
+
+  // PhoneInput no expone props de label; asociamos su input al label visible.
+  useEffect(() => {
+    if (!showForm) return;
+    const input = phoneFieldRef.current?.querySelector("input");
+    input?.setAttribute("aria-labelledby", "driver-phone-label");
+  }, [showForm]);
 
   const filtered = driverList.filter((d) =>
     d.name?.toLowerCase().includes(search.toLowerCase())
@@ -88,12 +97,12 @@ export default function AdminDrivers() {
       <header className="bg-white dark:bg-[#111115] border-b border-zinc-100 dark:border-white/10 px-3 lg:px-4 pt-safe-top pb-2 lg:py-4">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 lg:gap-3 min-w-0">
-            <button onClick={() => navigate("/admin")} className="touch-target shrink-0">
+            <button type="button" onClick={() => navigate("/admin")} aria-label="Volver al panel" className="touch-target shrink-0">
               <ArrowLeft className="w-4 h-4 lg:w-5 lg:h-5 text-zinc-500 dark:text-zinc-400" />
             </button>
             <h1 className="text-base lg:text-lg font-bold text-zinc-900 dark:text-zinc-100 truncate">Repartidores</h1>
           </div>
-          <button onClick={openCreate} className="flex items-center gap-1.5 lg:gap-2 bg-brand text-white px-3 lg:px-4 py-1.5 lg:py-2 rounded-xl text-xs lg:text-sm font-medium hover:bg-brand-strong transition-colors shrink-0 shadow-xs shadow-brand/20">
+          <button type="button" onClick={openCreate} className="min-h-11 flex items-center gap-1.5 lg:gap-2 bg-brand text-zinc-950 px-3 lg:px-4 py-1.5 lg:py-2 rounded-xl text-xs lg:text-sm font-semibold hover:bg-brand-strong transition-colors shrink-0 shadow-xs shadow-brand/20">
             <Plus className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
             <span>Nuevo</span>
           </button>
@@ -103,7 +112,7 @@ export default function AdminDrivers() {
       <div className="flex-1 bg-[#F7F7FA] dark:bg-[#0A0A0D] p-2 lg:p-4 lg:overflow-hidden">
         <div className="lg:h-full lg:flex lg:flex-col max-w-6xl mx-auto">
           {loading ? (
-            <div className="text-center py-12 text-zinc-500 dark:text-zinc-400 text-sm">Cargando...</div>
+            <div role="status" aria-live="polite" className="text-center py-12 text-zinc-500 dark:text-zinc-400 text-sm">Cargando...</div>
           ) : (
             <>
               {/* Status Cards */}
@@ -124,8 +133,10 @@ export default function AdminDrivers() {
 
               {/* Search */}
               <div className="relative mb-3 lg:mb-4 lg:shrink-0">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500" />
+                <label htmlFor="driver-search" className="sr-only">Buscar repartidor</label>
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                 <input
+                  id="driver-search"
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
@@ -182,8 +193,8 @@ export default function AdminDrivers() {
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">
-                              <button onClick={() => openEdit(d)} className="text-xs text-brand hover:bg-brand-soft dark:hover:bg-brand/10 px-2 py-1 rounded-lg transition-colors">Editar</button>
-                              <button onClick={() => handleDeleteDriver(d.id, d.name)} className="p-1.5 text-zinc-400 dark:text-zinc-500 hover:text-red-600 dark:hover:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10" title="Eliminar">
+                              <button type="button" onClick={() => openEdit(d)} aria-label={`Editar a ${d.name}`} className="min-h-11 min-w-11 px-2.5 text-xs text-brand-strong dark:text-brand hover:bg-brand-soft dark:hover:bg-brand/10 rounded-lg transition-colors">Editar</button>
+                              <button type="button" onClick={() => handleDeleteDriver(d.id, d.name)} aria-label={`Eliminar a ${d.name}`} className="min-h-11 min-w-11 inline-flex items-center justify-center text-zinc-500 dark:text-zinc-400 hover:text-red-600 dark:hover:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10" title="Eliminar">
                                 <Trash2 className="w-4 h-4" />
                               </button>
                             </div>
@@ -191,7 +202,7 @@ export default function AdminDrivers() {
                         </tr>
                       ))}
                       {filtered.length === 0 && (
-                        <tr><td colSpan={7} className="text-center py-8 text-zinc-400 dark:text-zinc-500 text-sm">Sin repartidores</td></tr>
+                        <tr><td colSpan={7} className="text-center py-8 text-zinc-500 dark:text-zinc-400 text-sm">Sin repartidores</td></tr>
                       )}
                     </tbody>
                   </table>
@@ -237,20 +248,23 @@ export default function AdminDrivers() {
                           </div>
                           <div>
                             <span className="block text-[10px] text-zinc-500 dark:text-zinc-400">Comisión</span>
-                            <span className="text-brand font-semibold text-xs sm:text-sm">{d.commissionRate || "75"}%</span>
+                            <span className="text-brand-strong dark:text-brand font-semibold text-xs sm:text-sm">{d.commissionRate || "75"}%</span>
                           </div>
                         </div>
 
                         <div className="pt-2 border-t border-zinc-100 dark:border-white/10 flex items-center justify-end gap-2">
                           <button
+                            type="button"
                             onClick={() => openEdit(d)}
-                            className="min-h-[44px] px-4 text-xs font-semibold text-brand bg-brand-soft dark:bg-brand/10 hover:bg-brand/15 dark:hover:bg-brand/20 rounded-xl transition-all active:scale-95"
+                            className="min-h-11 px-4 text-xs font-semibold text-brand-strong dark:text-brand bg-brand-soft dark:bg-brand/10 hover:bg-brand/15 dark:hover:bg-brand/20 rounded-xl transition-all active:scale-95"
                           >
                             Editar
                           </button>
                           <button
+                            type="button"
                             onClick={() => handleDeleteDriver(d.id, d.name)}
-                            className="min-h-[44px] w-10 flex items-center justify-center text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 rounded-xl transition-all active:scale-95"
+                            aria-label={`Eliminar a ${d.name}`}
+                            className="min-h-11 min-w-11 flex items-center justify-center text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 rounded-xl transition-all active:scale-95"
                             title="Eliminar"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -267,18 +281,22 @@ export default function AdminDrivers() {
       </div>
 
       {/* Modal */}
-      {showForm && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center z-[70] p-2.5 sm:p-4 animate-fade-in">
-          <div className="bg-white dark:bg-[#16161B] rounded-2xl w-full max-w-md max-h-[80dvh] sm:max-h-[85dvh] flex flex-col shadow-2xl border border-zinc-100 dark:border-white/10 overflow-hidden my-auto">
+      <DialogPrimitive.Root open={showForm} onOpenChange={(open) => { if (!open) setShowForm(false); }}>
+        <DialogPrimitive.Portal>
+          <DialogPrimitive.Overlay className="fixed inset-0 z-[70] bg-black/70 backdrop-blur-xs animate-fade-in" />
+          <DialogPrimitive.Content
+            aria-describedby={undefined}
+            className="fixed left-1/2 top-1/2 z-[70] -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-[#16161B] rounded-2xl w-[calc(100%_-_1.25rem)] sm:w-full max-w-md max-h-[80dvh] sm:max-h-[85dvh] flex flex-col shadow-2xl border border-zinc-100 dark:border-white/10 overflow-hidden focus:outline-none"
+          >
             {/* Sticky Header */}
             <div className="flex items-center justify-between p-3.5 sm:p-5 border-b border-zinc-100 dark:border-white/10 shrink-0 bg-white dark:bg-[#16161B]">
-              <h2 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100">{editing ? "Editar repartidor" : "Nuevo repartidor"}</h2>
-              <button
-                onClick={() => setShowForm(false)}
-                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-zinc-100 dark:hover:bg-white/10 text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+              <DialogPrimitive.Title className="text-base sm:text-lg font-bold text-zinc-900 dark:text-zinc-100">{editing ? "Editar repartidor" : "Nuevo repartidor"}</DialogPrimitive.Title>
+              <DialogPrimitive.Close
+                aria-label="Cerrar"
+                className="min-h-11 min-w-11 flex items-center justify-center rounded-full hover:bg-zinc-100 dark:hover:bg-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
               >
                 <X className="w-5 h-5" />
-              </button>
+              </DialogPrimitive.Close>
             </div>
 
             {/* Scrollable Form Body */}
@@ -290,8 +308,9 @@ export default function AdminDrivers() {
                     : "Registra a un nuevo repartidor en el sistema. Con el teléfono y la contraseña que ingreses aquí, el repartidor podrá iniciar sesión en su propia aplicación."}
                 </p>
                 <div>
-                  <label className="text-[10px] uppercase font-bold text-zinc-500 dark:text-zinc-400 mb-1 block">Nombre completo</label>
+                  <label htmlFor="driver-name" className="text-[10px] uppercase font-bold text-zinc-500 dark:text-zinc-400 mb-1 block">Nombre completo</label>
                   <input
+                    id="driver-name"
                     placeholder="Ej: Carlos Ramírez"
                     value={form.name}
                     onChange={(e) => setForm({...form, name: e.target.value})}
@@ -300,16 +319,17 @@ export default function AdminDrivers() {
                   />
                 </div>
                 
-                <div>
-                  <label className="text-[10px] uppercase font-bold text-zinc-500 dark:text-zinc-400 mb-1 block">Teléfono (Usuario para Login)</label>
+                <div ref={phoneFieldRef}>
+                  <label id="driver-phone-label" className="text-[10px] uppercase font-bold text-zinc-500 dark:text-zinc-400 mb-1 block">Teléfono (Usuario para Login)</label>
                   <div className="dark:[&_label]:text-zinc-400 dark:[&_input]:text-zinc-100 dark:[&_input]:placeholder:text-zinc-500 dark:[&_p]:text-zinc-500 dark:[&_svg]:text-zinc-500 dark:[&>div>div]:bg-[#16161B] dark:[&>div>div]:border-white/10 dark:[&>div>div>div>button]:bg-[#1A1A1E] dark:[&>div>div>div>button]:text-zinc-200 dark:[&>div>div>div>button]:border-white/10 dark:[&_.absolute]:bg-[#1F1F22] dark:[&_.absolute]:border-white/15 dark:[&_.absolute_button]:text-zinc-200 dark:[&_.absolute_button:hover]:bg-white/10">
                     <PhoneInput value={form.phone} onChange={(v) => setForm({...form, phone: v})} />
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-[10px] uppercase font-bold text-zinc-500 dark:text-zinc-400 mb-1 block">{editing ? "Cambiar Contraseña (opcional)" : "Contraseña de acceso"}</label>
+                  <label htmlFor="driver-password" className="text-[10px] uppercase font-bold text-zinc-500 dark:text-zinc-400 mb-1 block">{editing ? "Cambiar Contraseña (opcional)" : "Contraseña de acceso"}</label>
                   <input
+                    id="driver-password"
                     type="password"
                     placeholder={editing ? "Dejar vacío para no cambiarla" : "Mínimo 8 caracteres"}
                     value={form.password}
@@ -322,8 +342,9 @@ export default function AdminDrivers() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[10px] uppercase font-bold text-zinc-500 dark:text-zinc-400 mb-1 block">Vehículo</label>
+                    <label htmlFor="driver-vehicle" className="text-[10px] uppercase font-bold text-zinc-500 dark:text-zinc-400 mb-1 block">Vehículo</label>
                     <input
+                      id="driver-vehicle"
                       placeholder="Ej: Moto Honda 150"
                       value={form.vehicle}
                       onChange={(e) => setForm({...form, vehicle: e.target.value})}
@@ -331,8 +352,9 @@ export default function AdminDrivers() {
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] uppercase font-bold text-zinc-500 dark:text-zinc-400 mb-1 block">Patente</label>
+                    <label htmlFor="driver-license-plate" className="text-[10px] uppercase font-bold text-zinc-500 dark:text-zinc-400 mb-1 block">Patente</label>
                     <input
+                      id="driver-license-plate"
                       placeholder="Ej: ABC-123"
                       value={form.licensePlate}
                       onChange={(e) => setForm({...form, licensePlate: e.target.value})}
@@ -342,9 +364,10 @@ export default function AdminDrivers() {
                 </div>
 
                 <div>
-                  <label className="text-[10px] uppercase font-bold text-zinc-500 dark:text-zinc-400 mb-1 block">Ganancia del Repartidor (%)</label>
-                  <p className="text-[10px] text-zinc-400 dark:text-zinc-500 mb-2">Porcentaje del "Costo de Envío" que el repartidor se queda para él.</p>
+                  <label htmlFor="driver-commission" className="text-[10px] uppercase font-bold text-zinc-500 dark:text-zinc-400 mb-1 block">Ganancia del Repartidor (%)</label>
+                  <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mb-2">Porcentaje del "Costo de Envío" que el repartidor se queda para él.</p>
                   <input
+                    id="driver-commission"
                     type="number"
                     min="0"
                     max="100"
@@ -367,15 +390,15 @@ export default function AdminDrivers() {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="flex-1 h-11 bg-brand text-white rounded-xl text-sm font-semibold hover:bg-brand-strong transition-all active:scale-98 disabled:opacity-50 shadow-sm shadow-brand/20"
+                  className="flex-1 h-11 bg-brand text-zinc-950 rounded-xl text-sm font-semibold hover:bg-brand-strong transition-all active:scale-98 disabled:opacity-50 shadow-sm shadow-brand/20"
                 >
                   {saving ? "Guardando..." : "Guardar repartidor"}
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+          </DialogPrimitive.Content>
+        </DialogPrimitive.Portal>
+      </DialogPrimitive.Root>
     </AdminLayout>
   );
 }

@@ -26,6 +26,10 @@ dist-ssr
 .env
 .env.local
 .env.*.local
+.env.production
+.env.staging
+.env.development
+backups/
 # Database
 *.db
 *.sqlite

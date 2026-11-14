@@ -139,7 +139,7 @@ export default function CommerceProducts() {
     setDeleting(true);
     setDeleteError(null);
     try {
-      await deleteProductMutation.mutateAsync(confirmingDelete.id);
+      await deleteProductMutation.mutateAsync({ id: confirmingDelete.id });
       setConfirmingDelete(null);
     } catch (err: any) {
       setDeleteError(err?.message || "No se pudo eliminar el producto.");

@@ -110,7 +110,7 @@ export default function AdminProducts() {
       <div className="flex-1 flex flex-col bg-[#F7F7FA] dark:bg-[#0A0A0D] text-zinc-900 dark:text-zinc-100">
         <header className="bg-white dark:bg-[#111115] border-b border-zinc-100 dark:border-white/10 px-3 lg:px-4 pt-safe-top pb-2 lg:py-4">
           <div className="flex items-center gap-2 lg:gap-3 min-w-0">
-            <button onClick={() => navigate("/admin")} className="touch-target shrink-0">
+            <button type="button" onClick={() => navigate("/admin")} aria-label="Volver al panel" className="touch-target shrink-0">
               <ArrowLeft className="w-4 h-4 lg:w-5 lg:h-5 text-zinc-600 dark:text-zinc-300" />
             </button>
             <h1 className="text-base lg:text-lg font-bold text-zinc-900 dark:text-zinc-100 truncate">Productos</h1>
@@ -122,20 +122,24 @@ export default function AdminProducts() {
             {/* Tabs */}
             <div className="flex gap-2 mb-3 lg:mb-4 lg:shrink-0">
               <button
+                type="button"
                 onClick={() => setActiveTab("ranking")}
-                className={`min-h-[40px] px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all active:scale-95 shadow-xs ${
+                aria-pressed={activeTab === "ranking"}
+                className={`min-h-11 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all active:scale-95 shadow-xs ${
                   activeTab === "ranking"
-                    ? "bg-brand text-white shadow-sm shadow-brand/20"
+                    ? "bg-brand text-zinc-950 shadow-sm shadow-brand/20"
                     : "bg-white dark:bg-[#1A1A1E] text-zinc-600 dark:text-zinc-300 border border-zinc-100 dark:border-white/10 hover:bg-zinc-50 dark:hover:bg-white/5"
                 }`}
               >
                 Más vendidos
               </button>
               <button
+                type="button"
                 onClick={() => setActiveTab("all")}
-                className={`min-h-[40px] px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all active:scale-95 shadow-xs ${
+                aria-pressed={activeTab === "all"}
+                className={`min-h-11 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all active:scale-95 shadow-xs ${
                   activeTab === "all"
-                    ? "bg-brand text-white shadow-sm shadow-brand/20"
+                    ? "bg-brand text-zinc-950 shadow-sm shadow-brand/20"
                     : "bg-white dark:bg-[#1A1A1E] text-zinc-600 dark:text-zinc-300 border border-zinc-100 dark:border-white/10 hover:bg-zinc-50 dark:hover:bg-white/5"
                 }`}
               >
@@ -151,17 +155,17 @@ export default function AdminProducts() {
                   <>
                     <div className="grid grid-cols-3 gap-2 lg:gap-4 lg:shrink-0">
                       <div className="bg-white dark:bg-[#1A1A1E] border border-zinc-100 dark:border-white/10 rounded-xl card-shadow dark:shadow-none p-2.5 sm:p-3 lg:p-5 text-center lg:text-left">
-                        <Package className="w-4 h-4 lg:w-5 lg:h-5 text-brand mb-1 lg:mb-2 mx-auto lg:mx-0" />
+                        <Package className="w-4 h-4 lg:w-5 lg:h-5 text-brand-strong dark:text-brand mb-1 lg:mb-2 mx-auto lg:mx-0" />
                         <p className="text-base sm:text-xl lg:text-2xl font-extrabold text-zinc-900 dark:text-zinc-100 leading-tight">{totalProducts}</p>
                         <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium leading-tight">Prods. top</p>
                       </div>
                       <div className="bg-white dark:bg-[#1A1A1E] border border-zinc-100 dark:border-white/10 rounded-xl card-shadow dark:shadow-none p-2.5 sm:p-3 lg:p-5 text-center lg:text-left">
-                        <TrendingUp className="w-4 h-4 lg:w-5 lg:h-5 text-brand mb-1 lg:mb-2 mx-auto lg:mx-0" />
+                        <TrendingUp className="w-4 h-4 lg:w-5 lg:h-5 text-brand-strong dark:text-brand mb-1 lg:mb-2 mx-auto lg:mx-0" />
                         <p className="text-base sm:text-xl lg:text-2xl font-extrabold text-zinc-900 dark:text-zinc-100 leading-tight">{totalSold.toLocaleString()}</p>
                         <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium leading-tight">U. vendidas</p>
                       </div>
                       <div className="bg-white dark:bg-[#1A1A1E] border border-zinc-100 dark:border-white/10 rounded-xl card-shadow dark:shadow-none p-2.5 sm:p-3 lg:p-5 text-center lg:text-left">
-                        <DollarSign className="w-4 h-4 lg:w-5 lg:h-5 text-brand mb-1 lg:mb-2 mx-auto lg:mx-0" />
+                        <DollarSign className="w-4 h-4 lg:w-5 lg:h-5 text-brand-strong dark:text-brand mb-1 lg:mb-2 mx-auto lg:mx-0" />
                         <p className="text-base sm:text-xl lg:text-2xl font-extrabold text-zinc-900 dark:text-zinc-100 leading-tight">${totalRevenue.toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
                         <p className="text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400 font-medium leading-tight">Ingresos</p>
                       </div>
@@ -186,7 +190,7 @@ export default function AdminProducts() {
                         <tr key={p.id} className="hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors">
                           <td className="px-4 py-3">
                             <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                              i < 3 ? "bg-brand text-white" : "bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-300"
+                              i < 3 ? "bg-brand text-zinc-950" : "bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-300"
                             }`}>
                               {i + 1}
                             </span>
@@ -199,7 +203,7 @@ export default function AdminProducts() {
                               <span className="text-xs px-2 py-0.5 bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-300 rounded-full">{p.category || "-"}</span>
                             </td>
                             <td className="px-4 py-3 text-zinc-900 dark:text-zinc-100 font-medium">{Number(p.sold || 0).toLocaleString()}</td>
-                            <td className="px-4 py-3 font-medium text-brand">${Number(p.revenue || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                            <td className="px-4 py-3 font-medium text-brand-strong dark:text-brand">${Number(p.revenue || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -215,7 +219,7 @@ export default function AdminProducts() {
                         <div key={p.id} className="bg-white dark:bg-[#1A1A1E] border border-zinc-100 dark:border-white/10 rounded-xl card-shadow dark:shadow-none p-4 flex flex-col gap-2">
                           <div className="flex items-start gap-3">
                             <span className={`w-6 h-6 shrink-0 rounded-full flex items-center justify-center text-xs font-bold ${
-                              i < 3 ? "bg-brand text-white" : "bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-300"
+                              i < 3 ? "bg-brand text-zinc-950" : "bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-300"
                             }`}>
                               {i + 1}
                             </span>
@@ -233,7 +237,7 @@ export default function AdminProducts() {
                             </div>
                             <div className="text-right">
                               <span className="block text-[10px] text-zinc-500 dark:text-zinc-400">Facturación</span>
-                              <span className="font-medium text-brand">${Number(p.revenue || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                              <span className="font-medium text-brand-strong dark:text-brand">${Number(p.revenue || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
                             </div>
                           </div>
                         </div>
@@ -251,8 +255,10 @@ export default function AdminProducts() {
                 {/* Search bar */}
                 <div className="bg-white dark:bg-[#1A1A1E] border border-zinc-100 dark:border-white/10 rounded-xl card-shadow dark:shadow-none p-2 lg:p-4 lg:shrink-0">
                   <div className="relative">
-                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 dark:text-zinc-500" />
+                    <label htmlFor="product-search" className="sr-only">Buscar producto por nombre</label>
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 dark:text-zinc-400" />
                     <input
+                      id="product-search"
                       type="text"
                       placeholder="Buscar producto por nombre..."
                       value={search}
@@ -267,8 +273,9 @@ export default function AdminProducts() {
                     <div className="bg-white dark:bg-[#1A1A1E] border border-zinc-100 dark:border-white/10 rounded-xl p-6 text-center">
                       <p className="text-sm font-medium text-red-600 dark:text-red-400 mb-3">{errorAll}</p>
                       <button
+                        type="button"
                         onClick={loadAllProducts}
-                        className="min-h-[40px] px-4 py-2 bg-brand text-white rounded-xl text-xs sm:text-sm font-semibold hover:bg-brand-strong transition-colors"
+                        className="min-h-11 px-4 py-2 bg-brand text-zinc-950 rounded-xl text-xs sm:text-sm font-semibold hover:bg-brand-strong transition-colors"
                       >
                         Reintentar
                       </button>
@@ -315,7 +322,7 @@ export default function AdminProducts() {
                               </td>
                               <td className="px-4 py-3 font-medium text-zinc-900 dark:text-zinc-100">
                                 ${Number(p.price || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}
-                                <span className="text-[11px] text-zinc-400 dark:text-zinc-500 font-normal ml-1">
+                                <span className="text-[11px] text-zinc-500 dark:text-zinc-400 font-normal ml-1">
                                   {p.unitType === "kg" ? "/kg" : "/u"}
                                 </span>
                               </td>
@@ -332,7 +339,8 @@ export default function AdminProducts() {
                                 <button
                                   type="button"
                                   onClick={() => toggleFeatured(p)}
-                                  className="min-h-[36px] min-w-[36px] inline-flex items-center justify-center rounded-lg hover:bg-amber-50 dark:hover:bg-amber-500/10"
+                                  aria-label={p.isFeatured === "yes" ? `Quitar destacado a ${p.name}` : `Destacar ${p.name}`}
+                                  className="min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg hover:bg-amber-50 dark:hover:bg-amber-500/10"
                                   title={p.isFeatured === "yes" ? "Quitar destacado" : "Destacar"}
                                 >
                                   {p.isFeatured === "yes" ? (
@@ -347,7 +355,7 @@ export default function AdminProducts() {
                                   <button
                                     type="button"
                                     onClick={() => toggleAvailability(p)}
-                                    className="min-h-[36px] px-2.5 inline-flex items-center gap-1 text-[11px] font-semibold rounded-lg bg-zinc-100 dark:bg-white/10 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-white/15"
+                                    className="min-h-11 px-2.5 inline-flex items-center gap-1 text-[11px] font-semibold rounded-lg bg-zinc-100 dark:bg-white/10 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-white/15"
                                     title={p.adminPaused ? "Reactivar" : "Pausar"}
                                   >
                                     {p.adminPaused ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
@@ -356,7 +364,8 @@ export default function AdminProducts() {
                                   <button
                                     type="button"
                                     onClick={() => deleteProduct(p)}
-                                    className="min-h-[36px] min-w-[36px] inline-flex items-center justify-center rounded-lg bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/20"
+                                    aria-label={`Eliminar ${p.name}`}
+                                    className="min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/20"
                                     title="Eliminar"
                                   >
                                     <Trash2 className="w-3.5 h-3.5" />
@@ -367,7 +376,7 @@ export default function AdminProducts() {
                           ))}
                           {filteredProducts.length === 0 && !loadingAll && (
                             <tr>
-                              <td colSpan={8} className="px-2 lg:px-4 py-8 lg:py-12 text-center text-zinc-400 dark:text-zinc-500 text-xs lg:text-sm">
+                              <td colSpan={8} className="px-2 lg:px-4 py-8 lg:py-12 text-center text-zinc-500 dark:text-zinc-400 text-xs lg:text-sm">
                                 No se encontraron productos
                               </td>
                             </tr>
@@ -400,9 +409,9 @@ export default function AdminProducts() {
                                   <p className="text-[10px] text-zinc-500 dark:text-zinc-400 truncate">{p.commerceName}</p>
                                 </div>
                                 <div className="text-right shrink-0">
-                                  <p className="font-bold text-brand">
+                                  <p className="font-bold text-brand-strong dark:text-brand">
                                     ${Number(p.price || 0).toLocaleString(undefined, {minimumFractionDigits: 2})}
-                                    <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-normal ml-0.5">
+                                    <span className="text-[10px] text-zinc-500 dark:text-zinc-400 font-normal ml-0.5">
                                       {p.unitType === "kg" ? "/kg" : "/u"}
                                     </span>
                                   </p>
@@ -426,7 +435,8 @@ export default function AdminProducts() {
                                 <button
                                   type="button"
                                   onClick={() => toggleFeatured(p)}
-                                  className="ml-auto min-h-[32px] min-w-[32px] inline-flex items-center justify-center rounded-lg hover:bg-amber-50 dark:hover:bg-amber-500/10"
+                                  aria-label={p.isFeatured === "yes" ? `Quitar destacado a ${p.name}` : `Destacar ${p.name}`}
+                                  className="ml-auto min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg hover:bg-amber-50 dark:hover:bg-amber-500/10"
                                   title={p.isFeatured === "yes" ? "Quitar destacado" : "Destacar"}
                                 >
                                   {p.isFeatured === "yes" ? (
@@ -441,7 +451,7 @@ export default function AdminProducts() {
                                 <button
                                   type="button"
                                   onClick={() => toggleAvailability(p)}
-                                  className="flex-1 min-h-[38px] inline-flex items-center justify-center gap-1.5 text-[11px] font-semibold rounded-lg bg-zinc-100 dark:bg-white/10 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-white/15"
+                                  className="flex-1 min-h-11 inline-flex items-center justify-center gap-1.5 text-[11px] font-semibold rounded-lg bg-zinc-100 dark:bg-white/10 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-white/15"
                                 >
                                   {p.adminPaused ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
                                   {p.adminPaused ? "Reactivar" : "Pausar"}
@@ -449,7 +459,8 @@ export default function AdminProducts() {
                                 <button
                                   type="button"
                                   onClick={() => deleteProduct(p)}
-                                  className="min-h-[38px] min-w-[38px] inline-flex items-center justify-center rounded-lg bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/20"
+                                  aria-label={`Eliminar ${p.name}`}
+                                  className="min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/20"
                                   title="Eliminar"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />

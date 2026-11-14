@@ -67,8 +67,9 @@ export default function DriverEarnings() {
 
   if (isLoading) {
     return (
-      <div className="mobile-container bg-zinc-50 dark:bg-[#0A0A0D] min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-brand" />
+      <div role="status" aria-live="polite" className="mobile-container bg-zinc-50 dark:bg-[#0A0A0D] min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-brand" aria-hidden="true" />
+        <span className="sr-only">Cargando ganancias…</span>
       </div>
     );
   }
@@ -81,7 +82,7 @@ export default function DriverEarnings() {
         <button
           type="button"
           onClick={() => refetch()}
-          className="mt-4 px-4 py-2 rounded-lg bg-brand hover:bg-brand-strong text-white text-xs font-bold transition-colors"
+          className="mt-4 min-h-11 px-4 py-2 rounded-lg bg-brand hover:brightness-110 text-zinc-950 text-xs font-bold transition-colors"
         >
           Reintentar
         </button>
@@ -94,8 +95,8 @@ export default function DriverEarnings() {
       {/* Header */}
       <div className="bg-gradient-to-br from-brand to-brand-strong px-4 pt-4 pb-6">
         <div className="flex items-center justify-between mb-4">
-          <button onClick={() => navigate("/driver")} className="text-white/80 hover:text-white touch-target">
-            <ArrowLeft className="w-6 h-6" />
+          <button onClick={() => navigate("/driver")} aria-label="Volver a pedidos" className="text-white/80 hover:text-white touch-target flex items-center justify-center rounded-xl">
+            <ArrowLeft className="w-6 h-6" aria-hidden="true" />
           </button>
           <ThemeToggle
             size="lg"
@@ -109,8 +110,8 @@ export default function DriverEarnings() {
       <div className="px-4 -mt-3">
         <div className="bg-white dark:bg-[#1A1A1E] rounded-2xl card-shadow dark:shadow-none border border-zinc-100 dark:border-white/10 p-5">
           <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-1">{period === "day" ? "Ganancias de hoy" : period === "week" ? "Ganancias de la semana" : "Ganancias del mes"}</p>
-          <p className="text-3xl font-bold text-brand">${periodEarnings.toFixed(2)}</p>
-          <div className="flex items-center gap-1 mt-1 text-xs text-green-600 dark:text-green-400">
+          <p className="text-3xl font-bold text-brand-strong">${periodEarnings.toFixed(2)}</p>
+          <div className="flex items-center gap-1 mt-1 text-xs text-green-700 dark:text-green-400">
             <TrendingUp className="w-3 h-3" />
             <span>Ganancias acumuladas</span>
           </div>
@@ -124,9 +125,9 @@ export default function DriverEarnings() {
             <button
               key={p}
               onClick={() => setPeriod(p)}
-              className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${
+              className={`flex-1 min-h-11 min-w-11 px-2 py-2 text-sm font-medium rounded-lg transition-all ${
                 period === p
-                  ? "bg-white dark:bg-[#1A1A1E] text-brand shadow-sm"
+                  ? "bg-white dark:bg-[#1A1A1E] text-brand-strong shadow-sm"
                   : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
               }`}
             >
@@ -174,7 +175,7 @@ export default function DriverEarnings() {
                   </p>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400">{day.deliveries} entregas</p>
                 </div>
-                <span className="text-sm font-bold text-brand">${day.earnings.toFixed(2)}</span>
+                <span className="text-sm font-bold text-brand-strong">${day.earnings.toFixed(2)}</span>
               </div>
             ))
           ) : (

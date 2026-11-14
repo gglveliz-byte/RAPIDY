@@ -191,14 +191,16 @@ export default function AdminSettings() {
         <header className="bg-white dark:bg-[#111115] border-b border-zinc-100 dark:border-white/10 px-3 lg:px-4 pt-safe-top pb-2 lg:py-4">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 lg:gap-3 min-w-0">
-              <button onClick={() => navigate("/admin")} className="touch-target shrink-0">
+              <button type="button" onClick={() => navigate("/admin")} aria-label="Volver al panel" className="touch-target shrink-0">
                 <ArrowLeft className="w-4 h-4 lg:w-5 lg:h-5 text-zinc-600 dark:text-zinc-300" />
               </button>
               <h1 className="text-base lg:text-lg font-bold text-zinc-900 dark:text-zinc-100 truncate">Configuración</h1>
             </div>
             <button
+              type="button"
               onClick={handleLogout}
-              className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50 rounded-xl transition-colors border border-red-200 dark:border-red-900/40 shrink-0 shadow-2xs active:scale-95"
+              aria-label="Cerrar sesión"
+              className="min-h-11 min-w-11 flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50 rounded-xl transition-colors border border-red-200 dark:border-red-900/40 shrink-0 shadow-2xs active:scale-95"
               title="Cerrar sesión"
             >
               <LogOut className="w-3.5 h-3.5" />
@@ -209,7 +211,7 @@ export default function AdminSettings() {
 
         <div className="lg:flex-1 lg:overflow-y-auto p-3 sm:p-4 lg:p-6 max-w-2xl mx-auto space-y-4 lg:space-y-6 pb-20 sm:pb-24 lg:pb-8">
           {settingsQuery.isLoading ? (
-            <div className="flex flex-col items-center justify-center py-20 text-zinc-500 dark:text-zinc-400">
+            <div role="status" aria-live="polite" className="flex flex-col items-center justify-center py-20 text-zinc-500 dark:text-zinc-400">
               <div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-full animate-spin mb-4" />
               <p className="text-sm font-medium">Cargando configuración...</p>
             </div>
@@ -239,7 +241,7 @@ export default function AdminSettings() {
               {/* App Settings */}
               <div className="bg-white dark:bg-[#1A1A1E] rounded-2xl card-shadow dark:shadow-none border border-zinc-100 dark:border-white/10 p-4 sm:p-5">
                 <h2 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-100 mb-1 flex items-center gap-2">
-                  <Settings className="w-4 h-4 text-brand" />
+                  <Settings className="w-4 h-4 text-brand-strong dark:text-brand" />
                   General
                 </h2>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-4 leading-relaxed">
@@ -247,8 +249,9 @@ export default function AdminSettings() {
                 </p>
                 <div className="space-y-3.5 sm:space-y-4">
                   <div>
-                    <label className="text-[10px] uppercase font-bold text-zinc-500 dark:text-zinc-400 mb-1 block">Nombre de la app</label>
+                    <label htmlFor="settings-app-name" className="text-[10px] uppercase font-bold text-zinc-500 dark:text-zinc-400 mb-1 block">Nombre de la app</label>
                     <input
+                      id="settings-app-name"
                       type="text"
                       value={settings.appName}
                       onChange={(e) => setSettings({ ...settings, appName: e.target.value })}
@@ -256,8 +259,9 @@ export default function AdminSettings() {
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] uppercase font-bold text-zinc-500 dark:text-zinc-400 mb-1 block">Teléfono de soporte</label>
+                    <label htmlFor="settings-support-phone" className="text-[10px] uppercase font-bold text-zinc-500 dark:text-zinc-400 mb-1 block">Teléfono de soporte</label>
                     <input
+                      id="settings-support-phone"
                       type="text"
                       value={settings.supportPhone}
                       onChange={(e) => setSettings({ ...settings, supportPhone: e.target.value })}
@@ -270,7 +274,7 @@ export default function AdminSettings() {
               {/* Financial Settings */}
               <div className="bg-white dark:bg-[#1A1A1E] rounded-2xl card-shadow dark:shadow-none border border-zinc-100 dark:border-white/10 p-4 sm:p-5">
                 <h2 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-100 mb-1 flex items-center gap-2">
-                  <DollarSign className="w-4 h-4 text-brand" />
+                  <DollarSign className="w-4 h-4 text-brand-strong dark:text-brand" />
                   Financiero
                 </h2>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-4 leading-relaxed">
@@ -278,8 +282,9 @@ export default function AdminSettings() {
                 </p>
                 <div className="space-y-3.5 sm:space-y-4">
                   <div>
-                    <label className="text-[10px] uppercase font-bold text-zinc-500 dark:text-zinc-400 mb-1 block">Costo de envío base ($)</label>
+                    <label htmlFor="settings-delivery-fee" className="text-[10px] uppercase font-bold text-zinc-500 dark:text-zinc-400 mb-1 block">Costo de envío base ($)</label>
                     <input
+                      id="settings-delivery-fee"
                       type="number"
                       inputMode="decimal"
                       min={0}
@@ -291,8 +296,9 @@ export default function AdminSettings() {
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] uppercase font-bold text-zinc-500 dark:text-zinc-400 mb-1 block">Monto mínimo de pedido ($)</label>
+                    <label htmlFor="settings-min-order" className="text-[10px] uppercase font-bold text-zinc-500 dark:text-zinc-400 mb-1 block">Monto mínimo de pedido ($)</label>
                     <input
+                      id="settings-min-order"
                       type="number"
                       inputMode="decimal"
                       min={0}
@@ -309,7 +315,7 @@ export default function AdminSettings() {
               {/* Bank Transfer Settings */}
               <div className="bg-white dark:bg-[#1A1A1E] rounded-2xl card-shadow dark:shadow-none border border-zinc-100 dark:border-white/10 p-4 sm:p-5">
                 <h2 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-100 mb-1 flex items-center gap-2">
-                  <DollarSign className="w-4 h-4 text-brand" />
+                  <DollarSign className="w-4 h-4 text-brand-strong dark:text-brand" />
                   Datos de Transferencia Bancaria
                 </h2>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-4 leading-relaxed">
@@ -317,10 +323,11 @@ export default function AdminSettings() {
                 </p>
                 <div className="space-y-3.5 sm:space-y-4">
                   <div>
-                    <label className="text-[10px] uppercase font-bold text-zinc-500 dark:text-zinc-400 mb-1 block">
+                    <label htmlFor="settings-bank-info" className="text-[10px] uppercase font-bold text-zinc-500 dark:text-zinc-400 mb-1 block">
                       Instrucciones para clientes (Banco, Cuenta, Titular, RUC)
                     </label>
                     <textarea
+                      id="settings-bank-info"
                       value={settings.bankTransferInfo}
                       onChange={(e) => setSettings({ ...settings, bankTransferInfo: e.target.value })}
                       placeholder="Ej: Banco Pichincha, Cuenta: 123..., Titular: Juan Pérez, RUC: 1712345678001"
@@ -334,7 +341,7 @@ export default function AdminSettings() {
               <button
                 onClick={handleSave}
                 disabled={saving || !hasLoadedSettings}
-                className="w-full h-11 sm:h-12 bg-brand text-white font-semibold rounded-xl hover:bg-brand-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[#0A0A0D] active:scale-[0.99] transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-sm shadow-sm shadow-brand/20"
+                className="w-full h-11 sm:h-12 bg-brand text-zinc-950 font-semibold rounded-xl hover:bg-brand-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[#0A0A0D] active:scale-[0.99] transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-sm shadow-sm shadow-brand/20"
               >
                 <Save className="w-4 h-4" />
                 {saving ? "Guardando..." : "Guardar configuración"}
@@ -343,7 +350,7 @@ export default function AdminSettings() {
               {/* Reports Export */}
               <div className="bg-white dark:bg-[#1A1A1E] rounded-2xl card-shadow dark:shadow-none border border-zinc-100 dark:border-white/10 p-4 sm:p-5">
                 <h2 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-zinc-100 mb-1 flex items-center gap-2">
-                  <Download className="w-4 h-4 text-brand" />
+                  <Download className="w-4 h-4 text-brand-strong dark:text-brand" />
                   Reportes exportables
                 </h2>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-4 leading-relaxed">
@@ -353,8 +360,9 @@ export default function AdminSettings() {
                 {/* Date range inputs */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
                   <div>
-                    <label className="text-[10px] uppercase font-bold text-zinc-500 dark:text-zinc-400 mb-1 block">Desde</label>
+                    <label htmlFor="settings-date-from" className="text-[10px] uppercase font-bold text-zinc-500 dark:text-zinc-400 mb-1 block">Desde</label>
                     <input
+                      id="settings-date-from"
                       type="date"
                       value={dateFrom}
                       onChange={(e) => setDateFrom(e.target.value)}
@@ -362,8 +370,9 @@ export default function AdminSettings() {
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] uppercase font-bold text-zinc-500 dark:text-zinc-400 mb-1 block">Hasta</label>
+                    <label htmlFor="settings-date-to" className="text-[10px] uppercase font-bold text-zinc-500 dark:text-zinc-400 mb-1 block">Hasta</label>
                     <input
+                      id="settings-date-to"
                       type="date"
                       value={dateTo}
                       onChange={(e) => setDateTo(e.target.value)}
@@ -384,19 +393,21 @@ export default function AdminSettings() {
                     <div key={report.type} className="flex items-center gap-2">
                       <span className="text-xs sm:text-sm font-semibold text-zinc-900 dark:text-zinc-100 w-24 sm:w-28 shrink-0">{report.label}</span>
                       <button
+                        type="button"
                         onClick={() => handleExport(report.type, "pdf")}
                         disabled={Boolean(exporting)}
                         className="flex-1 min-h-[44px] px-2.5 bg-white dark:bg-[#16161B] border border-zinc-200 dark:border-white/10 rounded-xl text-xs sm:text-sm font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-white/5 hover:border-brand dark:hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30 active:scale-95 transition-all flex items-center justify-center gap-1.5 shadow-2xs dark:shadow-none disabled:opacity-50"
                       >
-                        <FileText className="w-3.5 h-3.5 text-brand" />
+                        <FileText className="w-3.5 h-3.5 text-brand-strong dark:text-brand" />
                         {exporting === `${report.type}:pdf` ? "Generando..." : "PDF"}
                       </button>
                       <button
+                        type="button"
                         onClick={() => handleExport(report.type, "excel")}
                         disabled={Boolean(exporting)}
                         className="flex-1 min-h-[44px] px-2.5 bg-white dark:bg-[#16161B] border border-zinc-200 dark:border-white/10 rounded-xl text-xs sm:text-sm font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-white/5 hover:border-brand dark:hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30 active:scale-95 transition-all flex items-center justify-center gap-1.5 shadow-2xs dark:shadow-none disabled:opacity-50"
                       >
-                        <FileSpreadsheet className="w-3.5 h-3.5 text-brand" />
+                        <FileSpreadsheet className="w-3.5 h-3.5 text-brand-strong dark:text-brand" />
                         {exporting === `${report.type}:excel` ? "Generando..." : "Excel"}
                       </button>
                     </div>
@@ -412,7 +423,7 @@ export default function AdminSettings() {
                 </div>
                 <button
                   onClick={handleLogout}
-                  className="flex items-center gap-1.5 px-3.5 py-2 bg-red-600 text-white text-xs font-bold rounded-xl shadow-xs hover:bg-red-700 active:scale-95 transition-all shrink-0"
+                  className="min-h-11 flex items-center gap-1.5 px-3.5 py-2 bg-red-600 text-white text-xs font-bold rounded-xl shadow-xs hover:bg-red-700 active:scale-95 transition-all shrink-0"
                 >
                   <LogOut className="w-4 h-4" />
                   <span>Cerrar sesión</span>

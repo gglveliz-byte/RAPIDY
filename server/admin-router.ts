@@ -18,7 +18,7 @@ import { eq } from "drizzle-orm";
 import { createRouter, publicQuery } from "./middleware";
 import { getDb } from "./queries/connection";
 import { users } from "@db/schema";
-import { verifyAdminRefreshToken, setAdminCookie } from "./admin-auth";
+import { verifyAdminRefreshTokenPayload, setAdminCookie } from "./admin-auth";
 
 import { adminDashboardProcedures } from "./admin/dashboard-router";
 import { adminCommercesProcedures } from "./admin/commerces-router";
@@ -34,16 +34,22 @@ export const adminRouter = createRouter({
     const tokenMatch = cookieHeader.match(/quickgo_admin_refresh=([^;]+)/);
     if (!tokenMatch) return { success: false, admin: null };
 
-    const userId = await verifyAdminRefreshToken(tokenMatch[1]);
-    if (!userId) return { success: false, admin: null };
+    const payload = await verifyAdminRefreshTokenPayload(tokenMatch[1]);
+    if (!payload) return { success: false, admin: null };
 
     const db = getDb();
-    const result = await db.select().from(users).where(eq(users.id, userId));
-    if (result.length === 0 || result[0].role !== "admin") {
+    const result = await db.select().from(users).where(eq(users.id, payload.userId));
+    const admin = result[0];
+    if (!admin || admin.role !== "admin") {
+      return { success: false, admin: null };
+    }
+    if (
+      payload.sessionVersion !== null &&
+      (admin.sessionVersion ?? 0) !== payload.sessionVersion
+    ) {
       return { success: false, admin: null };
     }
 
-    const admin = result[0];
     await setAdminCookie(ctx.resHeaders, ctx.req.headers, admin.id);
     return {
       success: true,
