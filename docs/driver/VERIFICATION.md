@@ -9,12 +9,13 @@ API 16/16 y navegador 8/8.
 ```bash
 npx tsc -b --force                 # 0 errores
 npm test                          # 9/9 OK
-npm run lint                      # 0 errores, 357 warnings históricos
+npm run lint                      # 0 errores, 321 warnings históricos
 npm run build                     # OK
 npm run db:generate               # No schema changes
-npm run db:migrate                # 0009 aplicada
+npm run db:migrate                # 0009, 0010 y 0011 aplicadas
 node scripts/driver-api-smoke.mjs # 16/16 PASS
 node scripts/e2e-driver-smoke.mjs # 8/8 PASS
+node scripts/e2e-theme-smoke.mjs  # 50/50 PASS (Driver + Admin)
 node scripts/e2e-commerce-smoke.mjs # 20/20 PASS (regresión)
 node scripts/admin-smoke.mjs      # admin 200 / anon 401
 npx tsx scripts/redirect-smoke.ts # sesión/logo/landing OK
@@ -53,6 +54,19 @@ npx tsx scripts/redirect-smoke.ts # sesión/logo/landing OK
 | `/driver/history` | PASS |
 | `/driver/chat/:orderId` | PASS |
 | 0 errores de página | PASS |
+
+## Tema, 401 y mapa — 50/50
+
+El smoke `node scripts/e2e-theme-smoke.mjs` valida las 6 rutas Driver y las 6
+Admin:
+
+| Caso | Resultado |
+|---|---|
+| `ThemeToggle` cambia `html.dark` | PASS en 12 rutas |
+| Sin 401 de `commerce.me` en Driver | PASS |
+| Sin 401 de `order.getCommerceOrders` en Driver | PASS |
+| Mapa con tiles OSM y marcadores | PASS |
+| Sin errores de página | PASS |
 
 ## Seguridad verificada
 
@@ -94,7 +108,7 @@ npx tsx scripts/redirect-smoke.ts # sesión/logo/landing OK
 
 ## Warnings de lint
 
-Se mantienen 357 warnings históricos (`any`, efectos en pantallas heredadas y
+Se mantienen 321 warnings históricos (`any`, efectos en pantallas heredadas y
 fast-refresh). No hay errores de lint ni afectan build/runtime.
 
 ## Criterios que no se deben romper
@@ -104,5 +118,6 @@ fast-refresh). No hay errores de lint ni afectan build/runtime.
 - `npm run build` OK.
 - `db:generate` sin cambios tras migrar.
 - Driver API 16/16 y navegador 8/8.
+- Theme smoke 50/50 y sin 401 cruzados.
 - E2E negocio 20/20.
 - Redirect smoke con `SESSION SURVIVED: true`.

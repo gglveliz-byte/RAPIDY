@@ -134,7 +134,23 @@ reabrir productos pausados por moderación.
 | Desactivación de comercio | Bloquea checkout, revoca sesión merchant y conserva historial. |
 | Sesión admin | Logout revoca access/refresh vía `sessionVersion`; SSE revalida contra DB. |
 
-## 6. Evidencia
+## 6. Pase visual y aislamiento posteriores
+
+Después de la corrección funcional se hizo un pase específico de UI:
+
+- Admin completo migrado a la marca naranja del sistema (`brand`), dejando
+  verde/ámbar/rojo solo para semántica.
+- Tema claro/oscuro en las 6 rutas, `AdminLayout` y `ThemeToggle` en desktop y
+  mobile.
+- `useTheme` convertido en store global para que dos toggles no se
+  desincronicen.
+- `PhoneInput` detecta el tema automáticamente.
+- Queries de merchant aisladas a rutas `/commerce`; ya no generan 401 en Admin
+  ni Driver.
+- Fallback de comisión para pedidos legacy sin `order_commerce_status`, para
+  que el dashboard no muestre comisiones en cero.
+
+## 7. Evidencia
 
 ```bash
 npx tsc -b --force                  # 0 errores
@@ -152,7 +168,7 @@ node scripts/admin-smoke.mjs        # admin 200 / anon 401
 npx tsx scripts/redirect-smoke.ts   # SESSION SURVIVED: true, 0 errores
 ```
 
-## 7. Lo que no se debe romper
+## 8. Lo que no se debe romper
 
 - `order_commerce_status.commission_amount` es la comisión histórica.
 - `orders.driver_commission_rate` es la comisión del driver congelada al asignar.
@@ -166,7 +182,7 @@ npx tsx scripts/redirect-smoke.ts   # SESSION SURVIVED: true, 0 errores
 - Los reportes no incluyen comprobantes ni usan la tasa actual para históricos.
 - Las migraciones son aditivas: `0010` y `0011`.
 
-## 8. Fuera de alcance / parcial
+## 9. Fuera de alcance / parcial
 
 - Reset de contraseña de merchant desde Admin.
 - Formulario completo de edición de producto en Admin (se modera y elimina; editar sigue en Negocio).

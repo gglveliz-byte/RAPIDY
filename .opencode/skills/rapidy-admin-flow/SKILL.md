@@ -135,6 +135,18 @@ bugs financieros, de sesión, settlement, moderación o reportes.
 - Una fila de comisión por comercio.
 - No usar `drivers.total_earnings`; sumar `driver_earnings`.
 
+### Tema y UI
+
+- Admin usa `brand`/`brand-strong`/`brand-soft` para chrome y acciones
+  primarias; verde/ámbar/rojo solo para semántica.
+- Toda superficie debe tener variante `dark:`; `bg-white`, `text-gray-*` y
+  `border-gray-*` sin `dark:` son deuda visual.
+- `ThemeToggle` vive en `AdminLayout`; `useTheme` es un store global con
+  listeners.
+- `PhoneInput` detecta el tema si no recibe `dark`.
+- No habilitar `commerce.me` ni `order.getCommerceOrders` en Admin; esas
+  queries solo viven en `/commerce`.
+
 ### Performance
 
 - `admin.orders` paginado y sin N+1.
@@ -153,6 +165,7 @@ npm run build
 npm run db:generate
 node scripts/admin-api-smoke.mjs
 node scripts/e2e-admin-smoke.mjs
+node scripts/e2e-theme-smoke.mjs
 node scripts/driver-api-smoke.mjs
 node scripts/e2e-driver-smoke.mjs
 node scripts/e2e-commerce-smoke.mjs
@@ -162,6 +175,7 @@ npx tsx scripts/redirect-smoke.ts
 
 - Admin API debe seguir 29/29.
 - Admin navegador debe seguir 12/12.
+- Theme smoke debe seguir 50/50 y sin 401 cruzados.
 - Driver API 16/16 y navegador 8/8.
 - Negocio navegador 20/20.
 - `db:generate` debe responder “No schema changes” después de migrar.

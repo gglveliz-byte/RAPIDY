@@ -39,6 +39,21 @@ SSE:
   /api/events/admin-dashboard → solo admin validado contra DB
 ```
 
+## Tema y diseño
+
+- Admin usa el tema claro/oscuro global con `ThemeToggle` en el layout
+  (sidebar desktop y barra móvil).
+- Marca naranja (`brand`, `brand-strong`, `brand-soft`) en header, navegación,
+  botones primarios, tabs y focos.
+- Superficies: `bg-[#F7F7FA] dark:bg-[#0A0A0D]`; cards
+  `bg-white dark:bg-[#1A1A1E]`.
+- Verde, ámbar y rojo quedan reservados a estados semánticos.
+- `useTheme` es un store global con listeners: dos toggles montados no se
+  desincronizan.
+- `PhoneInput` detecta el tema automáticamente si no recibe la prop `dark`.
+- Las queries de merchant (`commerce.me`, `order.getCommerceOrders`) solo se
+  habilitan en rutas `/commerce`; Admin y Driver no generan 401 cruzados.
+
 ## Sesión
 
 - **Access token:** 15 min, cookie `quickgo_admin_token` HttpOnly.

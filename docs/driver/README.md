@@ -149,6 +149,19 @@ estimada.
 - `useDriverEvents` ignora `location_update` para no invalidar catálogo/pedidos
   en cada ping.
 
+## Tema y mapas
+
+- Las 6 rutas usan el tema claro/oscuro global con `ThemeToggle` en el header.
+- Marca naranja (`brand`, `brand-strong`, `brand-soft`) en header, botones
+  primarios, progreso y bottom nav. Verde queda para éxito/online.
+- El mapa usa tiles de OpenStreetMap porque CARTO empezó a exigir API key.
+  En tema oscuro los tiles se invierten con `.dark .leaflet-tile`.
+- `DriverOrder` llama `invalidateSize()` al montar para evitar mapas en blanco
+  cuando el contenedor cambia de tamaño.
+- `/driver/order` (sin id) redirige a `/driver`.
+- Las queries de merchant (`commerce.me`, `order.getCommerceOrders`) están
+  deshabilitadas fuera de `/commerce`; abrir Driver ya no genera 401 cruzados.
+
 ## Integración con Cliente y Negocio
 
 | Evento | Cliente | Negocio |

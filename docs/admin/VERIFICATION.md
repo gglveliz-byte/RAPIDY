@@ -9,12 +9,13 @@ aplicadas, API Admin 29/29 y navegador Admin 12/12.
 ```bash
 npx tsc -b --force                  # 0 errores
 npm test                            # 9/9 OK
-npm run lint                        # 0 errores, 374 warnings históricos
+npm run lint                        # 0 errores, 321 warnings históricos
 npm run build                       # OK
 npm run db:generate                 # No schema changes
 npm run db:migrate                  # 0010 y 0011 aplicadas
 node scripts/admin-api-smoke.mjs    # 29/29 PASS
 node scripts/e2e-admin-smoke.mjs    # 12/12 PASS
+node scripts/e2e-theme-smoke.mjs    # 50/50 PASS (Driver + Admin, claro/oscuro)
 node scripts/driver-api-smoke.mjs   # 16/16 PASS
 node scripts/e2e-driver-smoke.mjs   # 8/8 PASS
 node scripts/e2e-commerce-smoke.mjs # 20/20 PASS
@@ -37,8 +38,8 @@ npx tsx scripts/redirect-smoke.ts   # SESSION SURVIVED: true, 0 errores
 | `admin.orders` no expone `paymentReceipt` | PASS |
 | Comisión snapshot suma el monto histórico | PASS |
 | `admin.orders` muestra comisión snapshot | PASS |
-| Cambiar tasa no reescribe comisión histórica | PASS |
-| Dashboard conserva comisión histórica | PASS |
+| Cambiar tasa no reescribe comisión snapshot | PASS |
+| Dashboard incluye comisión histórica | PASS |
 | Settlement liquida solo un comercio | PASS |
 | Pedido multi-comercio queda pendiente | PASS |
 | Entrega repetida no reescribe `delivered_at` | PASS |
@@ -72,6 +73,20 @@ npx tsx scripts/redirect-smoke.ts   # SESSION SURVIVED: true, 0 errores
 | Pedidos muestra liquidación por comercio | PASS |
 | Settings guarda sin error | PASS |
 | Sin errores de página | PASS |
+
+## Tema y aislamiento de sesión — 50/50
+
+`node scripts/e2e-theme-smoke.mjs` recorre las 6 rutas de Admin y las 6 de
+Repartidor en viewport móvil/escritorio y valida:
+
+| Caso | Resultado |
+|---|---|
+| `ThemeToggle` presente y cambia `html.dark` | PASS en 12 rutas |
+| Sin 401 de `commerce.me` / `order.getCommerceOrders` en Driver | PASS en 6 rutas |
+| Sin 401 de merchant en Admin | PASS en 6 rutas |
+| Sin errores de página | PASS en 12 rutas |
+| Mapa del driver visible con tiles y marcadores | PASS |
+| Capturas claras/oscuras | Generadas |
 
 ## Regresión Cliente / Negocio / Driver
 
@@ -115,7 +130,7 @@ npx tsx scripts/redirect-smoke.ts   # SESSION SURVIVED: true, 0 errores
 
 ## Warnings de lint
 
-Se mantienen 374 warnings históricos (`any`, fast-refresh y pantallas
+Se mantienen 321 warnings históricos (`any`, fast-refresh y pantallas
 heredadas). No hay errores de lint ni afectan build/runtime.
 
 ## Criterios que no se deben romper
@@ -125,8 +140,10 @@ heredadas). No hay errores de lint ni afectan build/runtime.
 - `npm run build` OK.
 - `db:generate` sin cambios tras migrar.
 - Admin API 29/29 y navegador 12/12.
+- Theme smoke 50/50 en las 12 rutas.
 - Driver API 16/16 y navegador 8/8.
 - Negocio navegador 20/20.
 - Redirect smoke con `SESSION SURVIVED: true`.
-- Comisión histórica estable al cambiar tasas.
+- Comisión con snapshot estable al cambiar tasas; el fallback legacy usa la
+  tasa actual solo cuando no existe snapshot.
 - Settlement por comercio y entrega idempotente.

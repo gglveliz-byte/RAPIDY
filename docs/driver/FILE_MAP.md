@@ -20,7 +20,10 @@
 |---|---|---|
 | `src/components/SessionGuard.tsx` | Guard cookie-first | Rehidrata driver, limpia QueryClient al redirigir |
 | `src/components/ChatBubble.tsx` | Acceso al chat | Sin cambios de contrato |
-| `src/index.css` | Safe-area y touch targets | `pt-safe`, `pb-safe-nav`, touch-target |
+| `src/index.css` | Safe-area, touch targets y tema | `pt-safe`, `pb-safe-nav`, touch-target, tiles Leaflet dark |
+| `src/hooks/useTheme.ts` | Store global de tema | Sincroniza toggles en claro/oscuro |
+| `src/components/ThemeToggle.tsx` | Toggle de tema | Presente en las 6 rutas Driver |
+| `src/pages/Login.tsx` | Login profesional | Limpia rol anterior y caché al cambiar de panel |
 
 ## Hooks
 
@@ -81,4 +84,6 @@ Migración driver: `db/migrations/0009_furry_nemesis.sql`.
 - No borrar drivers con historial.
 - No volver a `qs_session` como fuente de verdad.
 - No abrir el canal `driver:{id}` desde el cliente; usar `order:{id}`.
+- No habilitar queries de merchant fuera de `/commerce`; generan 401 cruzados.
+- No volver a CARTO para tiles; usa OpenStreetMap.
 - No reintroducir `is_read` global para chat.

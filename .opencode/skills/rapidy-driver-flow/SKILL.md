@@ -92,6 +92,19 @@ bugs de PII, estados, dinero, sesión o tracking.
 - Admin no puede cambiar pedidos terminales ni reasignar pedidos retirados.
 - No borrar un driver con historial.
 
+### Tema y mapas
+
+- Las 6 rutas usan `brand`/`brand-strong`/`brand-soft`, no verde de marca.
+- Toda superficie debe tener variante `dark:`; `ThemeToggle` va en el header de
+  cada pantalla.
+- `useTheme` es un store global; no crear estados de tema locales.
+- El mapa usa OpenStreetMap, no CARTO. Preservar
+  `https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png` y
+  `.dark .leaflet-tile` de `index.css`.
+- `DriverOrder` debe llamar `invalidateSize()` al montar.
+- No habilitar `commerce.me` ni `order.getCommerceOrders` en Driver; generan
+  401 cruzados. Esas queries solo viven en `/commerce`.
+
 ### Chat y SSE
 
 - El backend deriva `senderType`, `senderId`, `senderName`.
@@ -124,6 +137,7 @@ npm run build
 npm run db:generate
 node scripts/driver-api-smoke.mjs
 node scripts/e2e-driver-smoke.mjs
+node scripts/e2e-theme-smoke.mjs
 node scripts/e2e-commerce-smoke.mjs
 node scripts/admin-smoke.mjs
 npx tsx scripts/redirect-smoke.ts
@@ -131,6 +145,7 @@ npx tsx scripts/redirect-smoke.ts
 
 - Driver API debe seguir 16/16.
 - Driver navegador debe seguir 8/8.
+- Theme smoke debe seguir 50/50, sin 401 cruzados y con mapa visible.
 - Negocio debe seguir 20/20.
 - `db:generate` debe responder “No schema changes” después de migrar.
 

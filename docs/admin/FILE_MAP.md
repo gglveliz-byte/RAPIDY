@@ -12,7 +12,9 @@
 | `src/pages/admin/Orders.tsx` | Pedidos, pagos, asignación y settlement | `admin.orders`, `admin.orderDetail`, `admin.updateOrderStatus`, `admin.assignDriver`, `admin.toggleCommerceSettled`, `admin.toggleDriverSettled` | Corregido; paginación, settlement por comercio y modal |
 | `src/pages/admin/Products.tsx` | Moderación global | `admin.topProducts`, `admin.listProducts`, `admin.toggleProductAvailability`, `admin.toggleProductFeatured`, `admin.deleteProduct` | Corregido; acciones conectadas |
 | `src/pages/admin/Settings.tsx` | Configuración y reportes | `admin.settings`, `admin.updateSettingsBulk`, `admin.getReports` | Corregido; guardado atómico, validación, errores y exportación |
-| `src/components/AdminLayout.tsx` | Layout y logout | `login.logout` scope admin | Sin cambios de contrato |
+| `src/components/AdminLayout.tsx` | Layout, navegación, tema y logout | `login.logout` scope admin | Rediseñado claro/oscuro + `ThemeToggle` |
+| `src/hooks/useTheme.ts` | Store global de tema | `rapidy_theme` en localStorage | Sincroniza todas las instancias |
+| `src/components/PhoneInput.tsx` | Entrada telefónica | `useTheme` | Detecta tema automáticamente |
 
 ## Backend
 
