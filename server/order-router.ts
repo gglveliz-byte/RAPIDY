@@ -85,10 +85,23 @@ async function readPricing() {
     .from(appSettings)
     .where(inArray(appSettings.key, ["delivery_fee", "min_order_amount"]));
   const map = new Map(rows.map((row) => [row.key, row.value]));
-  return {
-    deliveryFee: Number(map.get("delivery_fee") ?? "2.50"),
-    minOrder: Number(map.get("min_order_amount") ?? "5.00"),
-  };
+  const deliveryFee = Number(map.get("delivery_fee") ?? "2.50");
+  const minOrder = Number(map.get("min_order_amount") ?? "5.00");
+  if (
+    !Number.isFinite(deliveryFee) ||
+    deliveryFee < 0 ||
+    deliveryFee > 100_000 ||
+    !Number.isFinite(minOrder) ||
+    minOrder < 0 ||
+    minOrder > 100_000
+  ) {
+    throw new TRPCError({
+      code: "PRECONDITION_FAILED",
+      message:
+        "La configuración de envío o pedido mínimo es inválida. Contacta al administrador.",
+    });
+  }
+  return { deliveryFee, minOrder };
 }
 
 interface QuoteLine {
@@ -896,7 +909,9 @@ export const orderRouter = createRouter({
               .from(drivers)
               .where(eq(drivers.id, assignedDriverId));
             const driver = driverRows[0];
-            const rate = Number(driver?.commissionRate ?? "80");
+            const rate = Number(
+              current.driverCommissionRate ?? driver?.commissionRate ?? "75",
+            );
             const amount = Number(order.deliveryFee) * (rate / 100);
             const today = guayaquilDateKey();
             await tx
@@ -1071,6 +1086,13 @@ export const orderRouter = createRouter({
             ? order.status
             : "preparing";
 
+          // Comisión histórica: snapshot por comercio; la tasa actual solo se usa
+          // como fallback para pedidos legacy sin snapshot.
+          const snapshotCommission =
+            myStatus?.commissionAmount !== null && myStatus?.commissionAmount !== undefined
+              ? Number(myStatus.commissionAmount)
+              : commerceTotal * (commissionRate / 100);
+
           // Proyección explícita: sin comprobante, sin idempotencyKey, sin
           // flags de liquidación y sin dirección completa.
           return {
@@ -1094,10 +1116,7 @@ export const orderRouter = createRouter({
             myCommerceStatus: ["pending_payment", "payment_rejected"].includes(order.status)
               ? order.status
               : myStatus?.status ?? fallbackStatus,
-            commerceCommission: (
-              commerceTotal *
-              (commissionRate / 100)
-            ).toFixed(2),
+            commerceCommission: snapshotCommission.toFixed(2),
           };
         });
     }),

@@ -149,7 +149,8 @@ export default function DriverOrder() {
   const isTerminal = delivered || order?.status === "cancelled";
   const isAssigned = order?.driverId === driverId;
   const earningAmount = (
-    (Number(order?.deliveryFee ?? 0) * Number(driverProfile?.commissionRate ?? 75)) /
+    (Number(order?.deliveryFee ?? 0) *
+      Number(order?.driverCommissionRate ?? driverProfile?.commissionRate ?? 75)) /
     100
   ).toFixed(2);
 

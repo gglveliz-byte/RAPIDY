@@ -1,13 +1,21 @@
 import type { FetchCreateContextFnOptions } from "@trpc/server/adapters/fetch";
 import type { Customer, User, Driver } from "@db/schema";
 import { verifyAccessTokenPayload, verifyRefreshTokenPayload, setCustomerCookies } from "./customer-auth";
-import { verifyAdminToken, verifyAdminRefreshToken, setAdminCookie } from "./admin-auth";
+import {
+  verifyAdminTokenPayload,
+  verifyAdminRefreshTokenPayload,
+  setAdminCookie,
+} from "./admin-auth";
 import {
   verifyDriverTokenPayload,
   verifyDriverRefreshTokenPayload,
   refreshDriverAccessToken,
 } from "./driver-auth";
-import { verifyMerchantToken, verifyMerchantRefreshToken } from "./merchant-auth";
+import {
+  verifyMerchantTokenPayload,
+  verifyMerchantRefreshTokenPayload,
+  setMerchantCookie,
+} from "./merchant-auth";
 import { getDb } from "./queries/connection";
 import { customers, users, drivers } from "@db/schema";
 import { eq, and } from "drizzle-orm";
@@ -75,12 +83,18 @@ async function getAdminFromCookie(headers: Headers, resHeaders?: Headers): Promi
   const refreshToken = cookies["quickgo_admin_refresh"];
 
   let adminId: number | null = null;
+  let expectedSessionVersion: number | null = null;
+
   if (token) {
-    adminId = await verifyAdminToken(token);
+    const payload = await verifyAdminTokenPayload(token);
+    adminId = payload?.userId ?? null;
+    expectedSessionVersion = payload?.sessionVersion ?? null;
   }
 
   if (!adminId && refreshToken) {
-    adminId = await verifyAdminRefreshToken(refreshToken);
+    const payload = await verifyAdminRefreshTokenPayload(refreshToken);
+    adminId = payload?.userId ?? null;
+    expectedSessionVersion = payload?.sessionVersion ?? null;
     if (adminId && resHeaders) {
       await setAdminCookie(resHeaders, headers, adminId);
     }
@@ -91,7 +105,14 @@ async function getAdminFromCookie(headers: Headers, resHeaders?: Headers): Promi
   const db = getDb();
   const result = await db.select().from(users).where(eq(users.id, adminId));
   const user = result[0];
-  return user?.role === "admin" ? user : null;
+  if (!user || user.role !== "admin") return null;
+  if (
+    expectedSessionVersion !== null &&
+    (user.sessionVersion ?? 0) !== expectedSessionVersion
+  ) {
+    return null;
+  }
+  return user;
 }
 
 async function getDriverFromCookie(headers: Headers, resHeaders: Headers): Promise<Driver | null> {
@@ -143,18 +164,22 @@ async function getMerchantFromCookie(headers: Headers, resHeaders: Headers): Pro
   const refreshToken = cookies["quickgo_merchant_refresh"];
 
   let userId: number | null = null;
+  let expectedSessionVersion: number | null = null;
 
   if (token) {
-    userId = await verifyMerchantToken(token);
+    const payload = await verifyMerchantTokenPayload(token);
+    userId = payload?.userId ?? null;
+    expectedSessionVersion = payload?.sessionVersion ?? null;
   }
 
   if (!userId && refreshToken) {
-    userId = await verifyMerchantRefreshToken(refreshToken);
+    const payload = await verifyMerchantRefreshTokenPayload(refreshToken);
+    userId = payload?.userId ?? null;
+    expectedSessionVersion = payload?.sessionVersion ?? null;
     if (userId) {
       const db = getDb();
       const result = await db.select().from(users).where(and(eq(users.id, userId), eq(users.role, "merchant")));
       if (result.length > 0) {
-        const { setMerchantCookie } = await import("./merchant-auth");
         await setMerchantCookie(resHeaders, headers, userId);
       }
     }
@@ -164,7 +189,15 @@ async function getMerchantFromCookie(headers: Headers, resHeaders: Headers): Pro
 
   const db = getDb();
   const result = await db.select().from(users).where(and(eq(users.id, userId), eq(users.role, "merchant")));
-  return result[0] || null;
+  const user = result[0];
+  if (!user) return null;
+  if (
+    expectedSessionVersion !== null &&
+    (user.sessionVersion ?? 0) !== expectedSessionVersion
+  ) {
+    return null;
+  }
+  return user;
 }
 
 export async function createContext(

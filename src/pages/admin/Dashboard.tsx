@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router";
 import {
   ShoppingBag, Store, Users, Truck,
@@ -24,6 +24,7 @@ export default function AdminDashboard() {
   const [earningsData, setEarningsData] = useState<EarningData[]>([]);
   const [period, setPeriod] = useState<Period>("month");
   const [growthPercent, setGrowthPercent] = useState<number | null>(null);
+  const [growthWindowDays, setGrowthWindowDays] = useState<number | null>(null);
   const [topCategories, setTopCategories] = useState<any[]>([]);
   const [topCommerces, setTopCommerces] = useState<any[]>([]);
   const [commerceCommissions, setCommerceCommissions] = useState<any[]>([]);
@@ -32,32 +33,22 @@ export default function AdminDashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<number>(0);
   const [secondsAgo, setSecondsAgo] = useState(0);
-  const prevPeriodRef = useRef<Period>(period);
 
   const loadCharts = useCallback(async (p: Period) => {
     try {
-      const [sales, earnings] = await Promise.all([
+      const [sales, earnings, growth] = await Promise.all([
         trpcCall<SaleData[]>("admin.salesByPeriod", { period: p }),
         trpcCall<EarningData[]>("admin.earningsByPeriod", { period: p }),
+        trpcCall<{ growthPercent: number | null; windowDays: number }>("admin.salesGrowth", { period: p }),
       ]);
       setSalesData(sales || []);
       setEarningsData(earnings || []);
-
-      const prevPeriod = prevPeriodRef.current;
-      prevPeriodRef.current = p;
-      if (prevPeriod !== p) {
-        const prevData = await trpcCall<SaleData[]>("admin.salesByPeriod", { period: prevPeriod });
-        const currentTotal = (sales || []).reduce((s: number, d: SaleData) => s + d.sales, 0);
-        const prevTotal = (prevData || []).reduce((s: number, d: SaleData) => s + d.sales, 0);
-        if (prevTotal > 0) {
-          setGrowthPercent(parseFloat(((currentTotal - prevTotal) / prevTotal * 100).toFixed(1)));
-        } else {
-          setGrowthPercent(null);
-        }
-      }
+      setGrowthPercent(growth?.growthPercent ?? null);
+      setGrowthWindowDays(growth?.windowDays ?? null);
     } catch (error) {
       console.warn("Error al cargar los gráficos:", error);
       setGrowthPercent(null);
+      setGrowthWindowDays(null);
     }
   }, []);
 
@@ -159,12 +150,7 @@ export default function AdminDashboard() {
                   <div>
                     <p className="text-[10px] lg:text-xs text-gray-500 font-medium">Facturación total</p>
                     <p className="text-xl lg:text-2xl font-black text-gray-900">${kpi.totalRevenue}</p>
-                    {growthPercent !== null && (
-                      <div className={`flex items-center gap-1 mt-0.5 text-[10px] lg:text-xs font-semibold ${growthPercent >= 0 ? "text-green-600" : "text-red-600"}`}>
-                        {growthPercent >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
-                        <span>{growthPercent >= 0 ? "+" : ""}{growthPercent}% vs periodo anterior</span>
-                      </div>
-                    )}
+                    <p className="text-[10px] text-gray-400 mt-0.5">Pedidos entregados</p>
                   </div>
                   <div className="text-right">
                     <p className="text-[10px] lg:text-xs text-gray-500 font-medium">Comisiones</p>
@@ -172,7 +158,17 @@ export default function AdminDashboard() {
                   </div>
                 </div>
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
-                  <h2 className="text-xs lg:text-sm font-bold text-gray-800">Ventas Totales de Comercios (Bruto)</h2>
+                  <div>
+                    <h2 className="text-xs lg:text-sm font-bold text-gray-800">Ventas Totales de Comercios (Bruto)</h2>
+                    {growthPercent !== null && (
+                      <div className={`flex items-center gap-1 mt-0.5 text-[10px] lg:text-xs font-semibold ${growthPercent >= 0 ? "text-green-600" : "text-red-600"}`}>
+                        {growthPercent >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
+                        <span>
+                          {growthPercent >= 0 ? "+" : ""}{growthPercent}% vs {growthWindowDays ?? 30} días anteriores
+                        </span>
+                      </div>
+                    )}
+                  </div>
                   <div className="flex bg-gray-100 rounded-lg p-0.5 shrink-0 self-start sm:self-auto">
                     {(["day", "week", "month", "year"] as Period[]).map((p) => (
                       <button

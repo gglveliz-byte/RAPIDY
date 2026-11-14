@@ -6,13 +6,21 @@ import { users, drivers, commerces, customers } from "@db/schema";
 import { eq, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { env } from "./lib/env";
-import { setAdminCookie, clearAdminCookie, verifyAdminRefreshToken } from "./admin-auth";
+import {
+  setAdminCookie,
+  clearAdminCookie,
+  verifyAdminRefreshTokenPayload,
+} from "./admin-auth";
 import {
   setDriverCookies,
   clearDriverCookies,
   verifyDriverRefreshTokenPayload,
 } from "./driver-auth";
-import { setMerchantCookie, clearMerchantCookie, verifyMerchantRefreshToken } from "./merchant-auth";
+import {
+  setMerchantCookie,
+  clearMerchantCookie,
+  verifyMerchantRefreshTokenPayload,
+} from "./merchant-auth";
 import { clearCustomerCookies, setCustomerCookies, verifyRefreshTokenPayload } from "./customer-auth";
 
 const LOGIN_WINDOW_MS = 10 * 60 * 1000;
@@ -132,6 +140,20 @@ export const loginRouter = createRouter({
             clearMerchantCookie(ctx.resHeaders);
             await setAdminCookie(ctx.resHeaders, ctx.req.headers, user.id);
           } else {
+            const ownedCommerces = await db
+              .select({ status: commerces.status })
+              .from(commerces)
+              .where(eq(commerces.merchantUserId, user.id));
+            if (
+              ownedCommerces.length > 0 &&
+              ownedCommerces.every((commerce) => commerce.status === "inactive")
+            ) {
+              recordLoginFailure(attemptKey);
+              return {
+                success: false,
+                message: "Tu comercio fue desactivado. Contacta a la administración.",
+              };
+            }
             clearAdminCookie(ctx.resHeaders);
             clearDriverCookies(ctx.resHeaders);
             const merchant = await setMerchantCookie(ctx.resHeaders, ctx.req.headers, user.id);
@@ -172,6 +194,9 @@ export const loginRouter = createRouter({
           .where(eq(drivers.phone, normalizedPhone));
 
         // Fallback por últimos 9 dígitos: tolera +593, 0 inicial y formatos legacy.
+        // Si el patrón coincide con más de un teléfono se rechaza: nunca se
+        // debe iniciar sesión en una cuenta ambigua.
+        let ambiguousDriver = false;
         if (driverResult.length === 0 && normalizedPhone.length >= 9) {
           const national = normalizedPhone.slice(-9);
           driverResult = await db
@@ -179,7 +204,20 @@ export const loginRouter = createRouter({
             .from(drivers)
             .where(
               sql`right(regexp_replace(${drivers.phone}, '[^0-9]', '', 'g'), 9) = ${national}`,
-            );
+            )
+            .limit(2);
+          if (driverResult.length > 1) {
+            ambiguousDriver = true;
+            driverResult = [];
+          }
+        }
+
+        if (ambiguousDriver) {
+          recordLoginFailure(attemptKey);
+          return {
+            success: false,
+            message: "Hay más de una cuenta con ese teléfono. Contacta a la administración.",
+          };
         }
 
         const driver = driverResult[0];
@@ -248,10 +286,40 @@ export const loginRouter = createRouter({
     )
     .mutation(async ({ input, ctx }) => {
       const scope = input?.scope ?? "all";
-      if (scope === "all" || scope === "admin") clearAdminCookie(ctx.resHeaders);
-      if (scope === "all" || scope === "driver") clearDriverCookies(ctx.resHeaders);
-      if (scope === "all" || scope === "merchant") clearMerchantCookie(ctx.resHeaders);
+      const db = getDb();
+
+      if ((scope === "all" || scope === "admin") && ctx.admin) {
+        await db
+          .update(users)
+          .set({ sessionVersion: sql`coalesce(${users.sessionVersion}, 0) + 1` })
+          .where(eq(users.id, ctx.admin.id));
+        clearAdminCookie(ctx.resHeaders);
+      }
+      if ((scope === "all" || scope === "driver") && ctx.driver) {
+        await db
+          .update(drivers)
+          .set({
+            status: "offline",
+            fcmToken: null,
+            sessionVersion: sql`coalesce(${drivers.sessionVersion}, 0) + 1`,
+          })
+          .where(eq(drivers.id, ctx.driver.id));
+        clearDriverCookies(ctx.resHeaders);
+      }
+      if ((scope === "all" || scope === "merchant") && ctx.merchant) {
+        await db
+          .update(users)
+          .set({ sessionVersion: sql`coalesce(${users.sessionVersion}, 0) + 1` })
+          .where(eq(users.id, ctx.merchant.id));
+        clearMerchantCookie(ctx.resHeaders);
+      }
       if (scope === "all" || scope === "customer") {
+        if (ctx.customer) {
+          await db
+            .update(customers)
+            .set({ sessionVersion: sql`coalesce(${customers.sessionVersion}, 0) + 1` })
+            .where(eq(customers.id, ctx.customer.id));
+        }
         clearCustomerCookies(ctx.resHeaders, ctx.req.headers);
       }
       return { success: true, scope };
@@ -269,10 +337,20 @@ export const loginRouter = createRouter({
     // Try admin refresh
     const adminRefresh = cookies["quickgo_admin_refresh"];
     if (adminRefresh) {
-      const userId = await verifyAdminRefreshToken(adminRefresh);
-      if (userId) {
-        await setAdminCookie(ctx.resHeaders, ctx.req.headers, userId);
-        return { success: true, role: "admin" };
+      const payload = await verifyAdminRefreshTokenPayload(adminRefresh);
+      if (payload) {
+        const db = getDb();
+        const rows = await db.select().from(users).where(eq(users.id, payload.userId));
+        const admin = rows[0];
+        if (
+          admin &&
+          admin.role === "admin" &&
+          (payload.sessionVersion === null ||
+            (admin.sessionVersion ?? 0) === payload.sessionVersion)
+        ) {
+          await setAdminCookie(ctx.resHeaders, ctx.req.headers, admin.id);
+          return { success: true, role: "admin" };
+        }
       }
     }
 
@@ -298,10 +376,20 @@ export const loginRouter = createRouter({
     // Try merchant refresh
     const merchantRefresh = cookies["quickgo_merchant_refresh"];
     if (merchantRefresh) {
-      const userId = await verifyMerchantRefreshToken(merchantRefresh);
-      if (userId) {
-        const merchant = await setMerchantCookie(ctx.resHeaders, ctx.req.headers, userId);
-        if (merchant) return { success: true, role: "merchant" };
+      const payload = await verifyMerchantRefreshTokenPayload(merchantRefresh);
+      if (payload) {
+        const db = getDb();
+        const rows = await db.select().from(users).where(eq(users.id, payload.userId));
+        const merchant = rows[0];
+        if (
+          merchant &&
+          merchant.role === "merchant" &&
+          (payload.sessionVersion === null ||
+            (merchant.sessionVersion ?? 0) === payload.sessionVersion)
+        ) {
+          const session = await setMerchantCookie(ctx.resHeaders, ctx.req.headers, merchant.id);
+          if (session) return { success: true, role: "merchant" };
+        }
       }
     }
 

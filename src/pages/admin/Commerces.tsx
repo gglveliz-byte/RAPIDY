@@ -3,28 +3,53 @@ import { useNavigate } from "react-router";
 import {
   ArrowLeft, Store, Star, Search, X, Plus, Eye, EyeOff, Trash2, Camera,
 } from "lucide-react";
+import { toast } from "sonner";
 import { trpcCall, trpcMutate } from "@/hooks/useDeliveryData";
 import AdminLayout from "@/components/AdminLayout";
 
-function readFileAsDataURL(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+
+async function readImageAsCompressedDataURL(file: File): Promise<string> {
+  if (!file.type.startsWith("image/")) {
+    throw new Error("El archivo debe ser una imagen.");
+  }
+  if (file.size > MAX_IMAGE_BYTES) {
+    throw new Error("La imagen supera el máximo de 8 MB.");
+  }
+  const dataUrl = await new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result as string);
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
+  const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = dataUrl;
+  });
+  const maxSide = 1400;
+  const scale = Math.min(1, maxSide / Math.max(image.width, image.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(image.width * scale));
+  canvas.height = Math.max(1, Math.round(image.height * scale));
+  const context = canvas.getContext("2d");
+  if (!context) return dataUrl;
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL("image/jpeg", 0.82);
 }
 
 export default function AdminCommerces() {
   const navigate = useNavigate();
   const [commerceList, setCommerceList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [showNewMerchant, setShowNewMerchant] = useState(false);
   const [merchantForm, setMerchantForm] = useState({ name: "", email: "", password: "", categoryId: "" });
-  const [editForm, setEditForm] = useState({ name: "", phone: "", email: "", address: "", commissionRate: "", deliveryTime: "", minOrder: "", description: "", categoryId: "", logo: "", coverImage: "", isOpen: "open", openHours: "", rating: "" });
+  const [editForm, setEditForm] = useState({ name: "", phone: "", email: "", address: "", lat: "", lng: "", commissionRate: "", deliveryTime: "", minOrder: "", description: "", categoryId: "", logo: "", coverImage: "", isOpen: "open", openHours: "", rating: "" });
   const [saving, setSaving] = useState(false);
   const [categories, setCategories] = useState<any[]>([]);
   const [confirmingDelete, setConfirmingDelete] = useState<any>(null);
@@ -33,8 +58,18 @@ export default function AdminCommerces() {
 
   const load = () => {
     setLoading(true);
-    trpcCall<any[]>("admin.listCommerces").then(setCommerceList).catch(console.error).finally(() => setLoading(false));
-    trpcCall<any[]>("admin.listCategories").then(setCategories).catch(() => {});
+    setLoadError(null);
+    trpcCall<any[]>("admin.listCommerces")
+      .then(setCommerceList)
+      .catch((error: any) => {
+        setLoadError(error?.message || "No se pudieron cargar los comercios");
+      })
+      .finally(() => setLoading(false));
+    trpcCall<any[]>("admin.listCategories")
+      .then(setCategories)
+      .catch((error: any) => {
+        toast.error(error?.message || "No se pudieron cargar las categorías");
+      });
   };
 
   useEffect(() => { load(); }, []);
@@ -60,10 +95,13 @@ export default function AdminCommerces() {
     setDeleting(true);
     try {
       await trpcMutate("admin.deleteCommerce", { id: confirmingDelete.id });
-      setCommerceList(commerceList.filter(c => c.id !== confirmingDelete.id));
+      setCommerceList(commerceList.map(c => c.id === confirmingDelete.id
+        ? { ...c, status: "inactive", isOpen: "closed" }
+        : c));
+      toast.success("Comercio desactivado. El historial se conserva.");
       closeConfirm();
     } catch (err: any) {
-      setDeleteError(err?.message || "Error al eliminar");
+      setDeleteError(err?.message || "Error al desactivar");
       setDeleting(false);
     }
   };
@@ -74,10 +112,17 @@ export default function AdminCommerces() {
       if (!c) return;
       const current = c.status;
       const next = current === "active" ? "suspended" : "active";
+      if (
+        current === "active" &&
+        !confirm(`¿Suspender "${c.name}"? Dejará de recibir pedidos hasta que lo reactives.`)
+      ) {
+        return;
+      }
       const updated = await trpcMutate<any>("admin.updateCommerce", { id, status: next });
       setCommerceList(commerceList.map(c => c.id === id ? { ...c, ...updated } : c));
+      toast.success(next === "active" ? "Comercio activado." : "Comercio suspendido.");
     } catch (err: any) {
-      alert(err?.message || "Error");
+      toast.error(err?.message || "No se pudo cambiar el estado.");
     }
   };
 
@@ -99,7 +144,7 @@ export default function AdminCommerces() {
       setShowNewMerchant(false);
       load();
     } catch (err: any) {
-      alert(err?.message || "Error al crear");
+      toast.error(err?.message || "Error al crear");
     } finally {
       setSaving(false);
     }
@@ -112,6 +157,8 @@ export default function AdminCommerces() {
       phone: c.phone || "",
       email: c.email || "",
       address: c.address || "",
+      lat: c.lat || "",
+      lng: c.lng || "",
       commissionRate: c.commissionRate || "",
       deliveryTime: c.deliveryTime || "",
       minOrder: c.minOrder || "",
@@ -131,14 +178,20 @@ export default function AdminCommerces() {
     setSaving(true);
     try {
       const payload: any = { id: editing.id, ...editForm };
-      payload.commissionRate = payload.commissionRate ? String(payload.commissionRate) : "0.00";
-      payload.minOrder = payload.minOrder ? String(payload.minOrder) : "0.00";
+      // Los campos vacíos no deben sobrescribir valores existentes con cero.
+      if (!payload.commissionRate) delete payload.commissionRate;
+      if (!payload.minOrder) delete payload.minOrder;
+      if (!payload.rating) delete payload.rating;
+      if (!payload.lat) delete payload.lat;
+      if (!payload.lng) delete payload.lng;
       if (payload.categoryId) payload.categoryId = Number(payload.categoryId);
+      else delete payload.categoryId;
       const updated = await trpcMutate<any>("admin.updateCommerce", payload);
       setCommerceList(commerceList.map(c => c.id === editing.id ? { ...c, ...updated } : c));
       setShowForm(false);
+      toast.success("Comercio actualizado.");
     } catch (err: any) {
-      alert(err?.message || "Error al guardar");
+      toast.error(err?.message || "Error al guardar");
     } finally {
       setSaving(false);
     }
@@ -165,6 +218,20 @@ export default function AdminCommerces() {
         <div className="lg:h-full lg:flex lg:flex-col max-w-6xl mx-auto">
           {loading ? (
             <div className="text-center py-12 text-gray-500 text-sm">Cargando...</div>
+          ) : loadError ? (
+            <div className="bg-white rounded-xl p-6 text-center border border-red-200">
+              <p className="text-sm font-semibold text-red-700">
+                No se pudieron cargar los comercios
+              </p>
+              <p className="text-xs text-red-600/80 mt-1">{loadError}</p>
+              <button
+                type="button"
+                onClick={load}
+                className="mt-4 min-h-[40px] px-4 rounded-xl bg-red-600 text-white text-xs font-bold"
+              >
+                Reintentar
+              </button>
+            </div>
           ) : (
             <>
               <div className="flex gap-2 lg:gap-3 mb-3 lg:mb-4 lg:shrink-0">
@@ -209,7 +276,7 @@ export default function AdminCommerces() {
                                 <p className="font-medium text-gray-800 leading-tight">{c.name}</p>
                                 <div className="flex items-center gap-1 text-xs text-gray-500">
                                   <Star className="w-3 h-3 text-[#FFC107]" />
-                                  {c.rating || "4.0"}
+                                  {c.rating || "—"}
                                 </div>
                               </div>
                             </div>
@@ -218,13 +285,19 @@ export default function AdminCommerces() {
                           <td className="px-4 py-3 text-gray-600">{c.commissionRate ? `${c.commissionRate}%` : "-"}</td>
                           <td className="px-4 py-3">
                             <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${c.status === "active" ? "bg-green-100 text-green-700" : c.status === "pending" ? "bg-yellow-100 text-yellow-700" : "bg-red-100 text-red-700"}`}>
-                              {c.status === "active" ? "Activo" : c.status === "pending" ? "Pendiente" : "Suspendido"}
+                              {c.status === "active"
+                                ? `Activo · ${c.isOpen === "open" ? "Abierto" : "Cerrado"}`
+                                : c.status === "pending"
+                                  ? "Pendiente"
+                                  : c.status === "inactive"
+                                    ? "Desactivado"
+                                    : "Suspendido"}
                             </span>
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">
                               <button onClick={() => toggleStatus(c.id)} className="p-1.5 text-gray-400 hover:text-[#2E7D32] rounded-lg hover:bg-green-50" title={c.status === "active" ? "Suspender" : "Activar"}>
-                                {c.status === "active" || c.status === "pending" ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                {c.status === "active" ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                               </button>
                               <button onClick={() => openEdit(c)} className="p-1.5 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50" title="Editar">
                                 <span className="hidden lg:inline text-xs font-medium">Editar</span>
@@ -238,7 +311,7 @@ export default function AdminCommerces() {
                         </tr>
                       ))}
                       {filtered.length === 0 && (
-                        <tr><td colSpan={5} className="text-center py-8 text-gray-400">Sin comercios registrados</td></tr>
+                        <tr><td colSpan={5} className="text-center py-8 text-gray-400">{search ? "No hay comercios que coincidan con la búsqueda" : "Sin comercios registrados"}</td></tr>
                       )}
                     </tbody>
                   </table>
@@ -247,7 +320,7 @@ export default function AdminCommerces() {
                 {/* Mobile Card View */}
                 <div className="lg:hidden flex flex-col gap-3 pb-4">
                   {filtered.length === 0 ? (
-                    <div className="p-4 text-center text-gray-500 text-sm">Sin comercios registrados</div>
+                    <div className="p-4 text-center text-gray-500 text-sm">{search ? "No hay comercios que coincidan con la búsqueda" : "Sin comercios registrados"}</div>
                   ) : (
                     filtered.map((c) => (
                       <div key={c.id} className="bg-white rounded-xl card-shadow p-4 flex flex-col gap-3">
@@ -264,12 +337,18 @@ export default function AdminCommerces() {
                               <p className="font-medium text-gray-800 leading-tight">{c.name}</p>
                               <div className="flex items-center gap-1 text-xs text-gray-500">
                                 <Star className="w-3 h-3 text-[#FFC107]" />
-                                {c.rating || "4.0"}
+                                {c.rating || "—"}
                               </div>
                             </div>
                           </div>
                           <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${c.status === "active" ? "bg-green-100 text-green-700" : c.status === "pending" ? "bg-yellow-100 text-yellow-700" : "bg-red-100 text-red-700"}`}>
-                            {c.status === "active" ? "Activo" : c.status === "pending" ? "Pend" : "Susp"}
+                            {c.status === "active"
+                              ? "Activo"
+                              : c.status === "pending"
+                                ? "Pendiente"
+                                : c.status === "inactive"
+                                  ? "Desactivado"
+                                  : "Suspendido"}
                           </span>
                         </div>
                         
@@ -290,7 +369,7 @@ export default function AdminCommerces() {
                             className="min-h-[40px] px-3 flex items-center gap-1.5 text-xs font-semibold text-gray-700 hover:text-[#2E7D32] bg-gray-100 hover:bg-green-50 rounded-xl transition-all active:scale-95"
                             title={c.status === "active" ? "Suspender" : "Activar"}
                           >
-                            {c.status === "active" || c.status === "pending" ? <EyeOff className="w-4 h-4 text-amber-600" /> : <Eye className="w-4 h-4 text-green-600" />}
+                            {c.status === "active" ? <EyeOff className="w-4 h-4 text-amber-600" /> : <Eye className="w-4 h-4 text-green-600" />}
                             <span>{c.status === "active" ? "Pausar" : "Activar"}</span>
                           </button>
                           <button
@@ -336,7 +415,7 @@ export default function AdminCommerces() {
             <form onSubmit={handleCreateMerchant} className="flex flex-col flex-1 min-h-0 overflow-hidden">
               <div className="p-3.5 sm:p-5 overflow-y-auto flex-1 space-y-3.5 overscroll-contain">
                 <p className="text-xs text-gray-500 leading-relaxed">
-                  Crea los credenciales de acceso para este negocio. Con este email y contraseña, el dueño del local podrá entrar a su propio panel para agregar sus productos y ver sus ventas.
+                  Crea las credenciales de acceso para este negocio. Con este email y contraseña, el dueño del local podrá entrar a su propio panel para agregar sus productos y ver sus ventas.
                 </p>
                 <div>
                   <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Nombre Comercial</label>
@@ -363,10 +442,11 @@ export default function AdminCommerces() {
                   <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Contraseña temporal</label>
                   <input
                     type="password"
-                    placeholder="Min. 6 caracteres"
+                    placeholder="Mínimo 8 caracteres"
                     value={merchantForm.password}
                     onChange={(e) => setMerchantForm({...merchantForm, password: e.target.value})}
                     className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20"
+                    minLength={8}
                     required
                   />
                 </div>
@@ -415,7 +495,7 @@ export default function AdminCommerces() {
             {deleteError ? (
               <>
                 <div className="flex items-center justify-between mb-3 sm:mb-4">
-                  <h2 className="text-base sm:text-lg font-bold text-red-600">No se puede eliminar</h2>
+                  <h2 className="text-base sm:text-lg font-bold text-red-600">No se puede desactivar</h2>
                   <button
                     onClick={closeConfirm}
                     className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
@@ -424,11 +504,9 @@ export default function AdminCommerces() {
                   </button>
                 </div>
                 <p className="text-sm text-gray-600 mb-2">
-                  El comercio <strong>{confirmingDelete.name}</strong> tiene pedidos que comparten productos con otros comercios.
+                  No pudimos desactivar <strong>{confirmingDelete.name}</strong>.
                 </p>
-                <p className="text-xs text-gray-500 mb-5 leading-relaxed">
-                  {deleteError}
-                </p>
+                <p className="text-xs text-gray-500 mb-5 leading-relaxed">{deleteError}</p>
                 <div className="flex gap-2">
                   <button
                     onClick={closeConfirm}
@@ -441,7 +519,7 @@ export default function AdminCommerces() {
             ) : (
               <>
                 <div className="flex items-center justify-between mb-3 sm:mb-4">
-                  <h2 className="text-base sm:text-lg font-bold text-gray-800">Eliminar comercio</h2>
+                  <h2 className="text-base sm:text-lg font-bold text-gray-800">Desactivar comercio</h2>
                   <button
                     onClick={closeConfirm}
                     className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
@@ -450,9 +528,12 @@ export default function AdminCommerces() {
                   </button>
                 </div>
                 <p className="text-sm text-gray-600 mb-1">
-                  ¿Estás seguro de eliminar <strong>{confirmingDelete.name}</strong>?
+                  ¿Estás seguro de desactivar <strong>{confirmingDelete.name}</strong>?
                 </p>
-                <p className="text-xs text-gray-400 mb-5 leading-relaxed">Se borrarán sus productos y datos relacionados. Esta acción no se puede deshacer.</p>
+                <p className="text-xs text-gray-400 mb-5 leading-relaxed">
+                  El comercio dejará de recibir pedidos, sus productos se pausan y se revoca
+                  el acceso del merchant. El historial de pedidos y la contabilidad se conservan.
+                </p>
                 <div className="flex gap-2.5 sm:gap-3">
                   <button
                     onClick={closeConfirm}
@@ -465,7 +546,7 @@ export default function AdminCommerces() {
                     disabled={deleting}
                     className="flex-1 h-11 bg-red-600 text-white text-sm font-semibold rounded-xl hover:bg-red-700 disabled:opacity-50 active:scale-98 transition-all shadow-sm shadow-red-600/20"
                   >
-                    {deleting ? "Eliminando..." : "Eliminar"}
+                    {deleting ? "Desactivando..." : "Desactivar"}
                   </button>
                 </div>
               </>
@@ -514,7 +595,12 @@ export default function AdminCommerces() {
                       {editForm.logo ? "Cambiar" : "Subir"}
                       <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
                         const f = e.target.files?.[0];
-                        if (f) setEditForm({...editForm, logo: await readFileAsDataURL(f)});
+                        if (!f) return;
+                        try {
+                          setEditForm({...editForm, logo: await readImageAsCompressedDataURL(f)});
+                        } catch (error: any) {
+                          toast.error(error?.message || "No se pudo procesar la imagen.");
+                        }
                       }} />
                     </label>
                   </div>
@@ -536,7 +622,12 @@ export default function AdminCommerces() {
                       {editForm.coverImage ? "Cambiar" : "Subir"}
                       <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
                         const f = e.target.files?.[0];
-                        if (f) setEditForm({...editForm, coverImage: await readFileAsDataURL(f)});
+                        if (!f) return;
+                        try {
+                          setEditForm({...editForm, coverImage: await readImageAsCompressedDataURL(f)});
+                        } catch (error: any) {
+                          toast.error(error?.message || "No se pudo procesar la imagen.");
+                        }
                       }} />
                     </label>
                   </div>
@@ -584,6 +675,36 @@ export default function AdminCommerces() {
                   className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20"
                 />
               </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Latitud</label>
+                  <input
+                    inputMode="decimal"
+                    placeholder="Ej: -0.180700"
+                    value={editForm.lat}
+                    onChange={(e) => setEditForm({...editForm, lat: e.target.value})}
+                    className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">Longitud</label>
+                  <input
+                    inputMode="decimal"
+                    placeholder="Ej: -78.467800"
+                    value={editForm.lng}
+                    onChange={(e) => setEditForm({...editForm, lng: e.target.value})}
+                    className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20"
+                  />
+                </div>
+              </div>
+
+              {editing?.merchantEmail && (
+                <div className="rounded-xl border border-blue-100 bg-blue-50 px-3 py-2">
+                  <p className="text-[10px] uppercase font-bold text-blue-500">Email de acceso del merchant</p>
+                  <p className="text-xs font-semibold text-blue-800 break-all">{editing.merchantEmail}</p>
+                </div>
+              )}
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>

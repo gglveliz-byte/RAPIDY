@@ -71,6 +71,20 @@
       "when": 1794613300075,
       "tag": "0009_furry_nemesis",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794615190113,
+      "tag": "0010_skinny_rage",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794616311945,
+      "tag": "0011_icy_satana",
+      "breakpoints": true
     }
   ]
 }

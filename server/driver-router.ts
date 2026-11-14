@@ -415,6 +415,7 @@ export const driverRouter = createRouter({
           .update(orders)
           .set({
             driverId,
+            driverCommissionRate: driver.commissionRate,
             status: "driver_assigned",
             updatedAt: new Date(),
           })

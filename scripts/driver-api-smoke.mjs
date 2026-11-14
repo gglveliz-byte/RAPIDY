@@ -1,9 +1,11 @@
 import "dotenv/config";
+import bcrypt from "bcryptjs";
 import pg from "pg";
 
 const BASE_URL = process.env.E2E_BASE_URL || "http://localhost:3000";
-const DRIVER_PHONE = process.env.E2E_DRIVER_PHONE || "0991234567";
-const DRIVER_PASSWORD = process.env.E2E_DRIVER_PASSWORD || "moto123";
+// Driver dedicado al smoke para no interferir con sesiones o pedidos reales.
+const DRIVER_PHONE = "0990000001";
+const DRIVER_PASSWORD = "smoke1234";
 const MERCHANT_EMAIL = process.env.E2E_MERCHANT_EMAIL || "comercio@test.com";
 const MERCHANT_PASSWORD = process.env.E2E_MERCHANT_PASSWORD || "comercio123";
 
@@ -64,6 +66,24 @@ const payload = (result) => result.data?.result?.data?.json;
 
 async function main() {
   const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+  const passwordHash = await bcrypt.hash(DRIVER_PASSWORD, 10);
+  const existingDriver = (
+    await pool.query("select id from drivers where phone = $1", [DRIVER_PHONE])
+  ).rows[0];
+  const testDriverId =
+    existingDriver?.id ??
+    (
+      await pool.query(
+        `insert into drivers (name, phone, password_hash, vehicle, license_plate, status, commission_rate)
+         values ('Driver Smoke', $1, $2, 'Moto Smoke', 'SMK-001', 'online', '75.00')
+         returning id`,
+        [DRIVER_PHONE, passwordHash],
+      )
+    ).rows[0].id;
+  await pool.query(
+    "update drivers set password_hash = $1, status = 'online', commission_rate = '75.00', session_version = coalesce(session_version, 0) + 1 where id = $2",
+    [passwordHash, testDriverId],
+  );
   const product = (
     await pool.query(
       "select id, name, price from products where commerce_id = 1 order by id limit 1",
@@ -136,7 +156,7 @@ async function main() {
       "Aceptar deja driver_assigned",
       accept.status === 200 &&
         accepted.status === "driver_assigned" &&
-        Number(accepted.driver_id) === 1,
+        Number(accepted.driver_id) === Number(testDriverId),
       `${accept.status} ${accepted.status} ${accept.data?.error?.json?.message || ""}`,
     );
 
@@ -266,7 +286,7 @@ async function main() {
   } finally {
     await pool.query("delete from driver_earnings where order_id = $1", [order.id]).catch(() => {});
     await pool.query("delete from orders where id = $1", [order.id]).catch(() => {});
-    await pool.query("update drivers set status = 'online' where phone = $1", [DRIVER_PHONE]).catch(() => {});
+    await pool.query("update drivers set status = 'offline' where phone = $1", [DRIVER_PHONE]).catch(() => {});
     await pool.end();
   }
 

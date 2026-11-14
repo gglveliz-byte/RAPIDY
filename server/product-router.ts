@@ -81,6 +81,7 @@ export const productRouter = createRouter({
       .where(
         and(
           eq(products.isAvailable, "yes"),
+          eq(products.adminPaused, false),
           eq(commerces.status, "active"),
           eq(commerces.isOpen, "open"),
         ),
@@ -99,6 +100,7 @@ export const productRouter = createRouter({
           and(
             eq(products.id, input.id),
             eq(products.isAvailable, "yes"),
+            eq(products.adminPaused, false),
             eq(commerces.status, "active"),
             eq(commerces.isOpen, "open"),
           ),
@@ -121,7 +123,9 @@ export const productRouter = createRouter({
       return rows
         .filter(
           (row) =>
-            row.commerceStatus === "active" && row.product.isAvailable === "yes",
+            row.commerceStatus === "active" &&
+            row.product.isAvailable === "yes" &&
+            !row.product.adminPaused,
         )
         .map((row) => row.product);
     }),
@@ -136,6 +140,7 @@ export const productRouter = createRouter({
         and(
           eq(products.isFeatured, "yes"),
           eq(products.isAvailable, "yes"),
+          eq(products.adminPaused, false),
           eq(commerces.status, "active"),
           eq(commerces.isOpen, "open"),
         ),
@@ -167,6 +172,7 @@ export const productRouter = createRouter({
       .where(
         and(
           eq(products.isAvailable, "yes"),
+          eq(products.adminPaused, false),
           eq(commerces.status, "active"),
           eq(commerces.isOpen, "open"),
         ),
@@ -194,6 +200,7 @@ export const productRouter = createRouter({
           and(
             or(ilike(products.name, term), ilike(commerces.name, term)),
             eq(products.isAvailable, "yes"),
+            eq(products.adminPaused, false),
             eq(commerces.status, "active"),
             eq(commerces.isOpen, "open"),
           ),
@@ -234,10 +241,25 @@ export const productRouter = createRouter({
       const { id, ...data } = input;
 
       try {
-        const existing = await db.select({ id: products.id, commerceId: products.commerceId }).from(products).where(eq(products.id, id));
+        const existing = await db
+          .select({
+            id: products.id,
+            commerceId: products.commerceId,
+            adminPaused: products.adminPaused,
+          })
+          .from(products)
+          .where(eq(products.id, id));
         if (!existing.length) throw new TRPCError({ code: "NOT_FOUND", message: "Producto no encontrado" });
         const commerceId = existing[0].commerceId;
         await assertCommerceOwnership(ctx, commerceId);
+
+        if (existing[0].adminPaused && data.isAvailable === "yes") {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message:
+              "Este producto está pausado por la administración. Contacta al administrador para reactivarlo.",
+          });
+        }
 
         const updateData: Record<string, any> = {};
         for (const [key, val] of Object.entries(data)) {

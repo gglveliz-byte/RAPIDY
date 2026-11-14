@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import {
   ArrowLeft, Star, Search, Bike, X, Plus, Trash2,
 } from "lucide-react";
+import { toast } from "sonner";
 import { trpcMutate } from "@/hooks/useDeliveryData";
 import { trpc } from "@/providers/trpc";
 import PhoneInput from "@/components/PhoneInput";
@@ -46,27 +47,37 @@ export default function AdminDrivers() {
       await trpcMutate("admin.deleteDriver", { id });
       await utils.driver.list.invalidate();
     } catch (err: any) {
-      alert(err?.message || "Error al eliminar");
+      toast.error(err?.message || "Error al eliminar");
     }
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    const commission = Number(form.commissionRate);
+    if (!Number.isFinite(commission) || commission < 0 || commission > 100) {
+      toast.error("La comisión debe ser un número entre 0 y 100.");
+      return;
+    }
+    if (form.password && form.password.length < 8) {
+      toast.error("La contraseña debe tener al menos 8 caracteres.");
+      return;
+    }
+
     setSaving(true);
     try {
-      const parsedCommission = (!isNaN(parseFloat(form.commissionRate)) ? parseFloat(form.commissionRate) : 80).toFixed(2);
-      
+      const commissionRate = commission.toFixed(2);
       if (editing) {
-        const payload: any = { id: editing.id, name: form.name, phone: form.phone, vehicle: form.vehicle, licensePlate: form.licensePlate, commissionRate: parsedCommission };
+        const payload: any = { id: editing.id, name: form.name, phone: form.phone, vehicle: form.vehicle, licensePlate: form.licensePlate, commissionRate };
         if (form.password) payload.password = form.password;
         await trpcMutate("admin.updateDriver", payload);
       } else {
-        await trpcMutate("admin.createDriver", { ...form, commissionRate: parsedCommission });
+        await trpcMutate("admin.createDriver", { ...form, commissionRate });
       }
       setShowForm(false);
       await utils.driver.list.invalidate();
+      toast.success(editing ? "Repartidor actualizado." : "Repartidor creado.");
     } catch (err: any) {
-      alert(err?.message || "Error al guardar");
+      toast.error(err?.message || "Error al guardar");
     } finally {
       setSaving(false);
     }
@@ -298,10 +309,11 @@ export default function AdminDrivers() {
                   <label className="text-[10px] uppercase font-bold text-gray-500 mb-1 block">{editing ? "Cambiar Contraseña (opcional)" : "Contraseña de acceso"}</label>
                   <input
                     type="password"
-                    placeholder={editing ? "Dejar vacío para no cambiarla" : "Min. 6 caracteres"}
+                    placeholder={editing ? "Dejar vacío para no cambiarla" : "Mínimo 8 caracteres"}
                     value={form.password}
                     onChange={(e) => setForm({...form, password: e.target.value})}
                     className="w-full h-11 px-4 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#2E7D32] focus:ring-2 focus:ring-[#2E7D32]/20"
+                    minLength={8}
                     required={!editing}
                   />
                 </div>

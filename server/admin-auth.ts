@@ -10,44 +10,87 @@ const ACCESS_EXPIRY = "15 minutes";
 const REFRESH_EXPIRY = "7 days";
 const REFRESH_MAX_AGE = 7 * 24 * 60 * 60;
 
-export async function signAdminToken(userId: number) {
+export interface AdminTokenPayload {
+  userId: number;
+  sessionVersion: number | null;
+}
+
+export async function signAdminToken(userId: number, sessionVersion = 0) {
   const secret = new TextEncoder().encode(env.appSecret);
-  return new jose.SignJWT({ userId, role: "admin", type: "access" })
+  return new jose.SignJWT({ userId, role: "admin", sessionVersion, type: "access" })
     .setProtectedHeader({ alg: JWT_ALG })
     .setIssuedAt()
     .setExpirationTime(ACCESS_EXPIRY)
     .sign(secret);
 }
 
-export async function signAdminRefreshToken(userId: number) {
+export async function signAdminRefreshToken(userId: number, sessionVersion = 0) {
   const secret = new TextEncoder().encode(env.appSecret);
-  return new jose.SignJWT({ userId, role: "admin", type: "refresh", jti: crypto.randomUUID() })
+  return new jose.SignJWT({
+    userId,
+    role: "admin",
+    sessionVersion,
+    type: "refresh",
+    jti: crypto.randomUUID(),
+  })
     .setProtectedHeader({ alg: JWT_ALG })
     .setIssuedAt()
     .setExpirationTime(REFRESH_EXPIRY)
     .sign(secret);
 }
 
-export async function verifyAdminToken(token: string): Promise<number | null> {
+export async function verifyAdminTokenPayload(
+  token: string,
+): Promise<AdminTokenPayload | null> {
   const secret = new TextEncoder().encode(env.appSecret);
   try {
     const { payload } = await jose.jwtVerify(token, secret, { algorithms: [JWT_ALG] });
-    if (payload.type !== "access" || payload.role !== "admin") return null;
-    return payload.userId as number;
+    if (
+      payload.type !== "access" ||
+      payload.role !== "admin" ||
+      typeof payload.userId !== "number"
+    ) {
+      return null;
+    }
+    return {
+      userId: payload.userId,
+      sessionVersion:
+        typeof payload.sessionVersion === "number" ? payload.sessionVersion : null,
+    };
   } catch {
     return null;
   }
 }
 
-export async function verifyAdminRefreshToken(token: string): Promise<number | null> {
+export async function verifyAdminRefreshTokenPayload(
+  token: string,
+): Promise<AdminTokenPayload | null> {
   const secret = new TextEncoder().encode(env.appSecret);
   try {
     const { payload } = await jose.jwtVerify(token, secret, { algorithms: [JWT_ALG] });
-    if (payload.type !== "refresh" || payload.role !== "admin") return null;
-    return payload.userId as number;
+    if (
+      payload.type !== "refresh" ||
+      payload.role !== "admin" ||
+      typeof payload.userId !== "number"
+    ) {
+      return null;
+    }
+    return {
+      userId: payload.userId,
+      sessionVersion:
+        typeof payload.sessionVersion === "number" ? payload.sessionVersion : null,
+    };
   } catch {
     return null;
   }
+}
+
+export async function verifyAdminToken(token: string): Promise<number | null> {
+  return (await verifyAdminTokenPayload(token))?.userId ?? null;
+}
+
+export async function verifyAdminRefreshToken(token: string): Promise<number | null> {
+  return (await verifyAdminRefreshTokenPayload(token))?.userId ?? null;
 }
 
 function serializeCookie(name: string, value: string, opts: Record<string, string | number | boolean | Date>): string {
@@ -65,8 +108,9 @@ export async function setAdminCookie(resHeaders: Headers, reqHeaders: Headers, u
   const db = getDb();
   const result = await db.select().from(users).where(eq(users.id, userId));
   if (result.length === 0 || result[0].role !== "admin") return null;
-  const token = await signAdminToken(userId);
-  const refreshToken = await signAdminRefreshToken(userId);
+  const sessionVersion = result[0].sessionVersion ?? 0;
+  const token = await signAdminToken(userId, sessionVersion);
+  const refreshToken = await signAdminRefreshToken(userId, sessionVersion);
   const cookieOpts = getSessionCookieOptions(reqHeaders);
   resHeaders.append("Set-Cookie", serializeCookie("quickgo_admin_token", token, {
     ...cookieOpts,

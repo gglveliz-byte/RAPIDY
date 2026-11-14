@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   Search,
@@ -8,7 +7,6 @@ import {
   X,
   Package,
 } from "lucide-react";
-import { useAdminOrders } from "@/hooks/useDeliveryData";
 import { useAdminSSE } from "@/hooks/useAdminSSE";
 import { trpc } from "@/providers/trpc";
 import AdminLayout from "@/components/AdminLayout";
@@ -42,15 +40,114 @@ const filterLabels: Record<string, string> = {
   cancelled: "Cancelados",
 };
 
+function SettlementPanel({
+  order,
+  loadingKey,
+  onToggleCommerce,
+  onToggleDriver,
+}: {
+  order: any;
+  loadingKey: string | null;
+  onToggleCommerce: (orderId: number, commerceId: number) => void;
+  onToggleDriver: (orderId: number) => void;
+}) {
+  if (order.status !== "delivered") {
+    return <span className="text-[10px] text-gray-400">Pendiente de entrega</span>;
+  }
+
+  const settlements: any[] =
+    order.commerceSettlements && order.commerceSettlements.length > 0
+      ? order.commerceSettlements
+      : [
+          {
+            commerceId: 0,
+            commerceName: order.commerceName || "Comercio",
+            owed: order.commerceOwed,
+            action: order.commerceAction,
+            settled: order.commerceSettled,
+          },
+        ];
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      {settlements.map((settlement) => {
+        const key = `${order.id}:${settlement.commerceId}`;
+        return (
+          <div
+            key={settlement.commerceId}
+            className="flex items-center justify-between gap-1.5 bg-gray-50 px-2 py-1.5 rounded-lg border border-gray-100"
+          >
+            <div className="flex flex-col min-w-0">
+              <span className="text-[9px] text-gray-400 leading-none truncate">
+                {settlements.length > 1 ? settlement.commerceName : "Comercio"}
+              </span>
+              <span
+                className={`text-[11px] font-bold truncate ${
+                  settlement.action === "cobrar" ? "text-blue-600" : "text-orange-600"
+                }`}
+              >
+                {settlement.action === "cobrar" ? "Cobrar" : "Pagar"} $
+                {Number(settlement.owed || 0).toFixed(2)}
+              </span>
+            </div>
+            <button
+              disabled={loadingKey === key}
+              onClick={() => onToggleCommerce(order.id, settlement.commerceId)}
+              className={`min-h-[34px] px-2.5 text-[11px] font-semibold rounded-lg transition-colors disabled:opacity-50 shrink-0 ${
+                settlement.settled
+                  ? "bg-green-100 text-green-700"
+                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+              }`}
+            >
+              {loadingKey === key ? "..." : settlement.settled ? "Saldado" : "Pendiente"}
+            </button>
+          </div>
+        );
+      })}
+
+      <div className="flex items-center justify-between gap-1.5 bg-gray-50 px-2 py-1.5 rounded-lg border border-gray-100">
+        <div className="flex flex-col min-w-0">
+          <span className="text-[9px] text-gray-400 leading-none">Repartidor</span>
+          <span
+            className={`text-[11px] font-bold truncate ${
+              order.driverAction === "cobrar" ? "text-blue-600" : "text-orange-600"
+            }`}
+          >
+            {order.driverAction === "cobrar" ? "Cobrar" : "Pagar"} $
+            {Number(order.driverOwed || 0).toFixed(2)}
+          </span>
+        </div>
+        <button
+          disabled={loadingKey === `${order.id}:driver`}
+          onClick={() => onToggleDriver(order.id)}
+          className={`min-h-[34px] px-2.5 text-[11px] font-semibold rounded-lg transition-colors disabled:opacity-50 shrink-0 ${
+            order.driverSettled
+              ? "bg-green-100 text-green-700"
+              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+          }`}
+        >
+          {loadingKey === `${order.id}:driver`
+            ? "..."
+            : order.driverSettled
+              ? "Saldado"
+              : "Pendiente"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminOrders() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
-  const [loadingCommerceId, setLoadingCommerceId] = useState<number | null>(null);
-  const [loadingDriverId, setLoadingDriverId] = useState<number | null>(null);
-  
-  const { data: orders, loading } = useAdminOrders();
+  const [loadingKey, setLoadingKey] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
+
+  const ordersQuery = trpc.admin.orders.useQuery({ limit: 100, offset: page * 100 });
+  const orders = ordersQuery.data ?? [];
+  const loading = ordersQuery.isLoading;
   const { data: orderDetails, isLoading: detailsLoading, isError: detailsError } = trpc.admin.orderDetail.useQuery(
     { id: selectedOrderId! },
     { enabled: !!selectedOrderId }
@@ -74,22 +171,16 @@ export default function AdminOrders() {
     }
   });
 
-  const queryClient = useQueryClient();
-
   const toggleCommerce = trpc.admin.toggleCommerceSettled.useMutation({
-    onSuccess: () => {
-      utils.admin.orders.invalidate();
-      queryClient.invalidateQueries({ queryKey: ["admin.orders"] });
-    },
-    onSettled: () => setLoadingCommerceId(null)
+    onSuccess: () => utils.admin.orders.invalidate(),
+    onSettled: () => setLoadingKey(null),
+    onError: (error) => alert(error.message || "No se pudo liquidar el comercio."),
   });
   
   const toggleDriver = trpc.admin.toggleDriverSettled.useMutation({
-    onSuccess: () => {
-      utils.admin.orders.invalidate();
-      queryClient.invalidateQueries({ queryKey: ["admin.orders"] });
-    },
-    onSettled: () => setLoadingDriverId(null)
+    onSuccess: () => utils.admin.orders.invalidate(),
+    onSettled: () => setLoadingKey(null),
+    onError: (error) => alert(error.message || "No se pudo liquidar al repartidor."),
   });
 
   const handleApprovePayment = async () => {
@@ -205,49 +296,19 @@ export default function AdminOrders() {
                           </span>
                         </td>
                         <td className="px-4 py-3 text-gray-500 text-xs">{o.createdAt ? new Date(o.createdAt).toLocaleString() : "-"}</td>
-                        <td className="px-4 py-3 min-w-[200px]">
-                          {o.status === "delivered" ? (
-                            <div className="flex flex-col gap-2">
-                              <div className="flex items-center justify-between gap-2 bg-gray-50 p-1.5 rounded-lg border border-gray-100">
-                                <div className="flex flex-col">
-                                  <span className="text-[10px] text-gray-500 leading-none">Comercio</span>
-                                  <span className={`text-xs font-semibold ${o.commerceAction === 'cobrar' ? 'text-blue-600' : 'text-orange-600'}`}>
-                                    {o.commerceAction === 'cobrar' ? 'Cobrar' : 'Pagar'} ${o.commerceOwed}
-                                  </span>
-                                </div>
-                                <button
-                                  disabled={loadingCommerceId === o.id}
-                                  onClick={() => {
-                                    setLoadingCommerceId(o.id);
-                                    toggleCommerce.mutate({ id: o.id });
-                                  }}
-                                  className={`px-2.5 py-1 text-[11px] font-semibold rounded-lg transition-colors disabled:opacity-50 ${o.commerceSettled ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
-                                >
-                                  {loadingCommerceId === o.id ? '...' : o.commerceSettled ? 'Saldado' : 'Pendiente'}
-                                </button>
-                              </div>
-                              <div className="flex items-center justify-between gap-2 bg-gray-50 p-1.5 rounded-lg border border-gray-100">
-                                <div className="flex flex-col">
-                                  <span className="text-[10px] text-gray-500 leading-none">Repartidor</span>
-                                  <span className={`text-xs font-semibold ${o.driverAction === 'cobrar' ? 'text-blue-600' : 'text-orange-600'}`}>
-                                    {o.driverAction === 'cobrar' ? 'Cobrar' : 'Pagar'} ${o.driverOwed}
-                                  </span>
-                                </div>
-                                <button
-                                  disabled={loadingDriverId === o.id}
-                                  onClick={() => {
-                                    setLoadingDriverId(o.id);
-                                    toggleDriver.mutate({ id: o.id });
-                                  }}
-                                  className={`px-2.5 py-1 text-[11px] font-semibold rounded-lg transition-colors disabled:opacity-50 ${o.driverSettled ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
-                                >
-                                  {loadingDriverId === o.id ? '...' : o.driverSettled ? 'Saldado' : 'Pendiente'}
-                                </button>
-                              </div>
-                            </div>
-                          ) : (
-                            <span className="text-[10px] text-gray-400">Pendiente de entrega</span>
-                          )}
+                        <td className="px-4 py-3 min-w-[220px]">
+                          <SettlementPanel
+                            order={o}
+                            loadingKey={loadingKey}
+                            onToggleCommerce={(orderId, commerceId) => {
+                              setLoadingKey(`${orderId}:${commerceId}`);
+                              toggleCommerce.mutate({ id: orderId, commerceId });
+                            }}
+                            onToggleDriver={(orderId) => {
+                              setLoadingKey(`${orderId}:driver`);
+                              toggleDriver.mutate({ id: orderId });
+                            }}
+                          />
                         </td>
                         <td className="px-4 py-3 text-center">
                           <button onClick={() => setSelectedOrderId(o.id)} className="w-9 h-9 inline-flex items-center justify-center hover:bg-gray-100 rounded-xl text-gray-600 hover:text-gray-900 transition-colors" title="Ver detalles">
@@ -301,48 +362,18 @@ export default function AdminOrders() {
 
                     <div className="pt-2 border-t border-gray-100 flex items-center justify-between gap-2">
                       <div className="flex-1 min-w-0">
-                        {o.status === "delivered" ? (
-                          <div className="flex flex-col gap-1.5">
-                            <div className="flex items-center justify-between gap-1.5 bg-gray-50 px-2 py-1.5 rounded-lg border border-gray-100">
-                              <div className="flex flex-col min-w-0">
-                                <span className="text-[9px] text-gray-400 leading-none">Comercio</span>
-                                <span className={`text-[11px] font-bold truncate ${o.commerceAction === 'cobrar' ? 'text-blue-600' : 'text-orange-600'}`}>
-                                  {o.commerceAction === 'cobrar' ? 'Cobrar' : 'Pagar'} ${o.commerceOwed}
-                                </span>
-                              </div>
-                              <button
-                                disabled={loadingCommerceId === o.id}
-                                onClick={() => {
-                                  setLoadingCommerceId(o.id);
-                                  toggleCommerce.mutate({ id: o.id });
-                                }}
-                                className={`min-h-[34px] px-2.5 text-[11px] font-semibold rounded-lg transition-colors disabled:opacity-50 shrink-0 ${o.commerceSettled ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
-                              >
-                                {loadingCommerceId === o.id ? '...' : o.commerceSettled ? 'Saldado' : 'Pendiente'}
-                              </button>
-                            </div>
-                            <div className="flex items-center justify-between gap-1.5 bg-gray-50 px-2 py-1.5 rounded-lg border border-gray-100">
-                              <div className="flex flex-col min-w-0">
-                                <span className="text-[9px] text-gray-400 leading-none">Repartidor</span>
-                                <span className={`text-[11px] font-bold truncate ${o.driverAction === 'cobrar' ? 'text-blue-600' : 'text-orange-600'}`}>
-                                  {o.driverAction === 'cobrar' ? 'Cobrar' : 'Pagar'} ${o.driverOwed}
-                                </span>
-                              </div>
-                              <button
-                                disabled={loadingDriverId === o.id}
-                                onClick={() => {
-                                  setLoadingDriverId(o.id);
-                                  toggleDriver.mutate({ id: o.id });
-                                }}
-                                className={`min-h-[34px] px-2.5 text-[11px] font-semibold rounded-lg transition-colors disabled:opacity-50 shrink-0 ${o.driverSettled ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
-                              >
-                                {loadingDriverId === o.id ? '...' : o.driverSettled ? 'Saldado' : 'Pendiente'}
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <span className="text-[11px] text-gray-400 italic">Pendiente de entrega</span>
-                        )}
+                        <SettlementPanel
+                          order={o}
+                          loadingKey={loadingKey}
+                          onToggleCommerce={(orderId, commerceId) => {
+                            setLoadingKey(`${orderId}:${commerceId}`);
+                            toggleCommerce.mutate({ id: orderId, commerceId });
+                          }}
+                          onToggleDriver={(orderId) => {
+                            setLoadingKey(`${orderId}:driver`);
+                            toggleDriver.mutate({ id: orderId });
+                          }}
+                        />
                       </div>
                       <button
                         onClick={() => setSelectedOrderId(o.id)}
@@ -355,6 +386,26 @@ export default function AdminOrders() {
                   </div>
                 ))
               )}
+            </div>
+
+            <div className="p-3 lg:p-4 border-t border-gray-100 bg-white flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => setPage((current) => Math.max(0, current - 1))}
+                disabled={page === 0 || ordersQuery.isFetching}
+                className="min-h-[44px] px-4 rounded-xl border border-gray-200 text-xs lg:text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+              >
+                Anteriores
+              </button>
+              <span className="text-xs text-gray-500 font-medium">Página {page + 1}</span>
+              <button
+                type="button"
+                onClick={() => setPage((current) => current + 1)}
+                disabled={orders.length < 100 || ordersQuery.isFetching}
+                className="min-h-[44px] px-4 rounded-xl border border-gray-200 text-xs lg:text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+              >
+                Siguientes
+              </button>
             </div>
           </div>
         </div>

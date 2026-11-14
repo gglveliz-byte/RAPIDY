@@ -22,19 +22,33 @@ import { eq, sql, inArray, and } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { emit } from "../events";
 
+const commissionRateSchema = z
+  .string()
+  .trim()
+  .refine((value) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed >= 0 && parsed <= 100;
+  }, "La comisión debe ser un número entre 0 y 100");
+
 export const adminDriversProcedures = {
   createDriver: adminQuery
     .input(z.object({
-      name: z.string().min(1, "El nombre es requerido"),
-      phone: z.string().min(5, "El teléfono debe tener al menos 5 dígitos"),
-      password: z.string().min(4, "La contraseña debe tener al menos 4 caracteres"),
-      vehicle: z.string().optional(),
-      licensePlate: z.string().optional(),
-      commissionRate: z.string().optional(),
+      name: z.string().trim().min(2, "El nombre es requerido").max(200),
+      phone: z.string().trim().min(7, "El teléfono debe tener al menos 7 dígitos").max(20),
+      password: z.string().min(8, "La contraseña debe tener al menos 8 caracteres").max(72),
+      vehicle: z.string().trim().max(100).optional(),
+      licensePlate: z.string().trim().max(20).optional(),
+      commissionRate: commissionRateSchema.optional(),
     }))
     .mutation(async ({ input }) => {
       const db = getDb();
       const normalizedPhone = input.phone.replace(/\D/g, "");
+      if (normalizedPhone.length < 7) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "El teléfono debe tener al menos 7 dígitos.",
+        });
+      }
       
       const existing = await db.select({ id: drivers.id }).from(drivers).where(eq(drivers.phone, normalizedPhone));
       if (existing.length > 0) {
@@ -51,7 +65,9 @@ export const adminDriversProcedures = {
         passwordHash: hash,
         vehicle: input.vehicle || null,
         licensePlate: input.licensePlate || null,
-        commissionRate: input.commissionRate || "75.00",
+        commissionRate: input.commissionRate
+          ? Number(input.commissionRate).toFixed(2)
+          : "75.00",
       }).returning({
         id: drivers.id,
         name: drivers.name,
@@ -70,21 +86,36 @@ export const adminDriversProcedures = {
 
   updateDriver: adminQuery
     .input(z.object({
-      id: z.number(),
-      name: z.string().optional(),
-      phone: z.string().optional(),
-      password: z.string().optional(),
-      vehicle: z.string().optional(),
-      licensePlate: z.string().optional(),
-      commissionRate: z.string().optional(),
+      id: z.number().int().positive(),
+      name: z.string().trim().min(2, "El nombre es requerido").max(200).optional(),
+      phone: z.string().trim().min(7).max(20).optional(),
+      password: z.string().max(72).optional(),
+      vehicle: z.string().trim().max(100).optional(),
+      licensePlate: z.string().trim().max(20).optional(),
+      commissionRate: commissionRateSchema.optional(),
     }))
     .mutation(async ({ input }) => {
       const db = getDb();
-      const { id, password, phone, ...data } = input;
-      const updateData: Record<string, any> = { ...data };
+      const { id, password, phone, commissionRate, ...data } = input;
+      const updateData: Record<string, any> = {};
+
+      if (data.name !== undefined) updateData.name = data.name;
+      if (data.vehicle !== undefined) updateData.vehicle = data.vehicle || null;
+      if (data.licensePlate !== undefined) {
+        updateData.licensePlate = data.licensePlate || null;
+      }
+      if (commissionRate !== undefined) {
+        updateData.commissionRate = Number(commissionRate).toFixed(2);
+      }
 
       if (phone !== undefined) {
         const normalizedPhone = phone.replace(/\D/g, "");
+        if (normalizedPhone.length < 7) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "El teléfono debe tener al menos 7 dígitos.",
+          });
+        }
         const existing = await db.select({ id: drivers.id }).from(drivers).where(eq(drivers.phone, normalizedPhone));
         if (existing.length > 0 && existing[0].id !== id) {
           throw new TRPCError({
@@ -95,7 +126,13 @@ export const adminDriversProcedures = {
         updateData.phone = normalizedPhone;
       }
 
-      if (password && password.trim().length >= 4) {
+      if (password !== undefined && password.length > 0) {
+        if (password.length < 8) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "La contraseña debe tener al menos 8 caracteres.",
+          });
+        }
         updateData.passwordHash = await bcrypt.hash(password, 10);
         updateData.sessionVersion = sql`coalesce(${drivers.sessionVersion}, 0) + 1`;
       }

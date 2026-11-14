@@ -3,14 +3,14 @@
  * ENRUTADOR DE CONFIGURACIÓN Y REPORTES - PANEL ADMIN (ADMIN SETTINGS ROUTER)
  * ==============================================================================
  * Gestiona los parámetros operativos de la plataforma y el generador de reportes:
- * - settings: Lectura de variables del sistema (comisiones, datos bancarios, etc.)
- * - updateSetting: Mutación individual atómica de configuración
- * - updateSettingsBulk: Mutación masiva transaccional de configuración
- * - getReports: Exportación estructurada de auditoría contable y operacional
+ * - settings: Lectura de variables del sistema
+ * - updateSetting / updateSettingsBulk: mutaciones validadas y auditadas
+ * - getReports: exportación contable basada en snapshots y fecha de entrega
  * ==============================================================================
  */
 
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { eq, desc, and, gte, lte, sql } from "drizzle-orm";
 import { getDb } from "../queries/connection";
 import {
@@ -20,199 +20,332 @@ import {
   commerces,
   drivers,
   driverEarnings,
+  orderCommerceStatus,
 } from "@db/schema";
 import { adminQuery } from "../middleware";
 import { emit } from "../events";
+import { guayaquilDateKey } from "../lib/dates";
+
+const SETTING_KEYS = [
+  "app_name",
+  "support_phone",
+  "delivery_fee",
+  "min_order_amount",
+  "bank_transfer_info",
+] as const;
+
+type SettingKey = (typeof SETTING_KEYS)[number];
+
+const moneySetting = z
+  .string()
+  .trim()
+  .regex(/^\d+(\.\d{1,2})?$/, "Usa un número positivo con hasta 2 decimales")
+  .refine((value) => Number(value) <= 100_000, "El monto es demasiado alto");
+
+const settingValueSchemas: Record<SettingKey, z.ZodTypeAny> = {
+  app_name: z.string().trim().min(1, "El nombre es obligatorio").max(80),
+  support_phone: z.string().trim().max(30),
+  delivery_fee: moneySetting,
+  min_order_amount: moneySetting,
+  bank_transfer_info: z.string().max(2_000),
+};
+
+function validateSetting(key: string, value: string): { key: SettingKey; value: string } {
+  if (!(SETTING_KEYS as readonly string[]).includes(key)) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: `Configuración desconocida: ${key}`,
+    });
+  }
+  const parsed = settingValueSchemas[key as SettingKey].safeParse(value);
+  if (!parsed.success) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: `${key}: ${parsed.error.issues[0]?.message ?? "valor inválido"}`,
+    });
+  }
+  return { key: key as SettingKey, value: parsed.data as string };
+}
+
+const reportDate = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Usa el formato YYYY-MM-DD")
+  .optional();
+
+function guayaquilDayStart(value: string): Date {
+  return new Date(`${value}T00:00:00-05:00`);
+}
+
+function guayaquilNextDayStart(value: string): Date {
+  const date = guayaquilDayStart(value);
+  date.setUTCDate(date.getUTCDate() + 1);
+  return date;
+}
+
+async function upsertSetting(
+  tx: any,
+  key: SettingKey,
+  value: string,
+  adminId: number,
+) {
+  const existing = await tx.select().from(appSettings).where(eq(appSettings.key, key));
+  if (existing.length > 0) {
+    await tx
+      .update(appSettings)
+      .set({ value, updatedBy: adminId, updatedAt: new Date() })
+      .where(eq(appSettings.key, key));
+  } else {
+    await tx
+      .insert(appSettings)
+      .values({ key, value, updatedBy: adminId, updatedAt: new Date() });
+  }
+}
 
 export const adminSettingsProcedures = {
-  // Lectura de todas las configuraciones del sistema
   settings: adminQuery.query(async () => {
     const db = getDb();
     return db.select().from(appSettings);
   }),
 
-  // Actualización individual de una clave de configuración
   updateSetting: adminQuery
-    .input(z.object({ key: z.string(), value: z.string() }))
-    .mutation(async ({ input }) => {
+    .input(z.object({ key: z.string().max(100), value: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const setting = validateSetting(input.key, input.value);
       const db = getDb();
-      const existing = await db.select().from(appSettings).where(eq(appSettings.key, input.key));
-      if (existing.length > 0) {
-        await db
-          .update(appSettings)
-          .set({ value: input.value, updatedAt: new Date() })
-          .where(eq(appSettings.key, input.key));
-      } else {
-        await db
-          .insert(appSettings)
-          .values({ key: input.key, value: input.value, updatedAt: new Date() });
-      }
+      await db.transaction(async (tx) => {
+        await upsertSetting(tx, setting.key, setting.value, ctx.admin!.id);
+      });
       emit("admin:dashboard", { type: "settings_update" });
       return { success: true };
     }),
 
-  // Actualización transaccional masiva de múltiples configuraciones simultáneas
   updateSettingsBulk: adminQuery
     .input(
       z.object({
-        settings: z.array(z.object({ key: z.string(), value: z.string() })),
-      })
+        settings: z
+          .array(z.object({ key: z.string().max(100), value: z.string() }))
+          .min(1)
+          .max(SETTING_KEYS.length),
+      }),
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
+      const validated = input.settings.map((item) => validateSetting(item.key, item.value));
+      const keys = validated.map((item) => item.key);
+      if (new Set(keys).size !== keys.length) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "No se puede enviar la misma configuración dos veces.",
+        });
+      }
+
       const db = getDb();
       await db.transaction(async (tx) => {
-        for (const item of input.settings) {
-          const existing = await tx.select().from(appSettings).where(eq(appSettings.key, item.key));
-          if (existing.length > 0) {
-            await tx
-              .update(appSettings)
-              .set({ value: item.value, updatedAt: new Date() })
-              .where(eq(appSettings.key, item.key));
-          } else {
-            await tx
-              .insert(appSettings)
-              .values({ key: item.key, value: item.value, updatedAt: new Date() });
-          }
+        for (const item of validated) {
+          await upsertSetting(tx, item.key, item.value, ctx.admin!.id);
         }
       });
       emit("admin:dashboard", { type: "settings_update" });
       return { success: true };
     }),
 
-  // Generador analítico de reportes para exportación y auditoría administrativa
+  // Generador de reportes con fechas de calendario de Guayaquil y snapshots.
   getReports: adminQuery
     .input(
-      z.object({
-        type: z.enum(["sales", "orders", "commerces", "drivers", "earnings", "commissions"]),
-        startDate: z.string().optional(),
-        endDate: z.string().optional(),
-      })
+      z
+        .object({
+          type: z.enum(["sales", "orders", "commerces", "drivers", "earnings", "commissions"]),
+          startDate: reportDate,
+          endDate: reportDate,
+        })
+        .refine(
+          (value) => {
+            if (!value.startDate || !value.endDate) return true;
+            return value.startDate <= value.endDate;
+          },
+          { message: "La fecha inicial no puede ser posterior a la final." },
+        ),
     )
     .mutation(async ({ input }) => {
       const db = getDb();
-      const dateFrom = input.startDate ? new Date(input.startDate) : undefined;
-      const dateTo = input.endDate ? new Date(input.endDate + "T23:59:59") : undefined;
+      const from = input.startDate ? guayaquilDayStart(input.startDate) : undefined;
+      const to = input.endDate ? guayaquilNextDayStart(input.endDate) : undefined;
+      if (from && to) {
+        const days = (to.getTime() - from.getTime()) / 86_400_000;
+        if (days > 731) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "El rango máximo de reportes es de 2 años.",
+          });
+        }
+      }
 
-      const withDate =
-        dateFrom || dateTo
-          ? and(
-              dateFrom ? gte(orders.createdAt, dateFrom) : undefined,
-              dateTo ? lte(orders.createdAt, dateTo) : undefined
-            )
-          : undefined;
+      const effectiveInRange = () =>
+        and(
+          from ? gte(sql`coalesce(${orders.deliveredAt}, ${orders.createdAt})`, from) : undefined,
+          to ? sql`coalesce(${orders.deliveredAt}, ${orders.createdAt}) < ${to}` : undefined,
+        );
 
-      // Reporte de Ventas
       if (input.type === "sales") {
-        const all = await db
-          .select({
-            date: sql<string>`${orders.createdAt}::date`,
-            orders: sql<number>`count(*)`,
-            revenue: sql<string>`sum(${orders.total})`,
-            commission: sql<string>`sum(${orders.commission})`,
-          })
-          .from(orders)
-          .where(and(withDate, sql`${orders.status} NOT IN ('cancelled', 'payment_rejected')`))
-          .groupBy(sql`${orders.createdAt}::date`)
-          .orderBy(sql`${orders.createdAt}::date`);
+        const [orderRows, commissionRows] = await Promise.all([
+          db
+            .select({
+              id: orders.id,
+              total: orders.total,
+              deliveredAt: orders.deliveredAt,
+              createdAt: orders.createdAt,
+            })
+            .from(orders)
+            .where(and(eq(orders.status, "delivered"), effectiveInRange())),
+          db
+            .select({
+              orderId: orderCommerceStatus.orderId,
+              commissionAmount: orderCommerceStatus.commissionAmount,
+              sales: sql<string>`coalesce(sum(${orderItems.total}), 0)`,
+              rate: commerces.commissionRate,
+            })
+            .from(orderCommerceStatus)
+            .innerJoin(orders, eq(orderCommerceStatus.orderId, orders.id))
+            .innerJoin(commerces, eq(orderCommerceStatus.commerceId, commerces.id))
+            .leftJoin(
+              orderItems,
+              and(
+                eq(orderItems.orderId, orderCommerceStatus.orderId),
+                eq(orderItems.commerceId, orderCommerceStatus.commerceId),
+              ),
+            )
+            .where(and(eq(orders.status, "delivered"), effectiveInRange()))
+            .groupBy(
+              orderCommerceStatus.orderId,
+              orderCommerceStatus.commissionAmount,
+              commerces.commissionRate,
+            ),
+        ]);
+
+        const commissionByOrder = new Map<number, number>();
+        for (const row of commissionRows) {
+          const commission =
+            row.commissionAmount !== null && row.commissionAmount !== undefined
+              ? Number(row.commissionAmount)
+              : Number(row.sales || 0) * (Number(row.rate || "10") / 100);
+          commissionByOrder.set(
+            row.orderId,
+            (commissionByOrder.get(row.orderId) ?? 0) + commission,
+          );
+        }
+
+        const grouped = new Map<string, { orders: number; revenue: number; commission: number }>();
+        for (const order of orderRows) {
+          const key = guayaquilDateKey(order.deliveredAt ?? order.createdAt);
+          const row = grouped.get(key) ?? { orders: 0, revenue: 0, commission: 0 };
+          row.orders += 1;
+          row.revenue += Number(order.total || 0);
+          row.commission += commissionByOrder.get(order.id) ?? 0;
+          grouped.set(key, row);
+        }
 
         return {
           type: "sales",
           generatedAt: new Date().toISOString(),
           columns: ["Fecha", "Pedidos", "Ingresos", "Comisiones"],
-          rows: all.map((r: { date: string; orders: number; revenue: string | null; commission: string | null }) => ({
-            Fecha: r.date,
-            Pedidos: r.orders,
-            Ingresos: parseFloat(r.revenue || "0").toFixed(2),
-            Comisiones: parseFloat(r.commission || "0").toFixed(2),
-          })),
+          rows: [...grouped.entries()]
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([date, row]) => ({
+              Fecha: date,
+              Pedidos: row.orders,
+              Ingresos: Number(row.revenue.toFixed(2)),
+              Comisiones: Number(row.commission.toFixed(2)),
+            })),
         };
       }
 
-      // Reporte de Pedidos
       if (input.type === "orders") {
-        const all = await db
-          .select()
+        const rows = await db
+          .select({
+            id: orders.id,
+            status: orders.status,
+            total: orders.total,
+            paymentMethod: orders.paymentMethod,
+            deliveryAddress: orders.deliveryAddress,
+            customerPhone: orders.customerPhone,
+            createdAt: orders.createdAt,
+            deliveredAt: orders.deliveredAt,
+          })
           .from(orders)
-          .where(withDate)
-          .orderBy(desc(orders.createdAt));
+          .where(effectiveInRange())
+          .orderBy(desc(sql`coalesce(${orders.deliveredAt}, ${orders.createdAt})`))
+          .limit(5_000);
 
         return {
           type: "orders",
           generatedAt: new Date().toISOString(),
           columns: ["ID", "Estado", "Total", "Metodo Pago", "Direccion", "Telefono", "Fecha"],
-          rows: all.map((r) => ({
-            ID: r.id,
-            Estado: r.status,
-            Total: parseFloat(r.total).toFixed(2),
-            "Metodo Pago": r.paymentMethod,
-            Direccion: r.deliveryAddress,
-            Telefono: r.customerPhone || "-",
-            Fecha: r.createdAt?.toISOString().split("T")[0],
+          rows: rows.map((row) => ({
+            ID: row.id,
+            Estado: row.status,
+            Total: Number(row.total || 0),
+            "Metodo Pago": row.paymentMethod,
+            Direccion: row.deliveryAddress,
+            Telefono: row.customerPhone || "-",
+            Fecha: guayaquilDateKey(row.deliveredAt ?? row.createdAt),
           })),
         };
       }
 
-      // Reporte de Comercios
       if (input.type === "commerces") {
-        const items =
-          dateFrom || dateTo
-            ? await db
-                .select({
-                  commerceId: orderItems.commerceId,
-                  orders: sql<number>`count(distinct ${orderItems.orderId})`,
-                  revenue: sql<string>`sum(${orderItems.total})`,
-                })
-                .from(orderItems)
-                .innerJoin(orders, eq(orderItems.orderId, orders.id))
-                .where(and(withDate, sql`${orders.status} NOT IN ('cancelled', 'payment_rejected')`))
-                .groupBy(orderItems.commerceId)
-            : await db
-                .select({
-                  commerceId: orderItems.commerceId,
-                  orders: sql<number>`count(distinct ${orderItems.orderId})`,
-                  revenue: sql<string>`sum(${orderItems.total})`,
-                })
-                .from(orderItems)
-                .innerJoin(orders, eq(orderItems.orderId, orders.id))
-                .where(sql`${orders.status} NOT IN ('cancelled', 'payment_rejected')`)
-                .groupBy(orderItems.commerceId);
+        const rows = await db
+          .select({
+            commerceId: orderItems.commerceId,
+            orders: sql<number>`count(distinct ${orderItems.orderId})`,
+            revenue: sql<string>`sum(${orderItems.total})`,
+          })
+          .from(orderItems)
+          .innerJoin(orders, eq(orderItems.orderId, orders.id))
+          .where(and(eq(orders.status, "delivered"), effectiveInRange()))
+          .groupBy(orderItems.commerceId);
 
         const comms = await db
           .select({ id: commerces.id, name: commerces.name, status: commerces.status })
           .from(commerces);
-        const map = new Map(comms.map((c) => [c.id, c]));
+        const map = new Map(comms.map((commerce) => [commerce.id, commerce]));
 
         return {
           type: "commerces",
           generatedAt: new Date().toISOString(),
           columns: ["Comercio", "Pedidos", "Ingresos", "Estado"],
-          rows: items.map((r: { commerceId: number; orders: number; revenue: string | null }) => {
-            const c = map.get(r.commerceId);
+          rows: rows.map((row) => {
+            const commerce = map.get(row.commerceId);
             return {
-              Comercio: c?.name || "-",
-              Pedidos: r.orders,
-              Ingresos: parseFloat(r.revenue || "0").toFixed(2),
-              Estado: c?.status || "-",
+              Comercio: commerce?.name || "-",
+              Pedidos: row.orders,
+              Ingresos: Number(Number(row.revenue || 0).toFixed(2)),
+              Estado: commerce?.status || "-",
             };
           }),
         };
       }
 
-      // Reporte de Repartidores
       if (input.type === "drivers") {
-        const revDriverId = sql<number>`${orders.driverId}`;
-        const stats =
-          dateFrom || dateTo
-            ? await db
-                .select({ driverId: revDriverId, deliveries: sql<number>`count(*)` })
-                .from(orders)
-                .where(and(eq(orders.status, "delivered"), withDate))
-                .groupBy(revDriverId)
-            : await db
-                .select({ driverId: revDriverId, deliveries: sql<number>`count(*)` })
-                .from(orders)
-                .where(eq(orders.status, "delivered"))
-                .groupBy(revDriverId);
+        const stats = await db
+          .select({
+            driverId: orders.driverId,
+            deliveries: sql<number>`count(*)`,
+          })
+          .from(orders)
+          .where(and(eq(orders.status, "delivered"), effectiveInRange()))
+          .groupBy(orders.driverId);
+
+        const earningsConditions = [
+          input.startDate ? gte(driverEarnings.date, input.startDate) : undefined,
+          input.endDate ? lte(driverEarnings.date, input.endDate) : undefined,
+        ].filter(Boolean) as any[];
+        const earnings = await db
+          .select({
+            driverId: driverEarnings.driverId,
+            total: sql<string>`coalesce(sum(${driverEarnings.amount}), 0)`,
+          })
+          .from(driverEarnings)
+          .where(earningsConditions.length > 0 ? and(...earningsConditions) : undefined)
+          .groupBy(driverEarnings.driverId);
 
         const d = await db
           .select({
@@ -220,28 +353,35 @@ export const adminSettingsProcedures = {
             name: drivers.name,
             phone: drivers.phone,
             rating: drivers.rating,
-            totalEarnings: drivers.totalEarnings,
           })
-          .from(drivers);
-        const statsMap = new Map(stats.map((s: { driverId: number; deliveries: number }) => [s.driverId, s.deliveries]));
+          .from(drivers)
+          .orderBy(drivers.name);
+
+        const deliveryMap = new Map(stats.map((row) => [row.driverId, row.deliveries]));
+        const earningMap = new Map(
+          earnings.map((row) => [row.driverId, Number(row.total || 0)]),
+        );
 
         return {
           type: "drivers",
           generatedAt: new Date().toISOString(),
           columns: ["Repartidor", "Telefono", "Entregas", "Ganancias", "Calif."],
-          rows: d.map((r) => ({
-            Repartidor: r.name,
-            Telefono: r.phone,
-            Entregas: statsMap.get(r.id) || 0,
-            Ganancias: parseFloat(r.totalEarnings || "0").toFixed(2),
-            "Calif.": r.rating || "4.5",
+          rows: d.map((row) => ({
+            Repartidor: row.name,
+            Telefono: row.phone,
+            Entregas: deliveryMap.get(row.id) || 0,
+            Ganancias: Number((earningMap.get(row.id) || 0).toFixed(2)),
+            "Calif.": row.rating ? Number(row.rating).toFixed(1) : "Sin calificar",
           })),
         };
       }
 
-      // Reporte de Ganancias de Repartidores
       if (input.type === "earnings") {
-        const e = await db
+        const conditions = [
+          input.startDate ? gte(driverEarnings.date, input.startDate) : undefined,
+          input.endDate ? lte(driverEarnings.date, input.endDate) : undefined,
+        ].filter(Boolean) as any[];
+        const earnings = await db
           .select({
             driverId: driverEarnings.driverId,
             orderId: driverEarnings.orderId,
@@ -250,64 +390,86 @@ export const adminSettingsProcedures = {
             date: driverEarnings.date,
           })
           .from(driverEarnings)
-          .orderBy(desc(driverEarnings.date));
+          .where(conditions.length > 0 ? and(...conditions) : undefined)
+          .orderBy(desc(driverEarnings.date))
+          .limit(10_000);
 
         const d = await db.select({ id: drivers.id, name: drivers.name }).from(drivers);
-        const dMap = new Map(d.map((r) => [r.id, r.name]));
+        const dMap = new Map(d.map((row) => [row.id, row.name]));
 
         return {
           type: "earnings",
           generatedAt: new Date().toISOString(),
           columns: ["Repartidor", "Pedido ID", "Monto", "Tipo", "Fecha"],
-          rows: e.map((r) => ({
-            Repartidor: dMap.get(r.driverId) || "-",
-            "Pedido ID": r.orderId,
-            Monto: parseFloat(r.amount || "0").toFixed(2),
-            Tipo: r.type === "delivery_fee" ? "Envio" : r.type === "tip" ? "Propina" : "Bono",
-            Fecha: r.date,
+          rows: earnings.map((row) => ({
+            Repartidor: dMap.get(row.driverId) || "-",
+            "Pedido ID": row.orderId,
+            Monto: Number(row.amount || 0),
+            Tipo:
+              row.type === "delivery_fee"
+                ? "Envio"
+                : row.type === "tip"
+                  ? "Propina"
+                  : "Bono",
+            Fecha: row.date,
           })),
         };
       }
 
-      // Reporte de Comisiones de Plataforma
-      if (input.type === "commissions") {
-        const all = await db
-          .select({
-            orderId: orders.id,
-            commission: orders.commission,
-            total: orders.total,
-            createdAt: orders.createdAt,
-          })
-          .from(orders)
-          .where(and(withDate, sql`${orders.status} NOT IN ('cancelled', 'payment_rejected')`))
-          .orderBy(desc(orders.createdAt));
+      // Comisiones: una fila por comercio, con snapshot histórico.
+      const rows = await db
+        .select({
+          orderId: orderCommerceStatus.orderId,
+          commerceId: orderCommerceStatus.commerceId,
+          commissionAmount: orderCommerceStatus.commissionAmount,
+          sales: sql<string>`coalesce(sum(${orderItems.total}), 0)`,
+          orderTotal: orders.total,
+          createdAt: orders.createdAt,
+          deliveredAt: orders.deliveredAt,
+          rate: commerces.commissionRate,
+          commerceName: commerces.name,
+        })
+        .from(orderCommerceStatus)
+        .innerJoin(orders, eq(orderCommerceStatus.orderId, orders.id))
+        .innerJoin(commerces, eq(orderCommerceStatus.commerceId, commerces.id))
+        .leftJoin(
+          orderItems,
+          and(
+            eq(orderItems.orderId, orderCommerceStatus.orderId),
+            eq(orderItems.commerceId, orderCommerceStatus.commerceId),
+          ),
+        )
+        .where(and(eq(orders.status, "delivered"), effectiveInRange()))
+        .groupBy(
+          orderCommerceStatus.orderId,
+          orderCommerceStatus.commerceId,
+          orderCommerceStatus.commissionAmount,
+          orders.total,
+          orders.createdAt,
+          orders.deliveredAt,
+          commerces.commissionRate,
+          commerces.name,
+        )
+        .orderBy(desc(sql`coalesce(${orders.deliveredAt}, ${orders.createdAt})`))
+        .limit(10_000);
 
-        const items = await db
-          .select({ orderId: orderItems.orderId, commerceId: orderItems.commerceId })
-          .from(orderItems);
-        const comms = await db.select({ id: commerces.id, name: commerces.name }).from(commerces);
-        const cMap = new Map(comms.map((c) => [c.id, c.name]));
-        const orderCommerces = new Map<number, string>();
-        for (const it of items) {
-          if (!orderCommerces.has(it.orderId)) {
-            orderCommerces.set(it.orderId, cMap.get(it.commerceId) || "-");
-          }
-        }
-
-        return {
-          type: "commissions",
-          generatedAt: new Date().toISOString(),
-          columns: ["Comercio", "Pedido ID", "Comision", "Total Pedido", "Fecha"],
-          rows: all.map((r) => ({
-            Comercio: orderCommerces.get(r.orderId) || "-",
-            "Pedido ID": r.orderId,
-            Comision: parseFloat(r.commission || "0").toFixed(2),
-            "Total Pedido": parseFloat(r.total || "0").toFixed(2),
-            Fecha: r.createdAt?.toISOString().split("T")[0],
-          })),
-        };
-      }
-
-      return { type: input.type, generatedAt: new Date().toISOString(), columns: [], rows: [] };
+      return {
+        type: "commissions",
+        generatedAt: new Date().toISOString(),
+        columns: ["Comercio", "Pedido ID", "Comision", "Total Pedido", "Fecha"],
+        rows: rows.map((row) => {
+          const commission =
+            row.commissionAmount !== null && row.commissionAmount !== undefined
+              ? Number(row.commissionAmount)
+              : Number(row.sales || 0) * (Number(row.rate || "10") / 100);
+          return {
+            Comercio: row.commerceName,
+            "Pedido ID": row.orderId,
+            Comision: Number(commission.toFixed(2)),
+            "Total Pedido": Number(row.orderTotal || 0),
+            Fecha: guayaquilDateKey(row.deliveredAt ?? row.createdAt),
+          };
+        }),
+      };
     }),
 };

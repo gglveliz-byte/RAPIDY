@@ -9,12 +9,21 @@ import { appRouter } from "./router";
 import { createContext } from "./context";
 import { env } from "./lib/env";
 import { subscribe } from "./events";
-import { verifyAdminToken, verifyAdminRefreshToken } from "./admin-auth";
+import {
+  verifyAdminTokenPayload,
+  verifyAdminRefreshTokenPayload,
+} from "./admin-auth";
 import { getDb } from "./queries/connection";
-import { commerces, orderItems, orders } from "@db/schema";
+import { commerces, orderItems, orders, users, drivers, customers } from "@db/schema";
 import { verifyAccessTokenPayload, verifyRefreshTokenPayload } from "./customer-auth";
-import { verifyDriverToken, verifyDriverRefreshToken } from "./driver-auth";
-import { verifyMerchantToken, verifyMerchantRefreshToken } from "./merchant-auth";
+import {
+  verifyDriverTokenPayload,
+  verifyDriverRefreshTokenPayload,
+} from "./driver-auth";
+import {
+  verifyMerchantTokenPayload,
+  verifyMerchantRefreshTokenPayload,
+} from "./merchant-auth";
 
 async function seedAdmin() {
   try {
@@ -84,7 +93,8 @@ async function resolveSseIdentities(c: any): Promise<SseIdentity[]> {
   const cookies = cookie.parse(c.req.header("cookie") || "");
   const identities: SseIdentity[] = [];
   const seen = new Set<string>();
-  const add = (role: SseIdentity["role"], id: number | null) => {
+  const db = getDb();
+  const add = (role: SseIdentity["role"], id: number | null | undefined) => {
     if (!id) return;
     const key = `${role}:${id}`;
     if (seen.has(key)) return;
@@ -92,29 +102,120 @@ async function resolveSseIdentities(c: any): Promise<SseIdentity[]> {
     identities.push({ role, id });
   };
 
+  const validAdmin = async (payload: { userId: number; sessionVersion: number | null } | null) => {
+    if (!payload) return null;
+    const rows = await db
+      .select({ role: users.role, sessionVersion: users.sessionVersion })
+      .from(users)
+      .where(eq(users.id, payload.userId))
+      .limit(1);
+    const user = rows[0];
+    if (!user || user.role !== "admin") return null;
+    if (
+      payload.sessionVersion !== null &&
+      (user.sessionVersion ?? 0) !== payload.sessionVersion
+    ) {
+      return null;
+    }
+    return payload.userId;
+  };
+
+  const validMerchant = async (payload: { userId: number; sessionVersion: number | null } | null) => {
+    if (!payload) return null;
+    const rows = await db
+      .select({ role: users.role, sessionVersion: users.sessionVersion })
+      .from(users)
+      .where(eq(users.id, payload.userId))
+      .limit(1);
+    const user = rows[0];
+    if (!user || user.role !== "merchant") return null;
+    if (
+      payload.sessionVersion !== null &&
+      (user.sessionVersion ?? 0) !== payload.sessionVersion
+    ) {
+      return null;
+    }
+    return payload.userId;
+  };
+
+  const validDriver = async (payload: { driverId: number; sessionVersion: number | null } | null) => {
+    if (!payload) return null;
+    const rows = await db
+      .select({ sessionVersion: drivers.sessionVersion })
+      .from(drivers)
+      .where(eq(drivers.id, payload.driverId))
+      .limit(1);
+    const driver = rows[0];
+    if (!driver) return null;
+    if (
+      payload.sessionVersion !== null &&
+      (driver.sessionVersion ?? 0) !== payload.sessionVersion
+    ) {
+      return null;
+    }
+    return payload.driverId;
+  };
+
+  const validCustomer = async (
+    payload: { customerId: number; sessionVersion?: number | null } | null,
+  ) => {
+    if (!payload) return null;
+    const rows = await db
+      .select({ sessionVersion: customers.sessionVersion, deletedAt: customers.deletedAt })
+      .from(customers)
+      .where(eq(customers.id, payload.customerId))
+      .limit(1);
+    const customer = rows[0];
+    if (!customer || customer.deletedAt) return null;
+    if (
+      typeof payload.sessionVersion === "number" &&
+      (customer.sessionVersion ?? 0) !== payload.sessionVersion
+    ) {
+      return null;
+    }
+    return payload.customerId;
+  };
+
   if (cookies.quickgo_admin_token) {
-    add("admin", await verifyAdminToken(cookies.quickgo_admin_token));
+    add("admin", await validAdmin(await verifyAdminTokenPayload(cookies.quickgo_admin_token)));
   }
   if (cookies.quickgo_admin_refresh) {
-    add("admin", await verifyAdminRefreshToken(cookies.quickgo_admin_refresh));
+    add(
+      "admin",
+      await validAdmin(await verifyAdminRefreshTokenPayload(cookies.quickgo_admin_refresh)),
+    );
   }
   if (cookies.quickgo_token) {
-    add("customer", (await verifyAccessTokenPayload(cookies.quickgo_token))?.customerId ?? null);
+    add("customer", await validCustomer(await verifyAccessTokenPayload(cookies.quickgo_token)));
   }
   if (cookies.refresh_token) {
-    add("customer", (await verifyRefreshTokenPayload(cookies.refresh_token))?.customerId ?? null);
+    add("customer", await validCustomer(await verifyRefreshTokenPayload(cookies.refresh_token)));
   }
   if (cookies.quickgo_driver_token) {
-    add("driver", await verifyDriverToken(cookies.quickgo_driver_token));
+    add(
+      "driver",
+      await validDriver(await verifyDriverTokenPayload(cookies.quickgo_driver_token)),
+    );
   }
   if (cookies.quickgo_driver_refresh) {
-    add("driver", await verifyDriverRefreshToken(cookies.quickgo_driver_refresh));
+    add(
+      "driver",
+      await validDriver(await verifyDriverRefreshTokenPayload(cookies.quickgo_driver_refresh)),
+    );
   }
   if (cookies.quickgo_merchant_token) {
-    add("merchant", await verifyMerchantToken(cookies.quickgo_merchant_token));
+    add(
+      "merchant",
+      await validMerchant(await verifyMerchantTokenPayload(cookies.quickgo_merchant_token)),
+    );
   }
   if (cookies.quickgo_merchant_refresh) {
-    add("merchant", await verifyMerchantRefreshToken(cookies.quickgo_merchant_refresh));
+    add(
+      "merchant",
+      await validMerchant(
+        await verifyMerchantRefreshTokenPayload(cookies.quickgo_merchant_refresh),
+      ),
+    );
   }
 
   return identities;

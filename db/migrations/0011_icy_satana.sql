@@ -1,0 +1,1 @@
+ALTER TABLE "orders" ADD COLUMN "driver_commission_rate" numeric(5, 2);

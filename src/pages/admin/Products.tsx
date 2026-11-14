@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { useQuery } from "@tanstack/react-query";
-import { trpcCall } from "@/hooks/useDeliveryData";
+import { toast } from "sonner";
+import { trpcCall, trpcMutate } from "@/hooks/useDeliveryData";
 import {
   ArrowLeft,
   Package,
@@ -9,6 +10,9 @@ import {
   DollarSign,
   Search,
   Star,
+  Pause,
+  Play,
+  Trash2,
 } from "lucide-react";
 import AdminLayout from "@/components/AdminLayout";
 
@@ -40,6 +44,58 @@ export default function AdminProducts() {
       loadAllProducts();
     }
   }, [activeTab]);
+
+  const toggleAvailability = async (product: any) => {
+    try {
+      const result = await trpcMutate<{ adminPaused: boolean; isAvailable: string }>(
+        "admin.toggleProductAvailability",
+        { id: product.id },
+      );
+      setAllProducts((current) =>
+        current.map((item) =>
+          item.id === product.id
+            ? { ...item, adminPaused: result.adminPaused, isAvailable: result.isAvailable }
+            : item,
+        ),
+      );
+      toast.success(result.adminPaused ? "Producto pausado." : "Producto reactivado.");
+      topProductsQuery.refetch();
+    } catch (error: any) {
+      toast.error(error?.message || "No se pudo moderar el producto.");
+    }
+  };
+
+  const toggleFeatured = async (product: any) => {
+    try {
+      const result = await trpcMutate<{ isFeatured: string }>(
+        "admin.toggleProductFeatured",
+        { id: product.id },
+      );
+      setAllProducts((current) =>
+        current.map((item) =>
+          item.id === product.id ? { ...item, isFeatured: result.isFeatured } : item,
+        ),
+      );
+      toast.success(result.isFeatured === "yes" ? "Producto destacado." : "Destacado retirado.");
+      topProductsQuery.refetch();
+    } catch (error: any) {
+      toast.error(error?.message || "No se pudo cambiar el destacado.");
+    }
+  };
+
+  const deleteProduct = async (product: any) => {
+    if (!confirm(`¿Eliminar "${product.name}"? Solo se permite si nunca tuvo ventas.`)) {
+      return;
+    }
+    try {
+      await trpcMutate("admin.deleteProduct", { id: product.id });
+      setAllProducts((current) => current.filter((item) => item.id !== product.id));
+      toast.success("Producto eliminado.");
+      topProductsQuery.refetch();
+    } catch (error: any) {
+      toast.error(error?.message || "No se pudo eliminar el producto.");
+    }
+  };
 
   const totalProducts = topProducts.length;
   const totalSold = topProducts.reduce((sum, p) => sum + (Number(p.sold) || 0), 0);
@@ -234,6 +290,7 @@ export default function AdminProducts() {
                         <th className="text-left px-4 py-3 font-medium">Precio</th>
                         <th className="text-left px-4 py-3 font-medium">Estado</th>
                         <th className="text-left px-4 py-3 font-medium">Dest.</th>
+                        <th className="text-left px-4 py-3 font-medium">Acciones</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-50">
@@ -271,17 +328,45 @@ export default function AdminProducts() {
                               </span>
                             </td>
                             <td className="px-4 py-3">
-                              {p.isFeatured === "yes" ? (
-                                <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                              ) : (
-                                <Star className="w-4 h-4 text-gray-300" />
-                              )}
+                              <button
+                                type="button"
+                                onClick={() => toggleFeatured(p)}
+                                className="min-h-[36px] min-w-[36px] inline-flex items-center justify-center rounded-lg hover:bg-yellow-50"
+                                title={p.isFeatured === "yes" ? "Quitar destacado" : "Destacar"}
+                              >
+                                {p.isFeatured === "yes" ? (
+                                  <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                                ) : (
+                                  <Star className="w-4 h-4 text-gray-300" />
+                                )}
+                              </button>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => toggleAvailability(p)}
+                                  className="min-h-[36px] px-2.5 inline-flex items-center gap-1 text-[11px] font-semibold rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200"
+                                  title={p.adminPaused ? "Reactivar" : "Pausar"}
+                                >
+                                  {p.adminPaused ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
+                                  {p.adminPaused ? "Activar" : "Pausar"}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => deleteProduct(p)}
+                                  className="min-h-[36px] min-w-[36px] inline-flex items-center justify-center rounded-lg bg-red-50 text-red-600 hover:bg-red-100"
+                                  title="Eliminar"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))}
                         {filteredProducts.length === 0 && !loadingAll && (
                           <tr>
-                            <td colSpan={7} className="px-2 lg:px-4 py-8 lg:py-12 text-center text-gray-400 text-xs lg:text-sm">
+                            <td colSpan={8} className="px-2 lg:px-4 py-8 lg:py-12 text-center text-gray-400 text-xs lg:text-sm">
                               No se encontraron productos
                             </td>
                           </tr>
@@ -332,9 +417,42 @@ export default function AdminProducts() {
                                 {p.isAvailable === "yes" ? "Disponible" : "Agotado"}
                               </span>
                               <span className="text-[10px] px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full">{p.category || "-"}</span>
-                              {p.isFeatured === "yes" && (
-                                <Star className="w-3 h-3 text-yellow-500 fill-yellow-500 ml-auto" />
+                              {p.adminPaused && (
+                                <span className="text-[10px] px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full font-semibold">
+                                  Pausado admin
+                                </span>
                               )}
+                              <button
+                                type="button"
+                                onClick={() => toggleFeatured(p)}
+                                className="ml-auto min-h-[32px] min-w-[32px] inline-flex items-center justify-center rounded-lg hover:bg-yellow-50"
+                                title={p.isFeatured === "yes" ? "Quitar destacado" : "Destacar"}
+                              >
+                                {p.isFeatured === "yes" ? (
+                                  <Star className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500" />
+                                ) : (
+                                  <Star className="w-3.5 h-3.5 text-gray-300" />
+                                )}
+                              </button>
+                            </div>
+
+                            <div className="flex items-center gap-2 mt-2 pt-2 border-t border-gray-100">
+                              <button
+                                type="button"
+                                onClick={() => toggleAvailability(p)}
+                                className="flex-1 min-h-[38px] inline-flex items-center justify-center gap-1.5 text-[11px] font-semibold rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200"
+                              >
+                                {p.adminPaused ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
+                                {p.adminPaused ? "Reactivar" : "Pausar"}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => deleteProduct(p)}
+                                className="min-h-[38px] min-w-[38px] inline-flex items-center justify-center rounded-lg bg-red-50 text-red-600 hover:bg-red-100"
+                                title="Eliminar"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
                             </div>
                           </div>
                         </div>

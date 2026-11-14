@@ -64,6 +64,7 @@ export const users = pgTable("users", {
     .$onUpdate(() => new Date()),
   lastSignInAt: timestamp("lastSignInAt").defaultNow().notNull(),
   fcmToken: text("fcm_token"),
+  sessionVersion: integer("session_version").default(0).notNull(),
 });
 
 export type User = typeof users.$inferSelect;
@@ -164,6 +165,7 @@ export const products = pgTable("products", {
   unitType: varchar("unit_type", { length: 20 }).default("unit").notNull(),
   isFeatured: featuredEnum("is_featured").default("no").notNull(),
   isAvailable: availableEnum("is_available").default("yes").notNull(),
+  adminPaused: boolean("admin_paused").default(false).notNull(),
   preparationTime: integer("preparation_time"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => [
@@ -181,6 +183,7 @@ export const orders = pgTable("orders", {
   id: serial("id").primaryKey(),
   customerId: bigint("customer_id", { mode: "number" }).notNull().references(() => customers.id),
   driverId: bigint("driver_id", { mode: "number" }).references(() => drivers.id, { onDelete: "set null" }),
+  driverCommissionRate: numeric("driver_commission_rate", { precision: 5, scale: 2 }),
   pickedUpCommerceIds: integer("picked_up_commerce_ids").array().default([]).notNull(),
   status: orderStatusEnum("status").default("received").notNull(),
   subtotal: numeric("subtotal", { precision: 10, scale: 2 }).notNull(),
@@ -256,6 +259,7 @@ export const orderCommerceStatus = pgTable("order_commerce_status", {
   commerceId: bigint("commerce_id", { mode: "number" }).notNull().references(() => commerces.id, { onDelete: "cascade" }),
   status: orderCommerceStatusEnum("status").default("received").notNull(),
   commissionAmount: numeric("commission_amount", { precision: 10, scale: 2 }),
+  settledAt: timestamp("settled_at", { withTimezone: true }),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => [
   uniqueIndex("order_commerce_status_order_commerce_idx").on(table.orderId, table.commerceId),
@@ -340,5 +344,6 @@ export const appSettings = pgTable("app_settings", {
   id: serial("id").primaryKey(),
   key: varchar("key", { length: 100 }).notNull().unique(),
   value: text("value"),
+  updatedBy: integer("updated_by").references(() => users.id, { onDelete: "set null" }),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

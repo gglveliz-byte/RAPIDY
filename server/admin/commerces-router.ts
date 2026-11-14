@@ -19,28 +19,58 @@ import { TRPCError } from "@trpc/server";
 import { adminQuery } from "../middleware";
 import { getDb } from "../queries/connection";
 import { commerces, products, orderItems, orders, users, categories } from "@db/schema";
-import { eq, inArray, and } from "drizzle-orm";
+import { eq, and, notInArray, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { emit } from "../events";
+
+const MAX_IMAGE_CHARS = 4_000_000;
+const decimal = (label: string, min: number, max: number) =>
+  z
+    .string()
+    .trim()
+    .refine((value) => {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) && parsed >= min && parsed <= max;
+    }, `${label} debe ser un número entre ${min} y ${max}`);
+
+const optionalImage = z.string().max(MAX_IMAGE_CHARS, "La imagen supera el máximo de 3 MB").optional();
 
 export const adminCommercesProcedures = {
   listCommerces: adminQuery.query(async () => {
     const db = getDb();
-    return db.select().from(commerces);
+    const rows = await db
+      .select({
+        commerce: commerces,
+        merchantEmail: users.email,
+        merchantName: users.name,
+      })
+      .from(commerces)
+      .leftJoin(users, eq(users.id, commerces.merchantUserId))
+      .orderBy(commerces.name);
+
+    return rows.map((row) => ({
+      ...row.commerce,
+      merchantEmail: row.merchantEmail,
+      merchantName: row.merchantName,
+    }));
   }),
 
   createMerchant: adminQuery
     .input(z.object({
-      name: z.string().min(1, "El nombre es requerido"),
-      email: z.string().email("Correo electrónico inválido"),
-      password: z.string().min(4, "La contraseña debe tener al menos 4 caracteres"),
-      categoryId: z.number().optional(),
+      name: z.string().trim().min(2, "El nombre es requerido").max(255),
+      email: z.string().trim().email("Correo electrónico inválido").max(320),
+      password: z.string().min(8, "La contraseña debe tener al menos 8 caracteres").max(72),
+      categoryId: z.number().int().positive().optional(),
     }))
     .mutation(async ({ input }) => {
       const db = getDb();
+      const email = input.email.trim().toLowerCase();
 
-      // Chequeo preventivo de email único
-      const existingUser = await db.select({ id: users.id }).from(users).where(eq(users.email, input.email));
+      // Chequeo preventivo de email único, insensible a mayúsculas.
+      const existingUser = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(sql`lower(${users.email}) = ${email}`);
       if (existingUser.length > 0) {
         throw new TRPCError({
           code: "CONFLICT",
@@ -48,13 +78,34 @@ export const adminCommercesProcedures = {
         });
       }
 
+      let targetCategoryId = input.categoryId;
+      if (targetCategoryId) {
+        const category = await db
+          .select({ id: categories.id })
+          .from(categories)
+          .where(eq(categories.id, targetCategoryId))
+          .limit(1);
+        if (category.length === 0) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "La categoría no existe." });
+        }
+      } else {
+        const cats = await db.select().from(categories).limit(1);
+        targetCategoryId = cats.length > 0 ? cats[0].id : undefined;
+      }
+      if (!targetCategoryId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "No hay categorías configuradas para crear el comercio.",
+        });
+      }
+
       const hash = await bcrypt.hash(input.password, 10);
-      
+
       const safeResult = await db.transaction(async (tx) => {
         const userResult = await tx.insert(users).values({
           unionId: `merchant-${Date.now()}`,
           name: input.name,
-          email: input.email,
+          email,
           passwordHash: hash,
           role: "merchant",
         }).returning({
@@ -64,15 +115,9 @@ export const adminCommercesProcedures = {
           role: users.role,
           createdAt: users.createdAt,
         });
-        
+
         const user = userResult[0];
-        
-        let targetCategoryId = input.categoryId;
-        if (!targetCategoryId || targetCategoryId <= 0) {
-          const cats = await tx.select().from(categories).limit(1);
-          targetCategoryId = cats.length > 0 ? cats[0].id : 1;
-        }
-        
+
         await tx.insert(commerces).values({
           name: input.name,
           address: "Dirección pendiente",
@@ -81,10 +126,10 @@ export const adminCommercesProcedures = {
           status: "pending",
           merchantUserId: user.id,
         });
-        
+
         return user;
       });
-      
+
       emit("admin:dashboard", { type: "dashboard_update" });
       emit("commerces:global", { type: "commerce_update" });
       return safeResult;
@@ -92,27 +137,55 @@ export const adminCommercesProcedures = {
 
   createCommerce: adminQuery
     .input(z.object({
-      name: z.string().min(1),
-      email: z.string().email(),
-      phone: z.string().min(5),
-      address: z.string().min(3),
-      categoryId: z.number().optional(),
+      name: z.string().trim().min(2).max(200),
+      email: z.string().trim().email(),
+      phone: z.string().trim().min(7).max(20),
+      address: z.string().trim().min(5).max(500),
+      categoryId: z.number().int().positive(),
+      lat: decimal("La latitud", -90, 90).optional(),
+      lng: decimal("La longitud", -180, 180).optional(),
     }))
     .mutation(async ({ input }) => {
       const db = getDb();
-      const existing = await db.select().from(users).where(eq(users.email, input.email));
-      if (existing.length === 0) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Usuario merchant no encontrado con ese email" });
+      const email = input.email.trim().toLowerCase();
+      const existing = await db.select().from(users).where(eq(users.email, email));
+      const merchant = existing[0];
+      if (!merchant || merchant.role !== "merchant") {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Usuario merchant no encontrado con ese email",
+        });
+      }
+      const owned = await db
+        .select({ id: commerces.id })
+        .from(commerces)
+        .where(eq(commerces.merchantUserId, merchant.id))
+        .limit(1);
+      if (owned.length > 0) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "Ese usuario ya tiene un comercio asociado.",
+        });
+      }
+      const category = await db
+        .select({ id: categories.id })
+        .from(categories)
+        .where(eq(categories.id, input.categoryId))
+        .limit(1);
+      if (category.length === 0) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "La categoría no existe." });
       }
 
       const result = await db.insert(commerces).values({
         name: input.name,
-        email: input.email,
-        phone: input.phone,
+        email,
+        phone: input.phone.replace(/\D/g, ""),
         address: input.address,
-        categoryId: input.categoryId || 1,
-        merchantUserId: existing[0].id,
-        status: "active",
+        categoryId: input.categoryId,
+        lat: input.lat,
+        lng: input.lng,
+        merchantUserId: merchant.id,
+        status: "pending",
       }).returning();
 
       emit("admin:dashboard", { type: "dashboard_update" });
@@ -122,70 +195,142 @@ export const adminCommercesProcedures = {
 
   updateCommerce: adminQuery
     .input(z.object({
-      id: z.number(),
-      name: z.string().optional(),
+      id: z.number().int().positive(),
+      name: z.string().trim().min(2).max(200).optional(),
       status: z.enum(["active", "inactive", "suspended", "pending"]).optional(),
-      isOpen: z.string().optional(),
-      commissionRate: z.string().optional(),
-      deliveryTime: z.string().optional(),
-      minOrder: z.string().optional(),
-      phone: z.string().optional(),
-      email: z.string().optional(),
-      address: z.string().optional(),
-      description: z.string().optional(),
-      logo: z.string().optional(),
-      coverImage: z.string().optional(),
-      categoryId: z.number().optional(),
-      openHours: z.string().optional(),
-      rating: z.string().optional(),
-      lat: z.string().optional(),
-      lng: z.string().optional(),
+      isOpen: z.enum(["open", "closed"]).optional(),
+      commissionRate: decimal("La comisión", 0, 100).optional(),
+      deliveryTime: z.string().trim().max(50).optional(),
+      minOrder: decimal("El pedido mínimo", 0, 100_000).optional(),
+      phone: z.string().trim().max(20).optional(),
+      email: z.union([z.string().trim().email(), z.literal("")]).optional(),
+      address: z.string().trim().min(5).max(500).optional(),
+      description: z.string().max(2_000).optional(),
+      logo: optionalImage,
+      coverImage: optionalImage,
+      categoryId: z.number().int().positive().optional(),
+      openHours: z.string().max(500).optional(),
+      rating: decimal("La calificación", 1, 5).optional(),
+      lat: decimal("La latitud", -90, 90).optional(),
+      lng: decimal("La longitud", -180, 180).optional(),
     }))
     .mutation(async ({ input }) => {
       const db = getDb();
       const { id, ...data } = input;
-      const updateData: Record<string, any> = {};
 
-      for (const [key, val] of Object.entries(data)) {
-        if (val !== undefined && val !== "") {
-          if (key === "commissionRate") {
-            const num = parseFloat(String(val));
-            if (!isNaN(num) && num >= 0 && num <= 100) {
-              updateData[key] = num.toFixed(2);
-            }
-          } else if (key === "rating") {
-            const num = parseFloat(String(val));
-            if (!isNaN(num) && num >= 1 && num <= 5) {
-              updateData[key] = num.toFixed(1);
-            }
-          } else if (key === "categoryId") {
-            const num = Number(val);
-            if (!isNaN(num) && num > 0) {
-              updateData[key] = num;
-            }
-          } else {
-            updateData[key] = val;
+      const result = await db.transaction(async (tx) => {
+        const existingRows = await tx
+          .select()
+          .from(commerces)
+          .where(eq(commerces.id, id))
+          .for("update");
+        const existing = existingRows[0];
+        if (!existing) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Comercio no encontrado" });
+        }
+
+        if (data.categoryId !== undefined) {
+          const category = await tx
+            .select({ id: categories.id })
+            .from(categories)
+            .where(eq(categories.id, data.categoryId))
+            .limit(1);
+          if (category.length === 0) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "La categoría no existe." });
           }
         }
-      }
 
-      if (Object.keys(updateData).length > 0) {
-        await db.update(commerces).set(updateData).where(eq(commerces.id, id));
-      }
+        if (data.status === "active") {
+          const address = data.address ?? existing.address;
+          const phone = (data.phone ?? existing.phone).replace(/\D/g, "");
+          const lat = data.lat ?? existing.lat;
+          const lng = data.lng ?? existing.lng;
+          const merchantUserId = existing.merchantUserId;
+          if (
+            !address ||
+            address.toLowerCase().includes("pendiente") ||
+            phone.length < 7 ||
+            phone === "0000000000" ||
+            lat === null ||
+            lng === null ||
+            !merchantUserId
+          ) {
+            throw new TRPCError({
+              code: "PRECONDITION_FAILED",
+              message:
+                "Para activar el comercio completa dirección real, teléfono, coordenadas y un merchant asignado.",
+            });
+          }
+        }
 
-      const result = await db.select().from(commerces).where(eq(commerces.id, id));
+        const updateData: Partial<typeof commerces.$inferInsert> = {};
+
+        if (data.name !== undefined) updateData.name = data.name;
+        if (data.status !== undefined) updateData.status = data.status;
+        if (data.isOpen !== undefined) updateData.isOpen = data.isOpen;
+        if (data.commissionRate !== undefined) {
+          updateData.commissionRate = Number(data.commissionRate).toFixed(2);
+        }
+        if (data.rating !== undefined) updateData.rating = Number(data.rating).toFixed(1);
+        if (data.categoryId !== undefined) updateData.categoryId = data.categoryId;
+        if (data.minOrder !== undefined) updateData.minOrder = Number(data.minOrder).toFixed(2);
+        if (data.lat !== undefined) updateData.lat = Number(data.lat).toFixed(8);
+        if (data.lng !== undefined) updateData.lng = Number(data.lng).toFixed(8);
+        if (data.deliveryTime !== undefined) {
+          updateData.deliveryTime = data.deliveryTime || null;
+        }
+        if (data.openHours !== undefined) updateData.openHours = data.openHours || null;
+        if (data.phone !== undefined) {
+          const normalized = data.phone.replace(/\D/g, "");
+          if (normalized.length < 7) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "El teléfono debe tener al menos 7 dígitos.",
+            });
+          }
+          updateData.phone = normalized;
+        }
+        if (data.email !== undefined) updateData.email = data.email || null;
+        if (data.address !== undefined) updateData.address = data.address;
+        if (data.description !== undefined) updateData.description = data.description || null;
+        if (data.logo !== undefined) updateData.logo = data.logo || null;
+        if (data.coverImage !== undefined) updateData.coverImage = data.coverImage || null;
+
+        if (Object.keys(updateData).length > 0) {
+          await tx.update(commerces).set(updateData).where(eq(commerces.id, id));
+        }
+
+        const updated = await tx.select().from(commerces).where(eq(commerces.id, id));
+        return updated[0];
+      });
+
       emit("admin:dashboard", { type: "dashboard_update" });
-      emit("commerces:global", { type: "commerce_update" });
-      return result[0];
+      emit("commerces:global", { type: "commerce_update", commerceId: id });
+      emit(`commerce:${id}`, { type: "commerce_update", commerceId: id });
+      for (const productEvent of ["products:global"]) {
+        emit(productEvent, { type: "catalog_update", commerceId: id });
+      }
+      return result;
     }),
 
   deleteCommerce: adminQuery
-    .input(z.object({ id: z.number() }))
+    .input(z.object({ id: z.number().int().positive() }))
     .mutation(async ({ input }) => {
       const db = getDb();
-      
-      await db.transaction(async (tx) => {
-        // Chequeo de pedidos activos en curso
+
+      const merchantUserId = await db.transaction(async (tx) => {
+        const commerceRows = await tx
+          .select()
+          .from(commerces)
+          .where(eq(commerces.id, input.id))
+          .for("update");
+        const commerce = commerceRows[0];
+        if (!commerce) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Comercio no encontrado" });
+        }
+
+        // Todo estado no terminal bloquea la desactivación: pendientes de pago,
+        // recibidos, en preparación, retirados y en camino.
         const activeOrders = await tx
           .select({ id: orders.id })
           .from(orders)
@@ -193,19 +338,18 @@ export const adminCommercesProcedures = {
           .where(
             and(
               eq(orderItems.commerceId, input.id),
-              inArray(orders.status, ["received", "accepted", "preparing", "ready_for_pickup", "driver_assigned", "on_the_way"])
-            )
+              notInArray(orders.status, ["delivered", "cancelled"]),
+            ),
           )
           .limit(1);
 
         if (activeOrders.length > 0) {
           throw new TRPCError({
             code: "PRECONDITION_FAILED",
-            message: "No se puede eliminar: el comercio tiene pedidos en curso activos. Finalízalos o cancélalos primero.",
+            message: "No se puede desactivar: el comercio tiene pedidos en curso. Finalízalos o cancélalos primero.",
           });
         }
 
-        // Desactivación lógica segura: preserva órdenes históricas y registros contables
         await tx.update(commerces).set({
           status: "inactive",
           isOpen: "closed",
@@ -213,12 +357,30 @@ export const adminCommercesProcedures = {
 
         await tx.update(products).set({
           isAvailable: "no",
+          adminPaused: true,
         }).where(eq(products.commerceId, input.id));
+
+        // Revoca tokens vigentes del merchant. El login también se bloquea si
+        // todos sus comercios están inactivos.
+        if (commerce.merchantUserId) {
+          await tx
+            .update(users)
+            .set({ sessionVersion: sql`coalesce(${users.sessionVersion}, 0) + 1` })
+            .where(eq(users.id, commerce.merchantUserId));
+        }
+
+        return commerce.merchantUserId;
       });
 
       emit("admin:dashboard", { type: "dashboard_update" });
-      emit("commerces:global", { type: "commerce_update" });
-      return { success: true, message: "Comercio desactivado con éxito preservando historial contable." };
+      emit("commerces:global", { type: "commerce_update", commerceId: input.id });
+      emit("products:global", { type: "catalog_update", commerceId: input.id });
+      emit(`commerce:${input.id}`, { type: "commerce_update", commerceId: input.id });
+      return {
+        success: true,
+        merchantUserId,
+        message: "Comercio desactivado con éxito preservando historial contable.",
+      };
     }),
 
   listCategories: adminQuery.query(async () => {
