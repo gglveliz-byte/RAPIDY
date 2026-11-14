@@ -53,7 +53,7 @@
 |---|---|
 | `drivers` | `session_version`, `phone` unique |
 | `users` | `email` unique |
-| `orders` | índice `(driver_id, status, delivered_at)`; `delivered_at` |
+| `orders` | índice `(driver_id, status, delivered_at)`; `delivered_at`; `driver_commission_rate` |
 | `driver_earnings` | unique `(order_id, type)`; monto histórico |
 | `chat_messages` | `read_by_customer`, `read_by_driver`, `read_by_commerce` |
 

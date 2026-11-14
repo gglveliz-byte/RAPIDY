@@ -96,8 +96,10 @@ cualquier estado activo → cancelled
 - `product.create/update` validan precio decimal positivo, máximo y formato.
 - `order_commerce_status.commission_amount` guarda la comisión histórica por
   comercio al crear el pedido.
-- `commerce.getStats` suma esa comisión; para pedidos legacy sin snapshot usa la
-  tasa actual como fallback.
+- `commerce.getStats` y `order.getCommerceOrders` suman esa comisión; para
+  pedidos legacy sin snapshot usan la tasa actual como fallback.
+- Admin, dashboard y reportes usan el mismo snapshot; cambiar la tasa no altera
+  pedidos entregados.
 - “Ventas entregadas” suma `order_items.total` del comercio (sin envío).
 - `delivered_at` se escribe al pasar a `delivered`; el gráfico usa una ventana
   real de 7 días en zona `America/Guayaquil`.

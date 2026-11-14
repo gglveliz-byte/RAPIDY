@@ -72,13 +72,15 @@ npx tsx scripts/redirect-smoke.ts # sesión/logo/landing OK
 
 ## Migración 0009
 
-`db/migrations/0009_furry_nemesis.sql`:
+`db/migrations/0009_furry_nemesis.sql`, `0010_skinny_rage.sql` y
+`0011_icy_satana.sql`:
 
 - `chat_messages.read_by_customer`, `read_by_driver`, `read_by_commerce`;
 - `drivers.session_version`;
 - índice `orders(driver_id, status, delivered_at)`;
 - unique `drivers.phone`;
-- unique `users.email`.
+- unique `users.email`;
+- `orders.driver_commission_rate` para congelar la comisión al asignar.
 
 `npm run db:generate` responde **“No schema changes”** después de aplicar.
 

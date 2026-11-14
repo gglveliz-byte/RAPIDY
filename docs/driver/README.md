@@ -107,6 +107,8 @@ estimada.
 ## Ganancias
 
 - `driver_earnings` es la fuente de verdad del monto histórico.
+- La tasa del driver se congela al asignar el pedido en
+  `orders.driver_commission_rate`; cambiarla después no altera pedidos en curso.
 - `driver.getEarnings` devuelve hasta 500 filas ordenadas por creación.
 - `/driver/earnings` agrupa y filtra por `createdAt` en
   `America/Guayaquil`.
@@ -162,14 +164,15 @@ estimada.
 | Tabla | Uso |
 |---|---|
 | `drivers` | cuenta, estado, ubicación, comisión, `sessionVersion`, FCM |
-| `orders` | pedido, `driverId`, `pickedUpCommerceIds`, `deliveredAt` |
+| `orders` | pedido, `driverId`, `driverCommissionRate`, `pickedUpCommerceIds`, `deliveredAt` |
 | `order_items` | snapshot y comercio |
 | `order_commerce_status` | retiro por comercio |
 | `order_status_history` | historial |
 | `driver_earnings` | ganancias idempotentes |
 | `chat_messages` | mensajes y lectura por rol |
 
-Migraciones: `0008` (negocio) y `0009` (driver/chat/sesión).
+Migraciones: `0008` (negocio), `0009` (driver/chat/sesión), `0010` (admin) y
+`0011` (comisión congelada del driver).
 
 ## Documentación relacionada
 
