@@ -60,47 +60,62 @@ export async function assertCommerceOwnership(ctx: TrpcContext, commerceId: numb
  * Devuelve el rol efectivo del solicitante para un pedido concreto.
  * Prioriza el rol más específico que realmente participa en el pedido.
  */
+/**
+ * Resuelve la identidad SOLO para el rol solicitado.
+ * Necesario cuando una misma sesión acumula varias identidades (repartidor y
+ * cliente, por ejemplo): el rol pedido por el cliente manda, no el más
+ * privilegiado que exista en las cookies.
+ */
+export async function resolveViewerForRole(
+  ctx: TrpcContext,
+  order: typeof orders.$inferSelect,
+  items: Array<typeof orderItems.$inferSelect>,
+  role: ViewerRole,
+): Promise<Viewer | null> {
+  if (role === "admin") {
+    return ctx.admin ? { role: "admin", id: ctx.admin.id, name: getViewerName(ctx, "admin") } : null;
+  }
+
+  if (role === "driver") {
+    return ctx.driver && order.driverId === ctx.driver.id
+      ? { role: "driver", id: ctx.driver.id, name: ctx.driver.name }
+      : null;
+  }
+
+  if (role === "customer") {
+    return ctx.customer && order.customerId === ctx.customer.id
+      ? { role: "customer", id: ctx.customer.id, name: getViewerName(ctx, "customer") }
+      : null;
+  }
+
+  if (!ctx.merchant) return null;
+  const commerceIds = [...new Set(items.map((item) => item.commerceId))];
+  if (commerceIds.length === 0) return null;
+  const db = getDb();
+  const owned = await db
+    .select({ id: commerces.id })
+    .from(commerces)
+    .where(
+      and(
+        inArray(commerces.id, commerceIds),
+        eq(commerces.merchantUserId, ctx.merchant.id),
+      ),
+    )
+    .limit(1);
+  return owned.length > 0
+    ? { role: "merchant", id: ctx.merchant.id, name: getViewerName(ctx, "merchant") }
+    : null;
+}
+
 export async function resolveOrderViewer(
   ctx: TrpcContext,
   order: typeof orders.$inferSelect,
   items: Array<typeof orderItems.$inferSelect>,
 ): Promise<Viewer | null> {
-  if (ctx.admin) {
-    return { role: "admin", id: ctx.admin.id, name: getViewerName(ctx, "admin") };
+  for (const role of ["admin", "driver", "merchant", "customer"] as const) {
+    const viewer = await resolveViewerForRole(ctx, order, items, role);
+    if (viewer) return viewer;
   }
-
-  if (ctx.driver && order.driverId === ctx.driver.id) {
-    return { role: "driver", id: ctx.driver.id, name: ctx.driver.name };
-  }
-
-  if (ctx.merchant) {
-    const commerceIds = [...new Set(items.map((item) => item.commerceId))];
-    if (commerceIds.length > 0) {
-      const db = getDb();
-      const owned = await db
-        .select({ id: commerces.id })
-        .from(commerces)
-        .where(
-          and(
-            inArray(commerces.id, commerceIds),
-            eq(commerces.merchantUserId, ctx.merchant.id),
-          ),
-        )
-        .limit(1);
-      if (owned.length > 0) {
-        return { role: "merchant", id: ctx.merchant.id, name: getViewerName(ctx, "merchant") };
-      }
-    }
-  }
-
-  if (ctx.customer && order.customerId === ctx.customer.id) {
-    return {
-      role: "customer",
-      id: ctx.customer.id,
-      name: getViewerName(ctx, "customer"),
-    };
-  }
-
   return null;
 }
 

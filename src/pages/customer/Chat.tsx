@@ -62,7 +62,7 @@ export default function Chat() {
   const chatOrderId = Number(orderId);
   const navigate = useNavigate();
   const { customer } = useCustomerSession();
-  const { data: messages, loading, error, refresh } = useChatMessages(chatOrderId);
+  const { data: messages, loading, error, refresh } = useChatMessages(chatOrderId, "customer");
   const sendChat = useSendChatMessage(chatOrderId);
   const utils = trpc.useUtils();
   const { connected } = useOrderEvents(chatOrderId || undefined, utils);
@@ -106,7 +106,7 @@ export default function Chat() {
   // Acuse de lectura cuando llegan mensajes nuevos.
   useEffect(() => {
     if (!chatOrderId || messages.length === 0) return;
-    trpcMutate("chat.markAsRead", { orderId: chatOrderId }).catch(() => {});
+    trpcMutate("chat.markAsRead", { orderId: chatOrderId, as: "customer" }).catch(() => {});
   }, [chatOrderId, messages.length]);
 
   const handleSend = async (rawMessage: string) => {

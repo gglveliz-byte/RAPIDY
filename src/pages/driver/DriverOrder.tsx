@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router";
 import {
-  ArrowLeft,
   Phone,
   Navigation,
   Package,
@@ -10,16 +9,16 @@ import {
   Store,
   Home,
   Check,
+  MessageCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/providers/trpc";
 import { useDriverSession } from "@/hooks/useDeliveryData";
 import { useOrderEvents } from "@/hooks/useOrderEvents";
 import { getOrderStatusMeta } from "@contracts/orderStatus";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import DriverLayout from "@/components/DriverLayout";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import ChatBubble from "@/components/ChatBubble";
 import { DEFAULT_MAP_CENTER, geocodeAddress } from "@/lib/geocoding";
 
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -353,83 +352,220 @@ export default function DriverOrder() {
       </div>
     );
   }
+  const pickupLabel =
+    allCommerceIds.length > 0
+      ? `Recogidos: ${pickedUpCommerceIds.length}/${allCommerceIds.length}`
+      : "Comercios del pedido";
+
+  const singleCommerce = order.commerces?.length === 1 ? order.commerces[0] : null;
+  const singleReadyPickup =
+    isAssigned &&
+    !delivered &&
+    singleCommerce &&
+    getCommerceStatus(singleCommerce) === "ready_for_pickup" &&
+    !pickedUpCommerceIds.includes(singleCommerce.id);
+
+  const primaryAction = (() => {
+    if (delivered) return null;
+    if (order.status === "cancelled") return null;
+    if (singleReadyPickup) {
+      return (
+        <button
+          onClick={() => handleMarkCommercePickup(singleCommerce.id)}
+          disabled={markCommercePickupMutation.isPending}
+          className="flex h-11 flex-1 items-center justify-center gap-1.5 rounded-xl bg-brand text-[13px] font-bold text-zinc-950 transition-all hover:brightness-110 active:scale-[0.99] disabled:opacity-60"
+        >
+          {markCommercePickupMutation.isPending ? (
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+          ) : (
+            <Package className="h-4 w-4" aria-hidden="true" />
+          )}
+          Recoger en {singleCommerce.name}
+        </button>
+      );
+    }
+    if (order.status === "ready_for_pickup" && !order.driverId) {
+      return (
+        <button
+          onClick={handleAcceptOrder}
+          disabled={acceptOrderMutation.isPending}
+          className="h-11 flex-1 rounded-xl bg-brand text-[13px] font-bold text-zinc-950 transition-all hover:brightness-110 active:scale-[0.99] disabled:opacity-60"
+        >
+          {acceptOrderMutation.isPending ? "Aceptando..." : "Aceptar pedido"}
+        </button>
+      );
+    }
+    if (!allPickedUp) {
+      return (
+        <div className="flex h-11 flex-1 items-center justify-center rounded-xl bg-zinc-100 px-3 text-center text-[11px] font-semibold text-zinc-500 dark:bg-white/5 dark:text-zinc-400">
+          {isAssigned ? "Retira el pedido para continuar" : "Esperando asignación"}
+        </div>
+      );
+    }
+    if (order.status === "picked_up") {
+      return (
+        <button
+          onClick={handleNextStep}
+          className="h-11 flex-1 rounded-xl bg-brand text-[13px] font-bold text-zinc-950 transition-all hover:brightness-110 active:scale-[0.99]"
+        >
+          Camino al cliente
+        </button>
+      );
+    }
+    if (order.status === "on_the_way") {
+      return (
+        <button
+          onClick={handleNextStep}
+          className="h-11 flex-1 rounded-xl bg-brand text-[13px] font-bold text-zinc-950 transition-all hover:brightness-110 active:scale-[0.99]"
+        >
+          Completar entrega
+        </button>
+      );
+    }
+    return null;
+  })();
 
   return (
-    <div className="mobile-container bg-[#F7F7FA] dark:bg-[#0A0A0D] min-h-screen">
-      {/* Header */}
-      <div className="bg-gradient-to-br from-brand to-brand-strong px-4 pt-safe pb-6 shadow-sm">
-        <div className="flex items-center justify-between mb-4">
-          <button onClick={() => navigate("/driver")} aria-label="Volver a pedidos" className="text-white/80 hover:text-white touch-target flex items-center justify-center rounded-xl">
-            <ArrowLeft className="w-6 h-6" aria-hidden="true" />
-          </button>
-          <ThemeToggle
-            size="lg"
-            className="!bg-white/20 !border-white/20 !text-white hover:!bg-white/30"
-          />
-        </div>
-        <h1 className="text-xl font-bold text-white">Pedido #{id}</h1>
-        <p className="text-white/80 text-sm mt-1">
-          {getOrderStatusMeta(order.status).label}
-        </p>
-      </div>
+    <DriverLayout
+      title={`Pedido #${id}`}
+      subtitle={getOrderStatusMeta(order.status).label}
+      backTo="/driver"
+      scroll={false}
+    >
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-4">
+        <div
+          id="driver-map"
+          className="relative z-0 h-40 rounded-xl border border-zinc-200 bg-zinc-200 shadow-sm overflow-hidden dark:border-white/10 dark:bg-[#121216] [&_.leaflet-control-attribution]:bg-white/85 [&_.leaflet-control-attribution]:text-zinc-600 dark:[&_.leaflet-control-attribution]:bg-[#1A1A1E]/90 dark:[&_.leaflet-control-attribution]:text-zinc-400 [&_.leaflet-control-attribution_a]:text-brand-strong"
+        />
 
-      {/* Map */}
-      <div
-        id="driver-map"
-        className="relative z-0 h-52 mx-4 -mt-3 rounded-xl shadow-lg overflow-hidden bg-zinc-200 dark:bg-[#121216] border border-zinc-200 dark:border-white/10 [&_.leaflet-control-attribution]:bg-white/85 [&_.leaflet-control-attribution]:text-zinc-600 dark:[&_.leaflet-control-attribution]:bg-[#1A1A1E]/90 dark:[&_.leaflet-control-attribution]:text-zinc-400 [&_.leaflet-control-attribution_a]:text-brand-strong"
-      />
+        {/* Ruta: retiro y entrega */}
+        <section className="rounded-2xl border border-zinc-200/80 bg-white p-3.5 shadow-[0_1px_2px_rgba(16,24,40,0.04)] dark:border-white/10 dark:bg-[#15151A]">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+              Ruta del pedido
+            </h2>
+            <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
+              ${earningAmount} para ti
+            </span>
+          </div>
 
-      {/* Order Info */}
-      <div className="px-4 mt-4">
-        <div className="bg-white dark:bg-[#1A1A1E] rounded-xl card-shadow p-4 border border-zinc-100 dark:border-white/10">
-          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-3">Detalles</h2>
-          <div className="space-y-3">
-            <div className="flex items-start gap-3">
-              <div className="w-9 h-9 bg-brand-soft dark:bg-brand/15 rounded-lg flex items-center justify-center flex-shrink-0">
-                <Store className="w-5 h-5 text-brand" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                  {order.commerces?.length === 1
-                    ? order.commerces[0].name
-                    : `${order.commerces?.length || 0} comercios`}
-                </p>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                  {allCommerceIds.length > 0
-                    ? `Recogidos: ${pickedUpCommerceIds.length}/${allCommerceIds.length}`
-                    : "Comercios del pedido"}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="w-9 h-9 bg-blue-100 dark:bg-sky-500/15 rounded-lg flex items-center justify-center flex-shrink-0">
-                <Home className="w-5 h-5 text-blue-600 dark:text-sky-400" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Cliente</p>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">{order.deliveryAddress}</p>
-                {!isTerminal && (
-                  <div className="flex gap-2 mt-1">
-                    <a
-                      href={`tel:${order.customerPhone || ""}`}
-                      aria-label={`Llamar al cliente ${order.customerPhone || ""}`}
-                      className="inline-flex items-center gap-1.5 min-h-11 min-w-11 -ml-2 px-2 text-xs text-blue-600 dark:text-sky-400"
-                    >
-                      <Phone className="w-3.5 h-3.5" aria-hidden="true" /> {order.customerPhone || "Llamar"}
-                    </a>
-                  </div>
-                )}
-              </div>
+          <div className="mt-2.5 flex items-start gap-2.5">
+            <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand/10 text-brand-strong dark:bg-brand/15 dark:text-brand">
+              <Store className="h-3.5 w-3.5" aria-hidden="true" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[12.5px] font-bold leading-tight">
+                {order.commerces?.length === 1
+                  ? order.commerces[0].name
+                  : `${order.commerces?.length || 0} comercios`}
+              </p>
+              <p className="truncate text-[11px] text-zinc-500 dark:text-zinc-400">{pickupLabel}</p>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Commerce Pickup Checklist — only when driver is assigned but not fully picked up */}
-      {isAssigned && !allPickedUp && !delivered && (
-        <div className="px-4 mt-4">
-          <div className="bg-white dark:bg-[#1A1A1E] rounded-xl card-shadow p-4 border border-zinc-100 dark:border-white/10">
-            <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-3">Recoger en comercios</h2>
+          <div className="ml-3.5 h-3 w-px bg-zinc-200 dark:bg-white/10" />
+
+          <div className="flex items-start gap-2.5">
+            <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-sky-50 text-sky-600 dark:bg-sky-500/15 dark:text-sky-400">
+              <Home className="h-3.5 w-3.5" aria-hidden="true" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[12.5px] font-bold leading-tight">Cliente</p>
+                {!isTerminal && order.customerPhone && (
+                  <a
+                    href={`tel:${order.customerPhone}`}
+                    aria-label={`Llamar al cliente ${order.customerPhone}`}
+                    className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-semibold text-sky-600 dark:text-sky-400"
+                  >
+                    <Phone className="h-3 w-3" aria-hidden="true" />
+                    Llamar
+                  </a>
+                )}
+              </div>
+              <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-zinc-500 dark:text-zinc-400">
+                {order.deliveryAddress}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-3 flex items-center justify-between gap-2 border-t border-zinc-100 pt-2.5 dark:border-white/5">
+            <span className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
+              {(order.items ?? []).reduce((n: number, item: any) => n + (item.quantity || 1), 0)} ítems
+            </span>
+            <span
+              className={`rounded-md px-2 py-0.5 text-[10px] font-bold ${
+                order.paymentMethod === "cash"
+                  ? "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300"
+                  : "bg-zinc-100 text-zinc-600 dark:bg-white/10 dark:text-zinc-300"
+              }`}
+            >
+              {order.paymentMethod === "cash"
+                ? `Cobrar $${Number(order.total ?? 0).toFixed(2)} en efectivo`
+                : "Pagado por transferencia"}
+            </span>
+          </div>
+        </section>
+
+        {/* Progreso horizontal */}
+        <section className="rounded-2xl border border-zinc-200/80 bg-white p-3 shadow-[0_1px_2px_rgba(16,24,40,0.04)] dark:border-white/10 dark:bg-[#15151A]">
+          <h2 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+            Progreso
+          </h2>
+          <div className="flex items-start">
+            {orderSteps.map((step, i) => {
+              const done = i < currentStep || (i === currentStep && delivered);
+              const active = i === currentStep && !delivered;
+              return (
+                <div key={step.key} className="flex min-w-0 flex-1 flex-col items-center gap-1">
+                  <div className="flex w-full items-center">
+                    <span
+                      className={`h-0.5 flex-1 ${
+                        i === 0 ? "bg-transparent" : i <= currentStep ? "bg-brand" : "bg-zinc-200 dark:bg-white/10"
+                      }`}
+                    />
+                    <span
+                      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
+                        done
+                          ? "bg-emerald-500 text-white"
+                          : active
+                            ? "bg-brand text-zinc-950"
+                            : "bg-zinc-200 text-zinc-500 dark:bg-white/10 dark:text-zinc-400"
+                      }`}
+                    >
+                      {done ? <CheckCircle className="h-3.5 w-3.5" aria-hidden="true" /> : i + 1}
+                    </span>
+                    <span
+                      className={`h-0.5 flex-1 ${
+                        i === orderSteps.length - 1
+                          ? "bg-transparent"
+                          : i < currentStep
+                            ? "bg-brand"
+                            : "bg-zinc-200 dark:bg-white/10"
+                      }`}
+                    />
+                  </div>
+                  <span
+                    className={`line-clamp-2 text-center text-[9px] leading-tight ${
+                      i <= currentStep
+                        ? "font-bold text-zinc-800 dark:text-zinc-100"
+                        : "font-medium text-zinc-400 dark:text-zinc-500"
+                    }`}
+                  >
+                    {["Asignado", "Retirado", "En camino", "Entregado"][i]}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Retiro por comercio */}
+        {isAssigned && !allPickedUp && !delivered && !singleReadyPickup && (
+          <section className="rounded-2xl border border-zinc-200/80 bg-white p-3.5 shadow-[0_1px_2px_rgba(16,24,40,0.04)] dark:border-white/10 dark:bg-[#15151A]">
+            <h2 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+              Recoger en comercios
+            </h2>
             <div className="space-y-2">
               {order.commerces?.map((c: any) => {
                 const picked = pickedUpCommerceIds.includes(c.id);
@@ -443,145 +579,99 @@ export default function DriverOrder() {
                     ? "text-brand-strong bg-brand-soft dark:text-brand dark:bg-brand/15"
                     : "text-emerald-700 bg-emerald-50 dark:text-emerald-300 dark:bg-emerald-500/10";
                 return (
-                  <div key={c.id} className="flex items-center justify-between gap-3 p-2 rounded-lg bg-zinc-50 dark:bg-[#16161B] border border-zinc-100 dark:border-white/5">
-                    <div className="flex items-center gap-2">
-                      <Store className="w-4 h-4 text-brand" />
-                      <div>
-                        <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{c.name}</p>
-                        {c.address && <p className="text-xs text-zinc-500 dark:text-zinc-400">{c.address}</p>}
+                  <div
+                    key={c.id}
+                    className="flex items-center justify-between gap-2 rounded-xl border border-zinc-100 bg-zinc-50 p-2 dark:border-white/5 dark:bg-[#101014]"
+                  >
+                    <div className="flex min-w-0 items-center gap-2">
+                      <Store className="h-3.5 w-3.5 shrink-0 text-brand" aria-hidden="true" />
+                      <div className="min-w-0">
+                        <p className="truncate text-[12px] font-semibold">{c.name}</p>
+                        <span className={`mt-0.5 inline-block rounded-full px-1.5 py-0.5 text-[9px] font-bold ${statusColor}`}>
+                          {statusLabel}
+                        </span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${statusColor}`}>{statusLabel}</span>
-                      {picked ? (
-                        <div className="flex items-center gap-1 text-emerald-700 dark:text-emerald-400 text-xs font-medium">
-                          <Check className="w-4 h-4" />
-                          Recogido
-                        </div>
-                      ) : isReady ? (
-                        <button
-                          onClick={() => handleMarkCommercePickup(c.id)}
-                          disabled={markCommercePickupMutation.isPending}
-                          aria-label={`Marcar retiro en ${c.name || "el comercio"}`}
-                          className="min-h-11 px-3 bg-brand text-zinc-950 text-xs font-semibold rounded-lg hover:brightness-110 active:scale-[0.97] transition-all flex items-center gap-1 touch-target disabled:opacity-60 disabled:cursor-not-allowed"
-                        >
-                          {markCommercePickupMutation.isPending ? (
-                            <Loader2 className="w-3 h-3 animate-spin" />
-                          ) : (
-                            <Package className="w-3 h-3" />
-                          )}
-                          Recoger
-                        </button>
-                      ) : (
-                        <span className="text-xs text-zinc-500 dark:text-zinc-400">Esperando preparación</span>
-                      )}
-                    </div>
+                    {picked ? (
+                      <span className="flex shrink-0 items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                        <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                        Recogido
+                      </span>
+                    ) : isReady ? (
+                      <button
+                        onClick={() => handleMarkCommercePickup(c.id)}
+                        disabled={markCommercePickupMutation.isPending}
+                        aria-label={`Marcar retiro en ${c.name || "el comercio"}`}
+                        className="flex h-9 shrink-0 items-center gap-1 rounded-lg bg-brand px-3 text-[11px] font-bold text-zinc-950 transition-all hover:brightness-110 active:scale-[0.97] disabled:opacity-60"
+                      >
+                        {markCommercePickupMutation.isPending ? (
+                          <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+                        ) : (
+                          <Package className="h-3 w-3" aria-hidden="true" />
+                        )}
+                        Recoger
+                      </button>
+                    ) : (
+                      <span className="shrink-0 text-[10px] font-medium text-zinc-500 dark:text-zinc-400">
+                        En preparación
+                      </span>
+                    )}
                   </div>
                 );
               })}
             </div>
-          </div>
-        </div>
-      )}
+          </section>
+        )}
 
-      {/* Progress Steps */}
-      <div className="px-4 mt-4">
-        <div className="bg-white dark:bg-[#1A1A1E] rounded-xl card-shadow p-4 border border-zinc-100 dark:border-white/10">
-          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-4">Progreso</h2>
-          <div className="relative">
-            <div className="absolute left-3.5 top-3 bottom-3 w-0.5 bg-zinc-200 dark:bg-white/10" />
-            <div className="space-y-4">
-              {orderSteps.map((step, i) => (
-                <div key={step.key} className="flex items-center gap-3 relative z-10">
-                  <div
-                    className={`w-7 h-7 rounded-full flex items-center justify-center ${
-                      delivered && i === orderSteps.length - 1
-                        ? "bg-emerald-500 text-white"
-                        : i <= currentStep
-                          ? "bg-brand text-zinc-950"
-                          : "bg-zinc-200 dark:bg-white/10 text-zinc-500 dark:text-zinc-400"
-                    }`}
-                  >
-                    {(i < currentStep || (i === currentStep && delivered)) ? (
-                      <CheckCircle className="w-4 h-4" />
-                    ) : (
-                      <span className="text-xs font-bold">{i + 1}</span>
-                    )}
-                  </div>
-                  <span
-                    className={`text-sm ${i <= currentStep ? "text-zinc-900 dark:text-zinc-100 font-medium" : "text-zinc-500 dark:text-zinc-400"}`}
-                  >
-                    {step.label}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+        {delivered && (
+          <section className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-center dark:border-emerald-500/20 dark:bg-emerald-500/10">
+            <CheckCircle className="mx-auto mb-1.5 h-7 w-7 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
+            <p className="text-[13px] font-bold text-zinc-900 dark:text-zinc-100">Entrega completada</p>
+            <p className="mt-0.5 text-[11px] text-zinc-600 dark:text-zinc-300">
+              Ganancia acreditada: ${earningAmount}
+            </p>
+          </section>
+        )}
+
+        {order.status === "cancelled" && (
+          <section className="rounded-2xl border border-rose-200 bg-rose-50 p-3.5 text-center dark:border-rose-500/25 dark:bg-rose-500/10">
+            <p className="text-[12px] font-bold text-rose-700 dark:text-rose-300">Pedido cancelado</p>
+          </section>
+        )}
       </div>
 
-      {/* Action Buttons */}
-      {!delivered && order.status === "ready_for_pickup" && !order.driverId && (
-        <div className="px-4 mt-4 mb-6">
+      {/* Acciones fijas */}
+      <div className="shrink-0 border-t border-zinc-200/80 bg-white/95 px-3 py-2.5 backdrop-blur-xl dark:border-white/10 dark:bg-[#101014]/95">
+        <div className="flex items-center gap-2">
           <button
-            onClick={handleAcceptOrder}
-            disabled={acceptOrderMutation.isPending}
-            className="w-full h-12 bg-brand text-zinc-950 font-semibold rounded-xl hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+            type="button"
+            onClick={() => navigate(`/driver/chat/${id}`)}
+            aria-label="Abrir chat del pedido"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-600 transition-colors hover:bg-zinc-50 dark:border-white/10 dark:bg-[#15151A] dark:text-zinc-300"
           >
-            {acceptOrderMutation.isPending ? "Aceptando..." : "Aceptar pedido"}
+            <MessageCircle className="h-4.5 w-4.5" aria-hidden="true" />
           </button>
-        </div>
-      )}
-
-      {!delivered && allPickedUp && (
-        <div className="px-4 mt-4 mb-6">
-          {order.status === "picked_up" && (
-            <button
-              onClick={handleNextStep}
-              className="w-full h-12 bg-brand text-zinc-950 font-semibold rounded-xl hover:brightness-110 active:scale-[0.98] transition-all"
-            >
-              Camino al cliente
-            </button>
-          )}
-          {order.status === "on_the_way" && (
-            <button
-              onClick={handleNextStep}
-              className="w-full h-12 bg-brand text-zinc-950 font-semibold rounded-xl hover:brightness-110 active:scale-[0.98] transition-all"
-            >
-              Completar entrega
-            </button>
-          )}
-        </div>
-      )}
-
-      {!isTerminal && (
-        <button
-          onClick={openRoute}
-          className="mx-4 mb-2 h-10 bg-white dark:bg-[#1A1A1E] border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-200 font-medium rounded-xl hover:bg-zinc-50 dark:hover:bg-white/5 transition-all flex items-center justify-center gap-2"
-        >
-          <Navigation className="w-4 h-4 text-brand" />
-          Abrir en Google Maps
-        </button>
-      )}
-
-      {!isTerminal && <ChatBubble orderId={Number(id)} role="driver" />}
-
-      {delivered && (
-        <div className="px-4 mt-4 mb-6">
-          <div className="bg-emerald-50 dark:bg-emerald-500/10 rounded-xl p-4 text-center border border-emerald-100 dark:border-emerald-500/20">
-            <CheckCircle className="w-10 h-10 text-emerald-600 dark:text-emerald-400 mx-auto mb-2" />
-            <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">Entrega completada!</p>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Ganancia acreditada: ${earningAmount}</p>
+          <button
+            type="button"
+            onClick={openRoute}
+            aria-label="Abrir ruta en Google Maps"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-600 transition-colors hover:bg-zinc-50 dark:border-white/10 dark:bg-[#15151A] dark:text-zinc-300"
+          >
+            <Navigation className="h-4.5 w-4.5" aria-hidden="true" />
+          </button>
+          {delivered ? (
             <button
               type="button"
               onClick={() => navigate("/driver/history")}
-              className="mt-3 min-h-11 px-4 py-2 rounded-lg bg-brand hover:brightness-110 text-zinc-950 text-xs font-bold transition-colors"
+              className="h-11 flex-1 rounded-xl bg-brand text-[13px] font-bold text-zinc-950 transition-all hover:brightness-110 active:scale-[0.99]"
             >
               Ver historial
             </button>
-          </div>
+          ) : (
+            primaryAction ?? <div className="flex-1" />
+          )}
         </div>
-      )}
-    </div>
+      </div>
+    </DriverLayout>
   );
 }

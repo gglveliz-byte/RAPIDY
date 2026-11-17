@@ -1,10 +1,9 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router";
-import { ArrowLeft, DollarSign, TrendingUp, Clock, Bike, Loader2 } from "lucide-react";
+import { Bike, CalendarDays, DollarSign, Loader2, TrendingUp, Wallet } from "lucide-react";
 import { trpc } from "@/providers/trpc";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { useDriverSession } from "@/hooks/useDeliveryData";
 import { useDriverEvents } from "@/hooks/useOrderEvents";
+import DriverLayout from "@/components/DriverLayout";
 
 function guayaquilDateKey(value: string | Date): string {
   return new Intl.DateTimeFormat("en-CA", {
@@ -15,8 +14,13 @@ function guayaquilDateKey(value: string | Date): string {
   }).format(new Date(value));
 }
 
+const PERIODS = [
+  { key: "day", label: "Hoy", long: "Hoy" },
+  { key: "week", label: "Semana", long: "Esta semana" },
+  { key: "month", label: "Mes", long: "Este mes" },
+] as const;
+
 export default function DriverEarnings() {
-  const navigate = useNavigate();
   const driverSession = useDriverSession();
   const driverId = driverSession?.id ?? null;
   const utils = trpc.useUtils();
@@ -25,7 +29,7 @@ export default function DriverEarnings() {
 
   const { data: earnings, isLoading, isError, error, refetch } = trpc.driver.getEarnings.useQuery(
     { id: driverId! },
-    { enabled: !!driverId }
+    { enabled: !!driverId },
   );
 
   const dailyHistory = useMemo(() => {
@@ -64,127 +68,150 @@ export default function DriverEarnings() {
   const periodDeliveries = periodEntries.length;
   const totalDeliveries = earnings?.length || 0;
   const avgEarnings = periodDeliveries > 0 ? periodEarnings / periodDeliveries : 0;
+  const periodMeta = PERIODS.find((p) => p.key === period)!;
 
   if (isLoading) {
     return (
-      <div role="status" aria-live="polite" className="mobile-container bg-zinc-50 dark:bg-[#0A0A0D] min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-brand" aria-hidden="true" />
-        <span className="sr-only">Cargando ganancias…</span>
-      </div>
+      <DriverLayout title="Ganancias" subtitle="Resumen de tus entregas">
+        <div role="status" aria-live="polite" className="flex flex-1 items-center justify-center py-16">
+          <Loader2 className="h-7 w-7 animate-spin text-brand" aria-hidden="true" />
+          <span className="sr-only">Cargando ganancias…</span>
+        </div>
+      </DriverLayout>
     );
   }
 
   if (isError) {
     return (
-      <div className="mobile-container bg-zinc-50 dark:bg-[#0A0A0D] min-h-screen flex flex-col items-center justify-center px-6 text-center">
-        <p className="text-sm font-bold text-red-700 dark:text-red-400">No se pudieron cargar tus ganancias</p>
-        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{error.message}</p>
-        <button
-          type="button"
-          onClick={() => refetch()}
-          className="mt-4 min-h-11 px-4 py-2 rounded-lg bg-brand hover:brightness-110 text-zinc-950 text-xs font-bold transition-colors"
-        >
-          Reintentar
-        </button>
-      </div>
+      <DriverLayout title="Ganancias" subtitle="Resumen de tus entregas">
+        <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
+          <p className="text-[13px] font-bold text-red-700 dark:text-red-400">
+            No se pudieron cargar tus ganancias
+          </p>
+          <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">{error.message}</p>
+          <button
+            type="button"
+            onClick={() => refetch()}
+            className="mt-4 min-h-10 rounded-lg bg-brand px-4 text-[11px] font-bold text-zinc-950 transition-colors hover:brightness-110"
+          >
+            Reintentar
+          </button>
+        </div>
+      </DriverLayout>
     );
   }
 
   return (
-    <div className="mobile-container bg-zinc-50 dark:bg-[#0A0A0D] min-h-screen pb-6">
-      {/* Header */}
-      <div className="bg-gradient-to-br from-brand to-brand-strong px-4 pt-4 pb-6">
-        <div className="flex items-center justify-between mb-4">
-          <button onClick={() => navigate("/driver")} aria-label="Volver a pedidos" className="text-white/80 hover:text-white touch-target flex items-center justify-center rounded-xl">
-            <ArrowLeft className="w-6 h-6" aria-hidden="true" />
-          </button>
-          <ThemeToggle
-            size="lg"
-            className="!bg-white/15 !border-white/30 !text-white hover:!bg-white/25 hover:!text-white shadow-sm"
+    <DriverLayout title="Ganancias" subtitle="Resumen de tus entregas">
+      <div className="space-y-3 px-4 py-4">
+        {/* Total del período */}
+        <section className="relative overflow-hidden rounded-2xl border border-zinc-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)] dark:border-white/10 dark:bg-[#15151A]">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -right-8 -top-10 h-28 w-28 rounded-full bg-brand/10 blur-2xl"
           />
-        </div>
-        <h1 className="text-xl font-bold text-white">Mis ganancias</h1>
-      </div>
+          <div className="relative flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                <Wallet className="h-3.5 w-3.5 text-brand" aria-hidden="true" />
+                {periodMeta.long}
+              </p>
+              <p className="mt-1 text-[30px] font-black leading-none tracking-tight text-zinc-900 dark:text-zinc-50">
+                ${periodEarnings.toFixed(2)}
+              </p>
+            </div>
+            <span className="flex shrink-0 items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
+              <TrendingUp className="h-3 w-3" aria-hidden="true" />
+              {periodDeliveries} {periodDeliveries === 1 ? "entrega" : "entregas"}
+            </span>
+          </div>
 
-      {/* Total Card */}
-      <div className="px-4 -mt-3">
-        <div className="bg-white dark:bg-[#1A1A1E] rounded-2xl card-shadow dark:shadow-none border border-zinc-100 dark:border-white/10 p-5">
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-1">{period === "day" ? "Ganancias de hoy" : period === "week" ? "Ganancias de la semana" : "Ganancias del mes"}</p>
-          <p className="text-3xl font-bold text-brand-strong">${periodEarnings.toFixed(2)}</p>
-          <div className="flex items-center gap-1 mt-1 text-xs text-green-700 dark:text-green-400">
-            <TrendingUp className="w-3 h-3" />
-            <span>Ganancias acumuladas</span>
+          <div className="relative mt-3 flex gap-2">
+            {PERIODS.map((p) => (
+              <button
+                key={p.key}
+                type="button"
+                onClick={() => setPeriod(p.key)}
+                aria-pressed={period === p.key}
+                className={`min-h-9 flex-1 rounded-xl text-[11.5px] font-bold transition-all ${
+                  period === p.key
+                    ? "bg-brand text-zinc-950 shadow-[0_2px_8px_rgba(255,106,0,0.3)]"
+                    : "bg-zinc-100 text-zinc-500 hover:text-zinc-700 dark:bg-white/5 dark:text-zinc-400 dark:hover:text-zinc-200"
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {/* Métricas */}
+        <div className="grid grid-cols-3 gap-2">
+          <div className="rounded-2xl border border-zinc-200/80 bg-white p-3 text-center dark:border-white/10 dark:bg-[#15151A]">
+            <Bike className="mx-auto h-4 w-4 text-brand" aria-hidden="true" />
+            <p className="mt-1 text-[17px] font-black leading-none">{totalDeliveries}</p>
+            <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+              Total
+            </p>
+          </div>
+          <div className="rounded-2xl border border-zinc-200/80 bg-white p-3 text-center dark:border-white/10 dark:bg-[#15151A]">
+            <CalendarDays className="mx-auto h-4 w-4 text-brand" aria-hidden="true" />
+            <p className="mt-1 text-[17px] font-black leading-none">{periodDeliveries}</p>
+            <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+              Período
+            </p>
+          </div>
+          <div className="rounded-2xl border border-zinc-200/80 bg-white p-3 text-center dark:border-white/10 dark:bg-[#15151A]">
+            <DollarSign className="mx-auto h-4 w-4 text-brand" aria-hidden="true" />
+            <p className="mt-1 text-[17px] font-black leading-none">${avgEarnings.toFixed(2)}</p>
+            <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+              Promedio
+            </p>
           </div>
         </div>
-      </div>
 
-      {/* Period Tabs */}
-      <div className="px-4 mt-4">
-        <div className="flex bg-zinc-100 dark:bg-[#16161B] rounded-xl p-1 border border-zinc-200/60 dark:border-white/5">
-          {(["day", "week", "month"] as const).map((p) => (
-            <button
-              key={p}
-              onClick={() => setPeriod(p)}
-              className={`flex-1 min-h-11 min-w-11 px-2 py-2 text-sm font-medium rounded-lg transition-all ${
-                period === p
-                  ? "bg-white dark:bg-[#1A1A1E] text-brand-strong shadow-sm"
-                  : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
-              }`}
-            >
-              {p === "day" ? "Hoy" : p === "week" ? "Semana" : "Mes"}
-            </button>
-          ))}
+        {/* Historial por día */}
+        <div className="flex items-center justify-between pt-1">
+          <h2 className="text-[12px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+            Historial
+          </h2>
+          {dailyHistory.length > 0 && (
+            <span className="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500">
+              {dailyHistory.length} {dailyHistory.length === 1 ? "día" : "días"}
+            </span>
+          )}
         </div>
-      </div>
 
-      {/* Stats */}
-      <div className="px-4 mt-4">
-        <div className="grid grid-cols-3 gap-3">
-          <div className="bg-white dark:bg-[#1A1A1E] rounded-2xl card-shadow dark:shadow-none border border-zinc-100 dark:border-white/10 p-3 text-center">
-            <Bike className="w-5 h-5 text-brand mx-auto mb-1" />
-            <p className="text-lg font-bold text-zinc-900 dark:text-zinc-100">{totalDeliveries}</p>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">Entregas</p>
-          </div>
-          <div className="bg-white dark:bg-[#1A1A1E] rounded-2xl card-shadow dark:shadow-none border border-zinc-100 dark:border-white/10 p-3 text-center">
-            <Clock className="w-5 h-5 text-brand mx-auto mb-1" />
-            <p className="text-lg font-bold text-zinc-900 dark:text-zinc-100">{periodDeliveries}</p>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">Entregas (período)</p>
-          </div>
-          <div className="bg-white dark:bg-[#1A1A1E] rounded-2xl card-shadow dark:shadow-none border border-zinc-100 dark:border-white/10 p-3 text-center">
-            <DollarSign className="w-5 h-5 text-brand mx-auto mb-1" />
-            <p className="text-lg font-bold text-zinc-900 dark:text-zinc-100">${avgEarnings.toFixed(2)}</p>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400">Promedio</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Daily History */}
-      <div className="px-4 mt-6">
-        <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 mb-3">Historial</h2>
-        <div className="bg-white dark:bg-[#1A1A1E] rounded-2xl card-shadow dark:shadow-none border border-zinc-100 dark:border-white/10 divide-y divide-zinc-100 dark:divide-white/5 overflow-hidden">
+        <div className="overflow-hidden rounded-2xl border border-zinc-200/80 bg-white divide-y divide-zinc-100 dark:border-white/10 dark:bg-[#15151A] dark:divide-white/5">
           {dailyHistory.length > 0 ? (
-            dailyHistory.map((day: any) => (
-              <div key={day.date} className="p-4 flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+            dailyHistory.map((day) => (
+              <div key={day.date} className="flex items-center justify-between gap-3 px-3.5 py-2.5">
+                <div className="min-w-0">
+                  <p className="truncate text-[13px] font-semibold capitalize leading-tight">
                     {new Date(`${day.date}T12:00:00`).toLocaleDateString("es-ES", {
                       weekday: "short",
                       day: "numeric",
                       month: "short",
                     })}
                   </p>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400">{day.deliveries} entregas</p>
+                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                    {day.deliveries} {day.deliveries === 1 ? "entrega" : "entregas"}
+                  </p>
                 </div>
-                <span className="text-sm font-bold text-brand-strong">${day.earnings.toFixed(2)}</span>
+                <span className="shrink-0 text-[13px] font-bold text-brand-strong dark:text-brand">
+                  ${day.earnings.toFixed(2)}
+                </span>
               </div>
             ))
           ) : (
-            <div className="p-6 text-center">
-              <p className="text-zinc-500 dark:text-zinc-400 text-sm">Sin historial de ganancias</p>
+            <div className="px-4 py-8 text-center">
+              <p className="text-[12px] text-zinc-500 dark:text-zinc-400">
+                Sin historial de ganancias
+              </p>
             </div>
           )}
         </div>
       </div>
-    </div>
+    </DriverLayout>
   );
 }

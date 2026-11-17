@@ -38,7 +38,7 @@ export default function DriverChat() {
   const navigate = useNavigate();
   const driverSession = useDriverSession();
   const chatOrderId = Number(orderId);
-  const { data: messages, loading, refresh, error } = useChatMessages(chatOrderId);
+  const { data: messages, loading, refresh, error } = useChatMessages(chatOrderId, "driver");
   const sendChat = useSendChatMessage(chatOrderId);
   const utils = trpc.useUtils();
   const { connected } = useOrderEvents(chatOrderId || undefined, utils);
@@ -57,7 +57,7 @@ export default function DriverChat() {
 
   useEffect(() => {
     if (chatOrderId && driverSession && lastMessageId) {
-      trpcMutate("chat.markAsRead", { orderId: chatOrderId }).catch(() => {});
+      trpcMutate("chat.markAsRead", { orderId: chatOrderId, as: "driver" }).catch(() => {});
     }
   }, [chatOrderId, driverSession, lastMessageId]);
 

@@ -1,25 +1,23 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import {
-  ArrowLeft,
-  User,
-  Phone,
   Bike,
-  Star,
-  ToggleLeft,
-  ToggleRight,
+  Check,
+  Edit3,
+  Loader2,
   LogOut,
   MapPin,
-  Loader2,
-  Edit3,
+  Phone,
   Save,
+  Star,
+  User,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc, queryClient } from "@/providers/trpc";
 import { trpcMutate, useDriverSession } from "@/hooks/useDeliveryData";
 import { clearRoleUser, clearSession, dispatchLogout } from "@/hooks/useSessionSync";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import DriverLayout from "@/components/DriverLayout";
 
 export default function DriverProfile() {
   const navigate = useNavigate();
@@ -34,7 +32,7 @@ export default function DriverProfile() {
 
   const { data: driver, isLoading, isError, error, refetch } = trpc.driver.getProfile.useQuery(
     { id: driverId! },
-    { enabled: !!driverId }
+    { enabled: !!driverId },
   );
 
   const updateStatusMutation = trpc.driver.updateStatus.useMutation({
@@ -110,219 +108,249 @@ export default function DriverProfile() {
 
   if (isLoading) {
     return (
-      <div className="mobile-container bg-surface dark:bg-[#0E0E12] min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-brand" />
-      </div>
+      <DriverLayout title="Perfil" subtitle="Tus datos de repartidor">
+        <div role="status" aria-live="polite" className="flex flex-1 items-center justify-center">
+          <Loader2 className="h-7 w-7 animate-spin text-brand" aria-hidden="true" />
+          <span className="sr-only">Cargando perfil…</span>
+        </div>
+      </DriverLayout>
     );
   }
 
   if (isError) {
     return (
-      <div className="mobile-container bg-surface dark:bg-[#0E0E12] min-h-screen flex flex-col items-center justify-center px-6 text-center">
-        <p className="text-sm font-bold text-red-600 dark:text-red-400">No se pudo cargar tu perfil</p>
-        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{error.message}</p>
-        <button
-          type="button"
-          onClick={() => refetch()}
-          className="mt-4 min-h-11 px-4 py-2 rounded-lg bg-brand hover:brightness-110 text-zinc-950 text-xs font-bold transition-colors"
-        >
-          Reintentar
-        </button>
-      </div>
+      <DriverLayout title="Perfil" subtitle="Tus datos de repartidor">
+        <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
+          <p className="text-[13px] font-bold text-red-600 dark:text-red-400">
+            No se pudo cargar tu perfil
+          </p>
+          <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">{error.message}</p>
+          <button
+            type="button"
+            onClick={() => refetch()}
+            className="mt-4 min-h-10 rounded-lg bg-brand px-4 text-[11px] font-bold text-zinc-950 transition-colors hover:brightness-110"
+          >
+            Reintentar
+          </button>
+        </div>
+      </DriverLayout>
     );
   }
 
   if (!driver) {
     return (
-      <div className="mobile-container bg-surface dark:bg-[#0E0E12] min-h-screen flex items-center justify-center">
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">Repartidor no encontrado</p>
-      </div>
+      <DriverLayout title="Perfil" subtitle="Tus datos de repartidor">
+        <div className="flex flex-1 items-center justify-center">
+          <p className="text-[12px] text-zinc-500 dark:text-zinc-400">Repartidor no encontrado</p>
+        </div>
+      </DriverLayout>
     );
   }
 
+  const statusLabel =
+    driver.status === "online" ? "En línea" : driver.status === "busy" ? "Ocupado" : "Desconectado";
+  const statusHint =
+    driver.status === "online"
+      ? "Recibiendo pedidos"
+      : driver.status === "busy"
+        ? "Pedido en curso"
+        : "No recibirás pedidos";
+
   return (
-    <div className="mobile-container bg-surface dark:bg-[#0E0E12] min-h-screen">
-      {/* Header */}
-      <div className="bg-gradient-to-br from-brand to-brand-strong px-4 pt-4 pb-8">
-        <div className="flex items-center justify-between mb-4">
-          <button onClick={() => navigate("/driver")} aria-label="Volver a pedidos" className="text-white/80 hover:text-white touch-target flex items-center justify-center rounded-xl">
-            <ArrowLeft className="w-6 h-6" aria-hidden="true" />
-          </button>
-          <div className="flex items-center gap-2">
-            <ThemeToggle
-              size="lg"
-              className="!bg-white/20 !border-white/30 !text-white hover:!bg-white/30 hover:!text-white backdrop-blur-sm"
-            />
-            {!isEditing ? (
-              <button onClick={handleStartEdit} className="text-white/80 hover:text-white touch-target" aria-label="Editar perfil">
-                <Edit3 className="w-5 h-5" />
+    <DriverLayout
+      title="Perfil"
+      subtitle={`Repartidor · ${statusLabel}`}
+      headerRight={
+        <div className="flex shrink-0 items-center gap-2">
+          {isEditing ? (
+            <>
+              <button
+                type="button"
+                onClick={handleCancelEdit}
+                disabled={updateProfileMutation.isPending}
+                aria-label="Cancelar edición"
+                className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/25 bg-white/15 text-white transition-colors hover:bg-white/25 disabled:opacity-50"
+              >
+                <X className="h-4.5 w-4.5" aria-hidden="true" />
               </button>
-            ) : (
-              <div className="flex items-center gap-2">
-                <button onClick={handleCancelEdit} className="text-white/80 hover:text-white touch-target disabled:opacity-50" disabled={updateProfileMutation.isPending} aria-label="Cancelar edición">
-                  <X className="w-5 h-5" />
-                </button>
-                <button onClick={handleSaveProfile} className="text-white/80 hover:text-white touch-target disabled:opacity-50" disabled={updateProfileMutation.isPending} aria-label="Guardar cambios">
-                  <Save className="w-5 h-5" />
-                </button>
-              </div>
-            )}
-          </div>
+              <button
+                type="button"
+                onClick={handleSaveProfile}
+                disabled={updateProfileMutation.isPending}
+                aria-label="Guardar cambios"
+                className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-brand-strong transition-colors hover:bg-white/90 disabled:opacity-50"
+              >
+                {updateProfileMutation.isPending ? (
+                  <Loader2 className="h-4.5 w-4.5 animate-spin" aria-hidden="true" />
+                ) : (
+                  <Check className="h-4.5 w-4.5" aria-hidden="true" />
+                )}
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={handleStartEdit}
+              aria-label="Editar perfil"
+              className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/25 bg-white/15 text-white transition-colors hover:bg-white/25"
+            >
+              <Edit3 className="h-4.5 w-4.5" aria-hidden="true" />
+            </button>
+          )}
         </div>
-        <div className="flex items-center gap-4">
-          <div className="w-16 h-16 bg-white/20 ring-2 ring-white/20 rounded-full flex items-center justify-center">
-            <User className="w-8 h-8 text-white" />
+      }
+    >
+      <div className="space-y-3 px-4 py-4">
+        {/* Identidad */}
+        <section className="flex items-center gap-3 rounded-2xl border border-zinc-200/80 bg-white p-3.5 shadow-[0_1px_2px_rgba(16,24,40,0.04)] dark:border-white/10 dark:bg-[#15151A]">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand to-brand-strong text-white shadow-[0_4px_14px_rgba(255,106,0,0.35)]">
+            <User className="h-6 w-6" aria-hidden="true" />
           </div>
-          <div>
-            {!isEditing ? (
-              <h1 className="text-xl font-bold text-white">{driver?.name || "Conductor"}</h1>
-            ) : (
+          <div className="min-w-0 flex-1">
+            {isEditing ? (
               <input
                 type="text"
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
-                className="text-xl font-bold text-zinc-900 dark:text-zinc-100 bg-white dark:bg-[#16161B] border border-transparent dark:border-white/15 rounded-lg px-2 py-1 w-full placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-white/60"
+                className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-2 py-1 text-[14px] font-bold text-zinc-900 outline-none focus:border-brand focus:ring-1 focus:ring-brand dark:border-white/15 dark:bg-[#101014] dark:text-zinc-100"
                 placeholder="Nombre"
                 aria-label="Nombre"
               />
+            ) : (
+              <h2 className="truncate text-[15px] font-black leading-tight">
+                {driver.name || "Conductor"}
+              </h2>
             )}
-            <div className="flex items-center gap-2 mt-1">
-              <Star className="w-4 h-4 text-[#FFC107]" />
-              <span className="text-white text-sm">{driver?.rating?.toString() || "4.8"}</span>
-              <span className="text-white/50">|</span>
-              <span className="text-white/70 text-sm">{driver?.totalEarnings || "0"} ganancias</span>
+            <div className="mt-1 flex items-center gap-1.5 text-[11px] text-zinc-500 dark:text-zinc-400">
+              <Star className="h-3.5 w-3.5 text-amber-400" aria-hidden="true" />
+              <span className="font-semibold text-zinc-700 dark:text-zinc-200">
+                {driver.rating ? Number(driver.rating).toFixed(1) : "—"}
+              </span>
+              <span className="text-zinc-300 dark:text-zinc-600">·</span>
+              <span className="truncate">
+                ${Number(driver.totalEarnings || 0).toFixed(2)} ganado
+              </span>
             </div>
           </div>
-        </div>
-      </div>
+        </section>
 
-      {/* Online Toggle */}
-      <div className="px-4 -mt-4">
-        <div className="bg-white dark:bg-[#1A1A1E] rounded-xl card-shadow dark:shadow-none border border-zinc-100 dark:border-white/10 p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div
-                className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                  driver?.status === "online"
-                    ? "bg-green-100 dark:bg-green-500/15"
-                    : driver?.status === "busy"
-                      ? "bg-amber-100 dark:bg-amber-500/15"
-                      : "bg-zinc-100 dark:bg-white/10"
-                }`}
-              >
-                <Bike
-                  className={`w-5 h-5 ${
-                    driver?.status === "online"
-                      ? "text-green-600 dark:text-green-400"
-                      : driver?.status === "busy"
-                        ? "text-amber-600 dark:text-amber-400"
-                        : "text-zinc-400 dark:text-zinc-500"
-                  }`}
-                />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                  {driver?.status === "online" ? "En línea" : driver?.status === "busy" ? "Ocupado" : "Desconectado"}
-                </p>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                  {driver?.status === "online" ? "Recibiendo pedidos" : driver?.status === "busy" ? "Pedido en curso" : "No recibirás pedidos"}
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={handleToggleOnline}
-              className="touch-target disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={updateStatusMutation.isPending || driver.status === "busy"}
-              aria-label={driver.status === "online" ? "Desconectarse" : "Conectarse"}
-              aria-pressed={driver.status === "online"}
+        {/* Estado */}
+        <section className="flex items-center justify-between gap-3 rounded-2xl border border-zinc-200/80 bg-white p-3.5 shadow-[0_1px_2px_rgba(16,24,40,0.04)] dark:border-white/10 dark:bg-[#15151A]">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <span
+              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
+                driver.status === "online"
+                  ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400"
+                  : driver.status === "busy"
+                    ? "bg-amber-50 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400"
+                    : "bg-zinc-100 text-zinc-400 dark:bg-white/10 dark:text-zinc-500"
+              }`}
             >
-              {driver?.status === "online" ? (
-                <ToggleRight className="w-10 h-10 text-brand-strong" />
-              ) : (
-                <ToggleLeft className="w-10 h-10 text-zinc-300 dark:text-zinc-600" />
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Info */}
-      <div className="px-4 mt-4">
-        <div className="bg-white dark:bg-[#1A1A1E] rounded-xl card-shadow dark:shadow-none border border-zinc-100 dark:border-white/10 divide-y divide-zinc-100 dark:divide-white/5">
-          <div className="p-4 flex items-center gap-3">
-            <Phone className="w-5 h-5 text-zinc-400 dark:text-zinc-500" />
-            <div>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">Telefono</p>
-              <p className="text-sm text-zinc-900 dark:text-zinc-100">{driver?.phone || "-"}</p>
+              <Bike className="h-4.5 w-4.5" aria-hidden="true" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-[13px] font-bold leading-tight">{statusLabel}</p>
+              <p className="truncate text-[11px] text-zinc-500 dark:text-zinc-400">{statusHint}</p>
             </div>
           </div>
-          <div className="p-4 flex items-center gap-3">
-            <Bike className="w-5 h-5 text-zinc-400 dark:text-zinc-500" />
-            <div className="flex-1">
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">Vehiculo</p>
-              {!isEditing ? (
-                <p className="text-sm text-zinc-900 dark:text-zinc-100">{driver?.vehicle || "-"}</p>
-              ) : (
+          <button
+            type="button"
+            onClick={handleToggleOnline}
+            disabled={updateStatusMutation.isPending || driver.status === "busy"}
+            aria-label={driver.status === "online" ? "Desconectarse" : "Conectarse"}
+            aria-pressed={driver.status === "online"}
+            className={`relative h-7 w-12 shrink-0 rounded-full transition-colors disabled:opacity-50 ${
+              driver.status === "online" ? "bg-emerald-500" : "bg-zinc-300 dark:bg-white/15"
+            }`}
+          >
+            <span
+              className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${
+                driver.status === "online" ? "left-[1.375rem]" : "left-0.5"
+              }`}
+            />
+          </button>
+        </section>
+
+        {/* Datos */}
+        <section className="overflow-hidden rounded-2xl border border-zinc-200/80 bg-white divide-y divide-zinc-100 dark:border-white/10 dark:bg-[#15151A] dark:divide-white/5">
+          <div className="flex items-center gap-3 px-3.5 py-3">
+            <Phone className="h-4 w-4 shrink-0 text-zinc-400 dark:text-zinc-500" aria-hidden="true" />
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                Teléfono
+              </p>
+              <p className="truncate text-[13px] font-semibold">{driver.phone || "-"}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 px-3.5 py-3">
+            <Bike className="h-4 w-4 shrink-0 text-zinc-400 dark:text-zinc-500" aria-hidden="true" />
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                Vehículo
+              </p>
+              {isEditing ? (
                 <input
                   type="text"
                   value={editVehicle}
                   onChange={(e) => setEditVehicle(e.target.value)}
-                  className="text-sm text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-[#16161B] border border-zinc-200 dark:border-white/15 rounded-lg px-2 py-1 w-full mt-0.5 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:border-brand focus:ring-1 focus:ring-brand focus:outline-none"
-                  placeholder="Vehiculo"
+                  className="mt-0.5 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-2 py-1 text-[13px] font-semibold text-zinc-900 outline-none focus:border-brand focus:ring-1 focus:ring-brand dark:border-white/15 dark:bg-[#101014] dark:text-zinc-100"
+                  placeholder="Vehículo"
                   aria-label="Vehículo"
                 />
+              ) : (
+                <p className="truncate text-[13px] font-semibold">{driver.vehicle || "-"}</p>
               )}
             </div>
           </div>
-          <div className="p-4 flex items-center gap-3">
-            <MapPin className="w-5 h-5 text-zinc-400 dark:text-zinc-500" />
-            <div className="flex-1">
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">Placa</p>
-              {!isEditing ? (
-                <p className="text-sm text-zinc-900 dark:text-zinc-100">{driver?.licensePlate || "-"}</p>
-              ) : (
+
+          <div className="flex items-center gap-3 px-3.5 py-3">
+            <MapPin className="h-4 w-4 shrink-0 text-zinc-400 dark:text-zinc-500" aria-hidden="true" />
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                Placa
+              </p>
+              {isEditing ? (
                 <input
                   type="text"
                   value={editLicensePlate}
                   onChange={(e) => setEditLicensePlate(e.target.value)}
-                  className="text-sm text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-[#16161B] border border-zinc-200 dark:border-white/15 rounded-lg px-2 py-1 w-full mt-0.5 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 focus:border-brand focus:ring-1 focus:ring-brand focus:outline-none"
+                  className="mt-0.5 w-full rounded-lg border border-zinc-200 bg-zinc-50 px-2 py-1 text-[13px] font-semibold uppercase text-zinc-900 outline-none focus:border-brand focus:ring-1 focus:ring-brand dark:border-white/15 dark:bg-[#101014] dark:text-zinc-100"
                   placeholder="Placa"
                   aria-label="Placa"
                 />
+              ) : (
+                <p className="truncate text-[13px] font-semibold uppercase">{driver.licensePlate || "-"}</p>
               )}
             </div>
           </div>
-        </div>
-      </div>
+        </section>
 
-      {/* Save Button (edit mode) */}
-      {isEditing && (
-        <div className="px-4 mt-4">
+        {isEditing && (
           <button
+            type="button"
             onClick={handleSaveProfile}
             disabled={updateProfileMutation.isPending}
-            className="w-full bg-brand text-zinc-950 rounded-xl card-shadow dark:shadow-none p-4 flex items-center justify-center gap-2 text-sm font-semibold hover:brightness-110 active:scale-95 transition-all disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand px-4 py-3 text-[13px] font-bold text-zinc-950 transition-all hover:brightness-110 active:scale-[0.99] disabled:opacity-50"
           >
             {updateProfileMutation.isPending ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
             ) : (
-              <Save className="w-5 h-5" />
+              <Save className="h-4 w-4" aria-hidden="true" />
             )}
-            <span>Guardar</span>
+            Guardar cambios
           </button>
-        </div>
-      )}
+        )}
 
-      {/* Actions */}
-      <div className="px-4 mt-6 mb-6">
         <button
+          type="button"
           onClick={handleLogout}
-          className="w-full bg-white dark:bg-[#1A1A1E] rounded-xl card-shadow dark:shadow-none border border-zinc-100 dark:border-white/10 p-4 flex items-center gap-3 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-rose-200 bg-white px-4 py-3 text-[13px] font-bold text-rose-600 transition-colors hover:bg-rose-50 dark:border-rose-500/25 dark:bg-[#15151A] dark:text-rose-400 dark:hover:bg-rose-500/10"
         >
-          <LogOut className="w-5 h-5" />
-          <span className="text-sm font-medium">Salir</span>
+          <LogOut className="h-4 w-4" aria-hidden="true" />
+          Cerrar sesión
         </button>
       </div>
-    </div>
+    </DriverLayout>
   );
 }

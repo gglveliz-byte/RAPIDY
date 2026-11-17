@@ -5,7 +5,7 @@ import { createRouter, participantQuery } from "./middleware";
 import { getDb } from "./queries/connection";
 import { chatMessages } from "@db/schema";
 import { emit } from "./events";
-import { assertOrderAccess } from "./lib/order-access";
+import { assertOrderAccess, resolveViewerForRole } from "./lib/order-access";
 import type { ViewerRole } from "@contracts/orderStatus";
 
 function senderTypeForViewer(role: ViewerRole): "customer" | "commerce" | "driver" {
@@ -66,16 +66,24 @@ export const chatRouter = createRouter({
     )
     .mutation(async ({ input, ctx }) => {
       const access = await assertOrderAccess(ctx, input.orderId);
-      const { order, viewer } = access;
+      const { order } = access;
 
-      if (viewer.role === "admin") {
-        throw new TRPCError({ code: "FORBIDDEN", message: "El administrador solo puede leer." });
-      }
-      if (input.as && input.as !== viewer.role) {
+      // El rol lo elige quien envía, entre las identidades que realmente tiene:
+      // una misma sesión puede ser cliente y repartidor a la vez (mismo
+      // navegador/dispositivo), y el rol explícito debe mandar sobre el
+      // privilegiado por defecto.
+      const viewer = input.as
+        ? await resolveViewerForRole(ctx, order, access.items, input.as)
+        : access.viewer;
+
+      if (!viewer) {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "No puedes enviar mensajes con un rol que no te corresponde.",
         });
+      }
+      if (viewer.role === "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "El administrador solo puede leer." });
       }
       if (viewer.role === "customer" && order.customerId !== ctx.customer!.id) {
         throw new TRPCError({ code: "FORBIDDEN", message: "No participas en este pedido." });
@@ -132,10 +140,15 @@ export const chatRouter = createRouter({
         orderId: z.number().int().positive(),
         limit: z.number().int().min(1).max(100).default(50),
         before: z.number().int().positive().optional(),
+        /** Rol con el que se leen los acuses de lectura. */
+        as: z.enum(["customer", "driver", "merchant"]).optional(),
       }),
     )
     .query(async ({ input, ctx }) => {
       const access = await assertOrderAccess(ctx, input.orderId);
+      const viewer = input.as
+        ? (await resolveViewerForRole(ctx, access.order, access.items, input.as)) ?? access.viewer
+        : access.viewer;
       const db = getDb();
       const rows = await db
         .select()
@@ -149,32 +162,41 @@ export const chatRouter = createRouter({
         .limit(input.limit);
       return rows.reverse().map((row) => ({
         ...row,
-        isRead: isReadForViewer(row, access.viewer.role) ? "yes" : "no",
+        isRead: isReadForViewer(row, viewer.role) ? "yes" : "no",
       }));
     }),
 
   markAsRead: participantQuery
-    .input(z.object({ orderId: z.number().int().positive() }))
+    .input(
+      z.object({
+        orderId: z.number().int().positive(),
+        /** Rol con el que se marcan los mensajes como leídos. */
+        as: z.enum(["customer", "driver", "merchant"]).optional(),
+      }),
+    )
     .mutation(async ({ input, ctx }) => {
       const access = await assertOrderAccess(ctx, input.orderId);
-      if (access.viewer.role === "admin") return { success: true };
+      const viewer = input.as
+        ? (await resolveViewerForRole(ctx, access.order, access.items, input.as)) ?? access.viewer
+        : access.viewer;
+      if (viewer.role === "admin") return { success: true };
 
       const db = getDb();
-      const readColumn = readColumnForViewer(access.viewer.role);
+      const readColumn = readColumnForViewer(viewer.role);
       await db
         .update(chatMessages)
         .set({ [readColumn]: "yes" })
         .where(
           and(
             eq(chatMessages.orderId, input.orderId),
-            ne(chatMessages.senderType, senderTypeForViewer(access.viewer.role)),
+            ne(chatMessages.senderType, senderTypeForViewer(viewer.role)),
             eq(chatMessages[readColumn], "no"),
           ),
         );
       emit(`order:${input.orderId}`, {
         type: "chat_read",
         orderId: input.orderId,
-        readerRole: access.viewer.role,
+        readerRole: viewer.role,
       });
       return { success: true };
     }),

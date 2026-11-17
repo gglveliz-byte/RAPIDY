@@ -401,10 +401,18 @@ export function useMarkCommerceReady(commerceId?: number) {
 }
 
 // ========== CHAT ==========
-export function useChatMessages(orderId: number) {
+export function useChatMessages(
+  orderId: number,
+  role?: "customer" | "driver" | "merchant",
+) {
   const query = useQuery({
-    queryKey: ["chat.getByOrder", orderId],
-    queryFn: () => trpcCall<any[]>("chat.getByOrder", { orderId, limit: 50 }),
+    queryKey: ["chat.getByOrder", orderId, role ?? "auto"],
+    queryFn: () =>
+      trpcCall<any[]>("chat.getByOrder", {
+        orderId,
+        limit: 50,
+        ...(role ? { as: role } : {}),
+      }),
     enabled: Boolean(orderId),
     refetchInterval: 30_000,
   });
