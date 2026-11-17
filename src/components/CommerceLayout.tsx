@@ -179,10 +179,9 @@ export default function CommerceLayout({ children }: { children: ReactNode }) {
 
       {/* 2. CABECERA MÓVIL SUPERIOR (Dark Velvet Fijo) */}
       <header
-        className="md:hidden fixed top-0 inset-x-0 z-40 bg-[#0E0E12]/95 backdrop-blur-2xl border-b border-white/10 px-4 min-[380px]:px-5 pt-12 pb-3 flex items-center justify-between shadow-xl transition-all"
+        className="md:hidden sticky top-0 inset-x-0 z-40 bg-[#0E0E12]/95 backdrop-blur-2xl border-b border-white/10 px-4 min-[380px]:px-5 pb-3 flex items-center justify-between shadow-xl transition-all"
         style={{
-          paddingTop: "max(48px, env(safe-area-inset-top, 48px))",
-          minHeight: "calc(max(48px, env(safe-area-inset-top, 48px)) + 52px)",
+          paddingTop: "max(16px, env(safe-area-inset-top, 16px))",
         }}
       >
         <div className="flex items-center gap-2.5 min-w-0">
@@ -218,7 +217,7 @@ export default function CommerceLayout({ children }: { children: ReactNode }) {
 
       {/* 3. ÁREA PRINCIPAL DE CONTENIDO */}
       <main
-        className="flex-1 md:ml-64 pt-[calc(max(48px,env(safe-area-inset-top,48px))+56px)] md:pt-0 pb-24 md:pb-8 overflow-x-hidden min-h-screen"
+        className="flex-1 md:ml-64 pb-24 md:pb-8 overflow-x-hidden min-h-screen"
       >
         {children}
       </main>
