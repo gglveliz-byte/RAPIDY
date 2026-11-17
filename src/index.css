@@ -4,7 +4,9 @@
 
 /* Native PWA Behaviors */
 html, body {
-  background-color: #121212;
+  /* Sigue el tema activo: evita el marco oscuro alrededor de los paneles
+     angostos (repartidor) cuando el usuario está en modo claro. */
+  background-color: hsl(var(--background));
   overscroll-behavior-y: none;
   -webkit-touch-callout: none;
   -webkit-user-select: none;
