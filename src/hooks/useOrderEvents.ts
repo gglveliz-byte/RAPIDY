@@ -149,14 +149,25 @@ export function useOrderEvents(orderId: number | undefined, utils: ReturnType<ty
   return { connected };
 }
 
-export function useCommerceEvents(commerceId: number | undefined, utils: ReturnType<typeof trpc.useUtils>) {
+export function useCommerceEvents(
+  commerceId: number | undefined,
+  utils: ReturnType<typeof trpc.useUtils>,
+  onNewOrder?: (data?: any) => void
+) {
   const queryClient = useQueryClient();
   useEffect(() => {
     if (!commerceId) return;
 
     const connection = createReconnectingEventSource(
       `/api/events/commerce/${commerceId}`,
-      () => {
+      (data) => {
+        const type =
+          data && typeof data === "object" && "type" in (data as any)
+            ? (data as any).type
+            : null;
+        if (type === "new_order") {
+          onNewOrder?.(data);
+        }
         utils.order.getCommerceOrders.invalidate({ commerceId });
         utils.product.getByCommerce.invalidate({ commerceId });
         utils.commerce.getById.invalidate({ id: commerceId });
@@ -169,7 +180,7 @@ export function useCommerceEvents(commerceId: number | undefined, utils: ReturnT
     );
 
     return () => connection.close();
-  }, [commerceId, utils, queryClient]);
+  }, [commerceId, utils, queryClient, onNewOrder]);
 }
 
 export function useDriverEvents(

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import { Capacitor } from "@capacitor/core";
 
 export type PWAInstallOutcome = "accepted" | "dismissed" | "unavailable";
 
@@ -98,6 +99,8 @@ function readDismissedUntil(): number {
 
 function readStandalone(): boolean {
   if (typeof window === "undefined") return false;
+  // En apps nativas (Capacitor / Play Store) se considera aplicación instalada de fábrica
+  if (Capacitor.isNativePlatform()) return true;
   if (window.matchMedia?.("(display-mode: standalone)").matches) return true;
   return (
     (window.navigator as Navigator & { standalone?: boolean }).standalone === true
@@ -112,6 +115,8 @@ function detectIos(): boolean {
 }
 
 export function usePWAInstall() {
+  const isNative = typeof window !== "undefined" && Capacitor.isNativePlatform();
+
   const promptEvent = useSyncExternalStore(
     subscribeToPrompt,
     getPromptSnapshot,
@@ -183,14 +188,14 @@ export function usePWAInstall() {
     setDismissedUntil(until);
   }, []);
 
-  const isDismissed = dismissedUntil > 0;
-  const canInstall = Boolean(promptEvent) && !isInstalled;
+  const isDismissed = isNative || dismissedUntil > 0;
+  const canInstall = !isNative && Boolean(promptEvent) && !isInstalled;
 
   return {
     canInstall,
     showPrompt: canInstall && !isDismissed,
-    isInstalled,
-    isIos: detectIos(),
+    isInstalled: isNative || isInstalled,
+    isIos: !isNative && detectIos(),
     isDismissed,
     install,
     // Alias mantenidos por compatibilidad con consumidores previos del hook.

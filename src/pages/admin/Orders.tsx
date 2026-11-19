@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { useNavigate } from "react-router";
+import { useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router";
+import { toast } from "sonner";
 import {
   ArrowLeft,
   Search,
@@ -140,11 +141,21 @@ function SettlementPanel({
 
 export default function AdminOrders() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const paramOrderId = searchParams.get("orderId") ? Number(searchParams.get("orderId")) : null;
+
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState("all");
-  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
+  const [filter, setFilter] = useState(() => (paramOrderId ? "pending_payment" : "all"));
+  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(paramOrderId);
   const [loadingKey, setLoadingKey] = useState<string | null>(null);
   const [page, setPage] = useState(0);
+
+  useEffect(() => {
+    if (paramOrderId && Number.isInteger(paramOrderId) && paramOrderId > 0) {
+      setSelectedOrderId(paramOrderId);
+      setFilter("pending_payment");
+    }
+  }, [paramOrderId]);
 
   const ordersQuery = trpc.admin.orders.useQuery({ limit: 100, offset: page * 100 });
   const orders = ordersQuery.data ?? [];
@@ -187,7 +198,12 @@ export default function AdminOrders() {
   const handleApprovePayment = async () => {
     if (!selectedOrderId) return;
     if (confirm("¿Confirmar que el pago ha sido recibido correctamente? Los negocios serán notificados.")) {
-      await updateStatus.mutateAsync({ id: selectedOrderId, status: "received" });
+      try {
+        await updateStatus.mutateAsync({ id: selectedOrderId, status: "received" });
+        toast.success(`Pago del Pedido #${selectedOrderId} aprobado con éxito. Comercios notificados.`);
+      } catch (err: any) {
+        toast.error(err.message || "Error al aprobar pago");
+      }
     }
   };
 
@@ -195,7 +211,12 @@ export default function AdminOrders() {
     if (!selectedOrderId) return;
     const reason = prompt("Razón del rechazo (ej. Comprobante ilegible):", "Comprobante inválido o ilegible");
     if (reason !== null) {
-      await updateStatus.mutateAsync({ id: selectedOrderId, status: "payment_rejected", notes: reason });
+      try {
+        await updateStatus.mutateAsync({ id: selectedOrderId, status: "payment_rejected", notes: reason });
+        toast.warning(`Pago del Pedido #${selectedOrderId} rechazado. El cliente puede re-subir comprobante.`);
+      } catch (err: any) {
+        toast.error(err.message || "Error al rechazar pago");
+      }
     }
   };
 

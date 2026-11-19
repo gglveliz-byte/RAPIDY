@@ -1,11 +1,17 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router";
 import { Download, Store, X } from "lucide-react";
+import { Capacitor } from "@capacitor/core";
 import { usePWAInstall } from "@/hooks/usePWAInstall";
 
 const IOS_HINT_DELAY_MS = 5000;
 
 export function PWAInstallBanner() {
+  // En apps nativas (Play Store / App Store vía Capacitor), suprimir permanentemente el banner PWA
+  if (typeof window !== "undefined" && Capacitor.isNativePlatform()) {
+    return null;
+  }
+
   const {
     canInstall,
     isInstalled,

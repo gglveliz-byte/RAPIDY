@@ -544,6 +544,15 @@ export const orderRouter = createRouter({
           for (const commerceId of commerceIds) {
             emit(`commerce:${commerceId}`, { type: "new_order", orderId: newOrder.id });
           }
+        } else {
+          // Si el método de pago es transferencia, alertar prioritariamente al admin con metadatos
+          emit("admin:dashboard", {
+            type: "new_transfer",
+            orderId: newOrder.id,
+            total: newOrder.total,
+            customerPhone: newOrder.customerPhone,
+            deliveryAddress: newOrder.deliveryAddress,
+          });
         }
         emit("admin:dashboard", { type: "dashboard_update" });
 
@@ -1161,6 +1170,14 @@ export const orderRouter = createRouter({
       });
 
       emit(`order:${input.orderId}`, { type: "status_update", status: "pending_payment" });
+      emit("admin:dashboard", {
+        type: "new_transfer",
+        orderId: input.orderId,
+        total: updated.total,
+        customerPhone: updated.customerPhone,
+        deliveryAddress: updated.deliveryAddress,
+        isResubmit: true,
+      });
       emit("admin:dashboard", { type: "dashboard_update" });
       return sanitizeOrder(updated);
     }),

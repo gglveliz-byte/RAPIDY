@@ -4,7 +4,7 @@ const SSE_URL = "/api/events/admin-dashboard";
 const FALLBACK_INTERVAL = 30000;
 const RECONNECT_DELAY = 3000;
 
-export function useAdminSSE(onUpdate: () => void) {
+export function useAdminSSE(onUpdate: (data?: any) => void) {
   const [connected, setConnected] = useState(false);
   const esRef = useRef<EventSource | null>(null);
   const fallbackRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
@@ -36,7 +36,7 @@ export function useAdminSSE(onUpdate: () => void) {
         try {
           const data = JSON.parse((event as MessageEvent).data);
           if (data && data.type !== "ping") {
-            onUpdateRef.current();
+            onUpdateRef.current(data);
           }
         } catch {}
       });
@@ -47,7 +47,7 @@ export function useAdminSSE(onUpdate: () => void) {
         try {
           const data = JSON.parse(event.data);
           if (data && data.type !== "ping") {
-            onUpdateRef.current();
+            onUpdateRef.current(data);
           }
         } catch {}
       };

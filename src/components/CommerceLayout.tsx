@@ -19,8 +19,9 @@
  *   - `lucide-react` (`LayoutDashboard`, `ShoppingBag`, `Package`, `BarChart3`, `LogOut`, `User`, `Store`, `Sparkles`)
  */
 
-import { type ReactNode } from "react";
+import { useCallback, type ReactNode } from "react";
 import { useNavigate, useLocation } from "react-router";
+import { toast } from "sonner";
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -58,10 +59,53 @@ export default function CommerceLayout({ children }: { children: ReactNode }) {
   const { commerceId, commerce } = useMerchantCommerceId();
   const { data: rawOrders } = useCommerceOrders(commerceId || 0);
   const utils = trpc.useUtils();
-  useCommerceEvents(commerceId || undefined, utils);
 
   const storeName = commerce?.name || merchantUser?.name || "Mi Comercio";
   const isSelling = commerce?.status === "active" && commerce?.isOpen === "open";
+
+  const notifyCommerceNewOrder = useCallback((data?: any) => {
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (AudioCtx) {
+        const ctx = new AudioCtx();
+        if (ctx.state === "suspended") ctx.resume().catch(() => {});
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(523.25, now);
+        osc.frequency.setValueAtTime(659.25, now + 0.15);
+        osc.frequency.setValueAtTime(783.99, now + 0.3);
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.6);
+      }
+    } catch {}
+
+    try {
+      if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+        navigator.vibrate([200, 100, 200]);
+      }
+    } catch {}
+
+    const orderId = data?.orderId;
+    toast.success(
+      orderId ? `¡Nuevo pedido recibido! #${orderId}` : "¡Nuevo pedido recibido!",
+      {
+        description: "Tienes un pedido listo para ser preparado en cocina.",
+        duration: 8000,
+        action: {
+          label: "Ver Pedidos",
+          onClick: () => navigate("/commerce/orders"),
+        },
+      }
+    );
+  }, [navigate]);
+
+  useCommerceEvents(commerceId || undefined, utils, notifyCommerceNewOrder);
 
   // Contador dinámico de pedidos que requieren acción de cocina.
   const pendingCount = (rawOrders || []).filter((order: any) =>

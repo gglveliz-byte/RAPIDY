@@ -4,9 +4,11 @@ import {
   LayoutDashboard, ShoppingBag, Store, Truck, Package, Settings, LogOut,
 } from "lucide-react";
 import { trpcMutate } from "@/hooks/useDeliveryData";
-import { queryClient } from "@/providers/trpc";
+import { queryClient, trpc } from "@/providers/trpc";
 import { clearRoleUser, clearSession, dispatchLogout } from "@/hooks/useSessionSync";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useAdminSSE } from "@/hooks/useAdminSSE";
+import { useAdminNotification } from "@/hooks/useAdminNotification";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/admin" },
@@ -20,6 +22,26 @@ const navItems = [
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const utils = trpc.useUtils();
+  const { notifyNewTransfer } = useAdminNotification();
+
+  // Contador en vivo de transferencias pendientes de validación
+  const { data: ordersData } = trpc.admin.orders.useQuery(
+    { limit: 100 },
+    { staleTime: 15_000, refetchInterval: 60_000 }
+  );
+  const pendingTransfersCount = (ordersData || []).filter(
+    (order: any) => order.status === "pending_payment"
+  ).length;
+
+  // Escuchar eventos en vivo del panel de administración
+  useAdminSSE((data) => {
+    utils.admin.orders.invalidate();
+    if (data?.type === "new_transfer") {
+      notifyNewTransfer(data);
+    }
+  });
+
   // Un solo ThemeToggle montado a la vez para que su estado no se desincronice
   // entre el sidebar (desktop) y la barra inferior (mobile).
   const [isDesktop, setIsDesktop] = useState(() =>
@@ -69,20 +91,31 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         <nav className="flex-1 p-4 space-y-1.5 overflow-y-auto">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
+            const isOrders = item.path === "/admin/orders";
             return (
               <button
                 key={item.path}
                 type="button"
                 onClick={() => navigate(item.path)}
                 aria-current={isActive ? "page" : undefined}
-                className={`w-full min-h-[44px] flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                className={`w-full min-h-[44px] flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                   isActive
                     ? "bg-brand/10 text-brand-strong dark:text-brand"
                     : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-white/5 hover:text-zinc-900 dark:hover:text-zinc-100"
                 }`}
               >
-                <item.icon className="w-5 h-5 shrink-0" />
-                {item.label}
+                <div className="flex items-center gap-3 min-w-0">
+                  <item.icon className="w-5 h-5 shrink-0" />
+                  <span className="truncate">{item.label}</span>
+                </div>
+                {isOrders && pendingTransfersCount > 0 && (
+                  <span
+                    title={`${pendingTransfersCount} transferencias pendientes de revisión`}
+                    className="ml-auto px-2 py-0.5 text-[11px] font-black rounded-full bg-amber-500 text-zinc-950 shadow-sm shadow-amber-500/30 animate-pulse shrink-0"
+                  >
+                    {pendingTransfersCount}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -132,6 +165,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         <div className="flex items-center justify-around">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
+            const isOrders = item.path === "/admin/orders";
             return (
               <button
                 key={item.path}
@@ -144,7 +178,17 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                     : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 font-medium"
                 }`}
               >
-                <item.icon className={`w-4 h-4 sm:w-5 sm:h-5 transition-transform ${isActive ? "scale-110" : ""}`} />
+                <div className="relative">
+                  <item.icon className={`w-4 h-4 sm:w-5 sm:h-5 transition-transform ${isActive ? "scale-110" : ""}`} />
+                  {isOrders && pendingTransfersCount > 0 && (
+                    <span
+                      title={`${pendingTransfersCount} transferencias pendientes`}
+                      className="absolute -top-1.5 -right-2 min-w-[15px] h-3.5 px-0.5 bg-amber-500 text-zinc-950 font-black text-[9px] rounded-full flex items-center justify-center animate-pulse leading-none shadow-sm shadow-amber-500/40"
+                    >
+                      {pendingTransfersCount}
+                    </span>
+                  )}
+                </div>
                 <span className="text-[7.5px] sm:text-[9px] leading-tight text-center truncate max-w-full font-medium">
                   {item.label}
                 </span>
