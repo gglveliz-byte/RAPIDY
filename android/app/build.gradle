@@ -16,8 +16,19 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            if (file('rapidy-release.jks').exists()) {
+                storeFile file('rapidy-release.jks')
+                storePassword 'rapidy2026'
+                keyAlias 'rapidy'
+                keyPassword 'rapidy2026'
+            }
+        }
+    }
     buildTypes {
         release {
+            signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
